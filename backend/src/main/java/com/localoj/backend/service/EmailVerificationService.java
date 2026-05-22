@@ -1,0 +1,168 @@
+package com.localoj.backend.service;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.localoj.common.mapper.EmailVerificationCodeMapper;
+import com.localoj.common.mapper.UserMapper;
+import com.localoj.common.model.EmailVerificationCode;
+import com.localoj.common.model.SmtpSetting;
+import com.localoj.common.model.User;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Properties;
+
+@Service
+public class EmailVerificationService {
+    private static final String REGISTER_PURPOSE = "REGISTER";
+    private static final String PASSWORD_CHANGE_PURPOSE = "PASSWORD_CHANGE";
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final EmailVerificationCodeMapper codeMapper;
+    private final UserMapper userMapper;
+    private final SmtpSettingsService smtpSettingsService;
+
+    public EmailVerificationService(
+            EmailVerificationCodeMapper codeMapper,
+            UserMapper userMapper,
+            SmtpSettingsService smtpSettingsService
+    ) {
+        this.codeMapper = codeMapper;
+        this.userMapper = userMapper;
+        this.smtpSettingsService = smtpSettingsService;
+    }
+
+    @Transactional
+    public void sendRegisterCode(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        ensureEmailNotUsed(normalizedEmail);
+        sendCode(normalizedEmail, REGISTER_PURPOSE, "Local Judge 注册验证码", "你的 Local Judge 注册验证码是：");
+    }
+
+    @Transactional
+    public void sendPasswordChangeCode(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        sendCode(normalizedEmail, PASSWORD_CHANGE_PURPOSE, "Local Judge 修改密码验证码", "你的 Local Judge 修改密码验证码是：");
+    }
+
+    private void sendCode(String normalizedEmail, String purpose, String subject, String textPrefix) {
+        SmtpSetting setting = smtpSettingsService.requireSettings();
+        validateSmtpSetting(setting);
+
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        LocalDateTime now = LocalDateTime.now();
+        codeMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<EmailVerificationCode>()
+                .eq("email", normalizedEmail)
+                .eq("purpose", purpose)
+                .eq("consumed", false)
+                .set("consumed", true));
+
+        EmailVerificationCode verificationCode = new EmailVerificationCode();
+        verificationCode.setEmail(normalizedEmail);
+        verificationCode.setCode(code);
+        verificationCode.setPurpose(purpose);
+        verificationCode.setExpiresAt(now.plusMinutes(10));
+        verificationCode.setConsumed(false);
+        verificationCode.setCreatedAt(now);
+        codeMapper.insert(verificationCode);
+
+        sendMail(setting, normalizedEmail, code, subject, textPrefix);
+    }
+
+    @Transactional
+    public void consumeRegisterCode(String email, String code) {
+        consumeCode(email, code, REGISTER_PURPOSE);
+    }
+
+    @Transactional
+    public void consumePasswordChangeCode(String email, String code) {
+        consumeCode(email, code, PASSWORD_CHANGE_PURPOSE);
+    }
+
+    private void consumeCode(String email, String code, String purpose) {
+        String normalizedEmail = normalizeEmail(email);
+        EmailVerificationCode verificationCode = codeMapper.selectOne(new QueryWrapper<EmailVerificationCode>()
+                .eq("email", normalizedEmail)
+                .eq("purpose", purpose)
+                .eq("consumed", false)
+                .ge("expires_at", LocalDateTime.now())
+                .orderByDesc("id")
+                .last("LIMIT 1"));
+        if (verificationCode == null || !verificationCode.getCode().equals(code)) {
+            throw new IllegalArgumentException("验证码不正确或已过期");
+        }
+        verificationCode.setConsumed(true);
+        codeMapper.updateById(verificationCode);
+    }
+
+    public String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("邮箱不能为空");
+        }
+        return email.trim().toLowerCase();
+    }
+
+    private void ensureEmailNotUsed(String email) {
+        Long count = userMapper.selectCount(new QueryWrapper<User>().eq("email", email));
+        if (count > 0) {
+            throw new IllegalArgumentException("邮箱已被注册");
+        }
+    }
+
+    private void validateSmtpSetting(SmtpSetting setting) {
+        if (!Boolean.TRUE.equals(setting.getEnabled())) {
+            throw new IllegalArgumentException("SMTP 尚未启用");
+        }
+        if (setting.getHost() == null || setting.getHost().isBlank()) {
+            throw new IllegalArgumentException("SMTP 主机未配置");
+        }
+        if (setting.getFromAddress() == null || setting.getFromAddress().isBlank()) {
+            throw new IllegalArgumentException("发件邮箱未配置");
+        }
+        if (Boolean.TRUE.equals(setting.getAuthEnabled())
+                && (setting.getUsername() == null || setting.getUsername().isBlank())) {
+            throw new IllegalArgumentException("SMTP 用户名未配置");
+        }
+    }
+
+    private void sendMail(SmtpSetting setting, String email, String code, String subject, String textPrefix) {
+        try {
+            JavaMailSenderImpl sender = new JavaMailSenderImpl();
+            sender.setHost(setting.getHost());
+            sender.setPort(setting.getPort() == null ? 587 : setting.getPort());
+            if (Boolean.TRUE.equals(setting.getAuthEnabled())) {
+                sender.setUsername(setting.getUsername());
+                sender.setPassword(setting.getPassword());
+            }
+            sender.setDefaultEncoding(StandardCharsets.UTF_8.name());
+
+            Properties properties = sender.getJavaMailProperties();
+            properties.put("mail.smtp.auth", String.valueOf(Boolean.TRUE.equals(setting.getAuthEnabled())));
+            properties.put("mail.smtp.ssl.enable", String.valueOf(Boolean.TRUE.equals(setting.getUseSsl())));
+            properties.put("mail.smtp.starttls.enable", String.valueOf(Boolean.TRUE.equals(setting.getUseStarttls())));
+            properties.put("mail.smtp.connectiontimeout", "10000");
+            properties.put("mail.smtp.timeout", "10000");
+            properties.put("mail.smtp.writetimeout", "10000");
+
+            MimeMessage message = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+            helper.setFrom(new InternetAddress(setting.getFromAddress(), defaultFromName(setting)));
+            helper.setTo(email);
+            helper.setSubject(subject);
+            helper.setText(textPrefix + code + "\n\n验证码 10 分钟内有效。");
+            sender.send(message);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("邮件发送失败，请检查 SMTP 配置");
+        }
+    }
+
+    private String defaultFromName(SmtpSetting setting) {
+        return setting.getFromName() == null || setting.getFromName().isBlank() ? "Local Judge" : setting.getFromName();
+    }
+}
