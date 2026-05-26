@@ -1,15 +1,23 @@
 package com.localoj.backend.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.localoj.backend.gojudge.GoJudgeClient;
 import com.localoj.backend.gojudge.GoJudgeResult;
 import com.localoj.backend.security.CurrentUser;
 import com.localoj.common.enums.Language;
 import com.localoj.common.enums.Role;
 import com.localoj.common.enums.Verdict;
+import com.localoj.common.mapper.ContestMapper;
+import com.localoj.common.mapper.ContestProblemMapper;
+import com.localoj.common.mapper.ContestRegistrationMapper;
 import com.localoj.common.mapper.ProblemMapper;
+import com.localoj.common.model.Contest;
+import com.localoj.common.model.ContestProblem;
+import com.localoj.common.model.ContestRegistration;
 import com.localoj.common.model.Problem;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,23 +30,39 @@ public class SelfTestService {
     private static final int RESPONSE_TEXT_LIMIT = 20_000;
 
     private final ProblemMapper problemMapper;
+    private final ContestMapper contestMapper;
+    private final ContestProblemMapper contestProblemMapper;
+    private final ContestRegistrationMapper contestRegistrationMapper;
     private final GoJudgeClient goJudgeClient;
     private final SandboxSettingsService sandboxSettingsService;
 
     public SelfTestService(
             ProblemMapper problemMapper,
+            ContestMapper contestMapper,
+            ContestProblemMapper contestProblemMapper,
+            ContestRegistrationMapper contestRegistrationMapper,
             GoJudgeClient goJudgeClient,
             SandboxSettingsService sandboxSettingsService
     ) {
         this.problemMapper = problemMapper;
+        this.contestMapper = contestMapper;
+        this.contestProblemMapper = contestProblemMapper;
+        this.contestRegistrationMapper = contestRegistrationMapper;
         this.goJudgeClient = goJudgeClient;
         this.sandboxSettingsService = sandboxSettingsService;
     }
 
-    public SelfTestResult run(CurrentUser user, Long problemId, Language language, String sourceCode, String stdin) {
+    public SelfTestResult run(CurrentUser user, Long problemId, Long contestId, Language language, String sourceCode, String stdin) {
         Problem problem = problemMapper.selectById(problemId);
-        if (problem == null || (user.role() != Role.ADMIN && user.role() != Role.SUPER_ADMIN && !Boolean.TRUE.equals(problem.getVisible()))) {
+        if (problem == null) {
             throw new IllegalArgumentException("Problem not found");
+        }
+        if (contestId == null) {
+            if (!isAdmin(user) && !Boolean.TRUE.equals(problem.getVisible())) {
+                throw new IllegalArgumentException("Problem not found");
+            }
+        } else {
+            requireContestProblemAccess(user, contestId, problemId);
         }
 
         CompiledArtifact artifact = null;
@@ -61,6 +85,38 @@ public class SelfTestService {
                 artifact.cachedFileIds().forEach(goJudgeClient::deleteFile);
             }
         }
+    }
+
+    private void requireContestProblemAccess(CurrentUser user, Long contestId, Long problemId) {
+        Contest contest = contestMapper.selectById(contestId);
+        if (contest == null || (!Boolean.TRUE.equals(contest.getVisible()) && !isAdmin(user))) {
+            throw new IllegalArgumentException("Contest not found");
+        }
+        ContestProblem contestProblem = contestProblemMapper.selectOne(new QueryWrapper<ContestProblem>()
+                .eq("contest_id", contestId)
+                .eq("problem_id", problemId));
+        if (contestProblem == null) {
+            throw new IllegalArgumentException("Problem not in this contest");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(contest.getStartTime()) && !isAdmin(user)) {
+            throw new IllegalArgumentException("Contest has not started yet");
+        }
+        if (!isAdmin(user) && now.isBefore(contest.getEndTime()) && !isRegistered(contestId, user.id())) {
+            throw new IllegalArgumentException("请先报名比赛");
+        }
+    }
+
+    private boolean isRegistered(Long contestId, Long userId) {
+        Long count = contestRegistrationMapper.selectCount(new QueryWrapper<ContestRegistration>()
+                .eq("contest_id", contestId)
+                .eq("user_id", userId));
+        return count != null && count > 0;
+    }
+
+    private boolean isAdmin(CurrentUser user) {
+        return user != null && (user.role() == Role.ADMIN || user.role() == Role.SUPER_ADMIN);
     }
 
     private CompiledArtifact compile(Language language, String sourceCode, SandboxSettingsService.SandboxSettingsView sandboxSettings) {

@@ -47,6 +47,7 @@ public class SubmissionService {
     private final ContestMapper contestMapper;
     private final ContestProblemMapper contestProblemMapper;
     private final ContestRegistrationMapper contestRegistrationMapper;
+    private final SystemLogService systemLogService;
     private final String submissionQueueKey;
 
     public SubmissionService(
@@ -59,6 +60,7 @@ public class SubmissionService {
             ContestMapper contestMapper,
             ContestProblemMapper contestProblemMapper,
             ContestRegistrationMapper contestRegistrationMapper,
+            SystemLogService systemLogService,
             @Value("${app.queue.submission-key}") String submissionQueueKey
     ) {
         this.problemMapper = problemMapper;
@@ -70,6 +72,7 @@ public class SubmissionService {
         this.contestMapper = contestMapper;
         this.contestProblemMapper = contestProblemMapper;
         this.contestRegistrationMapper = contestRegistrationMapper;
+        this.systemLogService = systemLogService;
         this.submissionQueueKey = submissionQueueKey;
     }
 
@@ -122,6 +125,15 @@ public class SubmissionService {
         }
 
         submissionMapper.insert(submission);
+        systemLogService.info(
+                "submission",
+                "created",
+                "提交已创建，等待入队",
+                submission.getId(),
+                submission.getProblemId(),
+                submission.getUserId(),
+                "language=" + submission.getLanguage() + "; contestId=" + submission.getContestId()
+        );
         publishJudgeJobAfterCommit(submission.getId());
         return submission;
     }
@@ -211,6 +223,15 @@ public class SubmissionService {
         resetForJudge(submission);
         submissionMapper.updateById(submission);
         caseResultMapper.delete(new QueryWrapper<SubmissionCaseResult>().eq("submission_id", submissionId));
+        systemLogService.info(
+                "submission",
+                "rejudge_requested",
+                "提交已重置并准备重新判题",
+                submission.getId(),
+                submission.getProblemId(),
+                submission.getUserId(),
+                null
+        );
         publishJudgeJobAfterCommit(submissionId);
         return submission;
     }
@@ -224,6 +245,15 @@ public class SubmissionService {
         for (Submission submission : submissions) {
             resetForJudge(submission);
             submissionMapper.updateById(submission);
+            systemLogService.info(
+                    "submission",
+                    "requeue_requested",
+                    "未完成提交已重新入队",
+                    submission.getId(),
+                    submission.getProblemId(),
+                    submission.getUserId(),
+                    null
+            );
             publishJudgeJobAfterCommit(submission.getId());
         }
         return submissions.size();
@@ -232,8 +262,21 @@ public class SubmissionService {
     private void publishJudgeJob(Long submissionId) {
         try {
             redisTemplate.opsForList().leftPush(submissionQueueKey, objectMapper.writeValueAsString(new JudgeJob(submissionId)));
+            systemLogService.info(
+                    "judge-queue",
+                    "job_published",
+                    "判题任务已写入 Redis 队列",
+                    submissionId,
+                    null,
+                    null,
+                    "queue=" + submissionQueueKey
+            );
         } catch (JsonProcessingException ex) {
+            systemLogService.error("judge-queue", "job_serialize_failed", "判题任务序列化失败", submissionId, null, null, ex);
             throw new IllegalStateException("Failed to publish judge job", ex);
+        } catch (RuntimeException ex) {
+            systemLogService.error("judge-queue", "job_publish_failed", "判题任务写入 Redis 队列失败", submissionId, null, null, ex);
+            throw ex;
         }
     }
 
@@ -249,6 +292,7 @@ public class SubmissionService {
                     publishJudgeJob(submissionId);
                 } catch (RuntimeException ex) {
                     log.error("Failed to publish judge job after commit for submission {}", submissionId, ex);
+                    systemLogService.error("judge-queue", "job_publish_after_commit_failed", "事务提交后发布判题任务失败", submissionId, null, null, ex);
                 }
             }
         });

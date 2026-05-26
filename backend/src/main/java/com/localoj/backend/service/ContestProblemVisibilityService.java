@@ -7,6 +7,7 @@ import com.localoj.common.mapper.ProblemMapper;
 import com.localoj.common.model.Contest;
 import com.localoj.common.model.ContestProblemVisibilityLock;
 import com.localoj.common.model.Problem;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,11 @@ public class ContestProblemVisibilityService {
             return;
         }
         LocalDateTime now = LocalDateTime.now();
+        Contest contest = contestMapper.selectById(contestId);
+        if (contest == null || !contest.getEndTime().isAfter(now)) {
+            releaseForContest(contestId);
+            return;
+        }
         for (Long problemId : new HashSet<>(problemIds)) {
             Problem problem = problemMapper.selectById(problemId);
             if (problem == null) {
@@ -71,6 +77,7 @@ public class ContestProblemVisibilityService {
     }
 
     @Transactional
+    @Scheduled(fixedDelayString = "${app.contests.visibility-release-delay-ms:60000}")
     public void releaseEndedContestLocks() {
         List<ContestProblemVisibilityLock> locks = visibilityLockMapper.selectList(new QueryWrapper<>());
         if (locks.isEmpty()) {

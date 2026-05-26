@@ -82,12 +82,25 @@ public class ContestController {
 
     @GetMapping("/{id}/submissions")
     public ApiResponse<List<Submission>> submissions(@PathVariable("id") Long id) {
-        CurrentUser user = SecurityUtils.currentUser();
+        CurrentUser user = SecurityUtils.optionalCurrentUser();
         return ApiResponse.ok(contestService.listContestSubmissions(id, user));
     }
 
     @GetMapping("/{id}/leaderboard")
     public ApiResponse<List<ContestService.ContestStandingsRow>> leaderboard(@PathVariable("id") Long id) {
-        return ApiResponse.ok(contestService.calculateStandings(id));
+        CurrentUser user = SecurityUtils.optionalCurrentUser();
+        contestService.requireContest(id, user);
+        return ApiResponse.ok(contestService.calculateStandings(id, user));
+    }
+
+    @GetMapping("/{id}/leaderboard/export")
+    public org.springframework.http.ResponseEntity<byte[]> exportLeaderboard(@PathVariable("id") Long id) {
+        CurrentUser user = SecurityUtils.optionalCurrentUser();
+        byte[] csvBytes = contestService.exportStandingsCsv(id, user);
+
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"contest-" + id + "-standings.csv\"")
+                .body(csvBytes);
     }
 }

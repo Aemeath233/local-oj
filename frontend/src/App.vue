@@ -10,6 +10,7 @@
         <nav class="nav">
           <RouterLink to="/">首页</RouterLink>
           <RouterLink to="/problems">题库</RouterLink>
+          <RouterLink to="/training">专项练习</RouterLink>
           <RouterLink to="/leaderboard">排行榜</RouterLink>
           <RouterLink to="/contests">比赛</RouterLink>
           <RouterLink v-if="auth.isLoggedIn" to="/submissions">提交</RouterLink>

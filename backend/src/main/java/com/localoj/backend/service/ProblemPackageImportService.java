@@ -40,6 +40,74 @@ public class ProblemPackageImportService {
 
     @Transactional
     public Problem importPackage(MultipartFile file) {
+        PackageAnalysis analysis = analyzePackage(file);
+        List<TestCaseFileStorage.CaseFileContent> caseFiles = analysis.caseFiles().stream()
+                .map(entry -> new TestCaseFileStorage.CaseFileContent(entry.simpleName(), entry.bytes()))
+                .toList();
+        List<TestCaseFileStorage.ImportedCase> importedCases = testCaseFileStorage.importFileContents(caseFiles);
+        if (importedCases.isEmpty()) {
+            throw new IllegalArgumentException("ZIP 中没有找到同名配对的 .in 和 .out/.ans 测试点");
+        }
+
+        List<ProblemService.TestCaseCommand> testCases = new ArrayList<>();
+        for (TestCaseFileStorage.ImportedCase importedCase : importedCases) {
+            testCases.add(new ProblemService.TestCaseCommand(
+                    importedCase.uploadToken(),
+                    importedCase.name(),
+                    importedCase.inputFile(),
+                    importedCase.outputFile(),
+                    importedCase.inputSize(),
+                    importedCase.outputSize(),
+                    analysis.scores().getOrDefault(importedCase.name(), 0),
+                    analysis.config().samples().contains(importedCase.name())
+            ));
+        }
+
+        return problemService.createProblem(new ProblemService.CreateProblemCommand(
+                analysis.resolvedSlug(),
+                analysis.config().title(),
+                analysis.statementEntry().text(),
+                analysis.config().timeLimitMs(),
+                analysis.config().memoryLimitKb(),
+                analysis.config().difficulty(),
+                analysis.config().tags(),
+                analysis.config().visible(),
+                testCases
+        ));
+    }
+
+    public PackagePreview previewPackage(MultipartFile file) {
+        PackageAnalysis analysis = analyzePackage(file);
+        List<PackageCasePreview> cases = analysis.pairedCases().stream()
+                .map(pairedCase -> new PackageCasePreview(
+                        pairedCase.name(),
+                        pairedCase.input().simpleName(),
+                        pairedCase.output().simpleName(),
+                        (long) pairedCase.input().bytes().length,
+                        (long) pairedCase.output().bytes().length,
+                        analysis.scores().getOrDefault(pairedCase.name(), 0),
+                        analysis.config().samples().contains(pairedCase.name())
+                ))
+                .toList();
+        return new PackagePreview(
+                analysis.originalFilename(),
+                analysis.configEntry().path(),
+                analysis.statementEntry().path(),
+                analysis.statementEntry().text().length(),
+                analysis.config().title(),
+                analysis.resolvedSlug(),
+                analysis.slugGenerated(),
+                analysis.config().difficulty(),
+                analysis.config().tags(),
+                analysis.config().timeLimitMs(),
+                analysis.config().memoryLimitKb(),
+                analysis.config().visible(),
+                cases,
+                warningsFor(analysis, cases)
+        );
+    }
+
+    private PackageAnalysis analyzePackage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("请选择题目 ZIP 包");
         }
@@ -52,41 +120,29 @@ public class ProblemPackageImportService {
         PackageEntry configEntry = findConfig(entries);
         PackageEntry statementEntry = findStatement(entries, configEntry);
         PackageConfig config = parseConfig(configEntry.text());
-        List<TestCaseFileStorage.CaseFileContent> caseFiles = caseFiles(entries, configEntry, statementEntry);
-        List<TestCaseFileStorage.ImportedCase> importedCases = testCaseFileStorage.importFileContents(caseFiles);
-        if (importedCases.isEmpty()) {
+        List<PackageEntry> caseFiles = caseFiles(entries, configEntry, statementEntry);
+        List<PairedCase> pairedCases = pairCases(caseFiles);
+        if (pairedCases.isEmpty()) {
             throw new IllegalArgumentException("ZIP 中没有找到同名配对的 .in 和 .out/.ans 测试点");
         }
 
         Set<String> importedCaseNames = new HashSet<>();
-        importedCases.forEach(importedCase -> importedCaseNames.add(importedCase.name()));
+        pairedCases.forEach(pairedCase -> importedCaseNames.add(pairedCase.name()));
         validateKnownNames(config.samples(), importedCaseNames, "samples");
-        Map<String, Integer> resolvedScores = resolveScores(importedCases, config.scores(), importedCaseNames);
-        List<ProblemService.TestCaseCommand> testCases = new ArrayList<>();
-        for (TestCaseFileStorage.ImportedCase importedCase : importedCases) {
-            testCases.add(new ProblemService.TestCaseCommand(
-                    importedCase.uploadToken(),
-                    importedCase.name(),
-                    importedCase.inputFile(),
-                    importedCase.outputFile(),
-                    importedCase.inputSize(),
-                    importedCase.outputSize(),
-                    resolvedScores.getOrDefault(importedCase.name(), 0),
-                    config.samples().contains(importedCase.name())
-            ));
-        }
-
-        return problemService.createProblem(new ProblemService.CreateProblemCommand(
-                config.slug().isBlank() ? generatedSlug(originalFilename, config.title()) : config.slug(),
-                config.title(),
-                statementEntry.text(),
-                config.timeLimitMs(),
-                config.memoryLimitKb(),
-                config.difficulty(),
-                config.tags(),
-                config.visible(),
-                testCases
-        ));
+        Map<String, Integer> resolvedScores = resolveScores(pairedCases.stream().map(PairedCase::name).toList(), config.scores(), importedCaseNames);
+        boolean slugGenerated = config.slug().isBlank();
+        String resolvedSlug = slugGenerated ? generatedSlug(originalFilename, config.title()) : config.slug();
+        return new PackageAnalysis(
+                originalFilename,
+                configEntry,
+                statementEntry,
+                config,
+                caseFiles,
+                pairedCases,
+                resolvedScores,
+                resolvedSlug,
+                slugGenerated
+        );
     }
 
     private List<PackageEntry> readZip(MultipartFile file) {
@@ -165,13 +221,13 @@ public class ProblemPackageImportService {
                 .orElseThrow(() -> new IllegalArgumentException("题目包缺少 problem.md 或 statement.md"));
     }
 
-    private List<TestCaseFileStorage.CaseFileContent> caseFiles(
+    private List<PackageEntry> caseFiles(
             List<PackageEntry> entries,
             PackageEntry configEntry,
             PackageEntry statementEntry
-    ) {
+        ) {
         Set<String> usedNames = new HashSet<>();
-        List<TestCaseFileStorage.CaseFileContent> files = new ArrayList<>();
+        List<PackageEntry> files = new ArrayList<>();
         for (PackageEntry entry : entries) {
             if (entry.path().equals(configEntry.path()) || entry.path().equals(statementEntry.path())) {
                 continue;
@@ -183,9 +239,48 @@ public class ProblemPackageImportService {
             if (!usedNames.add(entry.simpleName())) {
                 throw new IllegalArgumentException("题目包内测试点文件名重复: " + entry.simpleName());
             }
-            files.add(new TestCaseFileStorage.CaseFileContent(entry.simpleName(), entry.bytes()));
+            files.add(entry);
         }
         return files;
+    }
+
+    private static List<PairedCase> pairCases(List<PackageEntry> caseFiles) {
+        Map<String, PackageEntry> inputs = new HashMap<>();
+        Map<String, PackageEntry> outputs = new HashMap<>();
+        for (PackageEntry entry : caseFiles) {
+            String name = entry.simpleName();
+            String lower = name.toLowerCase(Locale.ROOT);
+            if (lower.endsWith(".in")) {
+                String base = name.substring(0, name.length() - 3);
+                if (!base.isBlank()) {
+                    if (inputs.containsKey(base)) {
+                        throw new IllegalArgumentException("题目包内同一测试点存在多个输入文件: " + base);
+                    }
+                    inputs.put(base, entry);
+                }
+            } else if (lower.endsWith(".out")) {
+                String base = name.substring(0, name.length() - 4);
+                if (!base.isBlank()) {
+                    if (outputs.containsKey(base)) {
+                        throw new IllegalArgumentException("题目包内同一测试点存在多个输出文件: " + base);
+                    }
+                    outputs.put(base, entry);
+                }
+            } else if (lower.endsWith(".ans")) {
+                String base = name.substring(0, name.length() - 4);
+                if (!base.isBlank()) {
+                    if (outputs.containsKey(base)) {
+                        throw new IllegalArgumentException("题目包内同一测试点存在多个输出文件: " + base);
+                    }
+                    outputs.put(base, entry);
+                }
+            }
+        }
+        return inputs.keySet().stream()
+                .filter(outputs::containsKey)
+                .sorted(ProblemPackageImportService::compareCaseName)
+                .map(name -> new PairedCase(name, inputs.get(name), outputs.get(name)))
+                .toList();
     }
 
     static PackageConfig parseConfig(String markdown) {
@@ -226,7 +321,7 @@ public class ProblemPackageImportService {
     }
 
     private static Map<String, Integer> resolveScores(
-            List<TestCaseFileStorage.ImportedCase> importedCases,
+            List<String> caseNames,
             Map<String, Integer> explicitScores,
             Set<String> importedCaseNames
     ) {
@@ -236,8 +331,7 @@ public class ProblemPackageImportService {
             throw new IllegalArgumentException("scores 总分不能超过 100");
         }
 
-        List<String> missingNames = importedCases.stream()
-                .map(TestCaseFileStorage.ImportedCase::name)
+        List<String> missingNames = caseNames.stream()
                 .filter(name -> !explicitScores.containsKey(name))
                 .toList();
         List<Integer> defaultScores = distributeScores(100 - explicitTotal, missingNames.size());
@@ -247,6 +341,28 @@ public class ProblemPackageImportService {
             scores.put(missingNames.get(i), defaultScores.get(i));
         }
         return scores;
+    }
+
+    private static List<String> warningsFor(PackageAnalysis analysis, List<PackageCasePreview> cases) {
+        List<String> warnings = new ArrayList<>();
+        if (analysis.slugGenerated()) {
+            warnings.add("config 中未填写 slug，导入时会自动生成唯一 slug。");
+        }
+        if (analysis.config().samples().isEmpty()) {
+            warnings.add("config 中未填写 samples，题目详情页不会自动展示样例。");
+        }
+        if (analysis.config().scores().isEmpty()) {
+            warnings.add("config 中未填写 scores，系统会把 100 分平均分配给所有测试点。");
+        }
+        int ignoredCaseFiles = analysis.caseFiles().size() - cases.size() * 2;
+        if (ignoredCaseFiles > 0) {
+            warnings.add("有 " + ignoredCaseFiles + " 个测试数据文件没有同名配对，导入时会被忽略。");
+        }
+        long sampleCount = cases.stream().filter(PackageCasePreview::sample).count();
+        if (sampleCount > 3) {
+            warnings.add("当前标记了 " + sampleCount + " 个样例，前台题面可能会显得偏长。");
+        }
+        return warnings;
     }
 
     private static void validateKnownNames(Iterable<String> names, Set<String> knownNames, String label) {
@@ -268,6 +384,14 @@ public class ProblemPackageImportService {
             scores.add(base + (i < remainder ? 1 : 0));
         }
         return scores;
+    }
+
+    private static int compareCaseName(String left, String right) {
+        try {
+            return Integer.compare(Integer.parseInt(left), Integer.parseInt(right));
+        } catch (NumberFormatException ignored) {
+            return left.compareTo(right);
+        }
     }
 
     private static Map<String, Integer> parseScores(String value) {
@@ -425,6 +549,51 @@ public class ProblemPackageImportService {
         String text() {
             return new String(bytes, StandardCharsets.UTF_8);
         }
+    }
+
+    private record PairedCase(String name, PackageEntry input, PackageEntry output) {
+    }
+
+    private record PackageAnalysis(
+            String originalFilename,
+            PackageEntry configEntry,
+            PackageEntry statementEntry,
+            PackageConfig config,
+            List<PackageEntry> caseFiles,
+            List<PairedCase> pairedCases,
+            Map<String, Integer> scores,
+            String resolvedSlug,
+            boolean slugGenerated
+    ) {
+    }
+
+    public record PackageCasePreview(
+            String name,
+            String inputFile,
+            String outputFile,
+            Long inputSize,
+            Long outputSize,
+            Integer score,
+            Boolean sample
+    ) {
+    }
+
+    public record PackagePreview(
+            String filename,
+            String configFile,
+            String statementFile,
+            Integer statementChars,
+            String title,
+            String slug,
+            Boolean slugGenerated,
+            String difficulty,
+            String tags,
+            Integer timeLimitMs,
+            Integer memoryLimitKb,
+            Boolean visible,
+            List<PackageCasePreview> cases,
+            List<String> warnings
+    ) {
     }
 
     record PackageConfig(

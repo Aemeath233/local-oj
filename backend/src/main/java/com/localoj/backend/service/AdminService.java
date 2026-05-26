@@ -22,17 +22,20 @@ public class AdminService {
     private final TestCaseMapper testCaseMapper;
     private final SubmissionMapper submissionMapper;
     private final UserMapper userMapper;
+    private final ProblemService problemService;
 
     public AdminService(
             ProblemMapper problemMapper,
             TestCaseMapper testCaseMapper,
             SubmissionMapper submissionMapper,
-            UserMapper userMapper
+            UserMapper userMapper,
+            ProblemService problemService
     ) {
         this.problemMapper = problemMapper;
         this.testCaseMapper = testCaseMapper;
         this.submissionMapper = submissionMapper;
         this.userMapper = userMapper;
+        this.problemService = problemService;
     }
 
     public Dashboard dashboard() {
@@ -58,7 +61,9 @@ public class AdminService {
     }
 
     public List<ProblemSummary> problems() {
-        return problemMapper.selectList(new QueryWrapper<Problem>().orderByDesc("id")).stream()
+        List<Problem> problems = problemMapper.selectList(new QueryWrapper<Problem>().orderByDesc("id"));
+        problemService.populateTags(problems);
+        return problems.stream()
                 .map(this::toProblemSummary)
                 .toList();
     }
@@ -70,7 +75,9 @@ public class AdminService {
         }
         problem.setVisible(Boolean.TRUE.equals(visible));
         problemMapper.updateById(problem);
-        return toProblemSummary(problemMapper.selectById(problemId));
+        Problem updated = problemMapper.selectById(problemId);
+        problemService.populateTags(List.of(updated));
+        return toProblemSummary(updated);
     }
 
     public List<SubmissionSummary> recentSubmissions(int limit) {

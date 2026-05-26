@@ -21,12 +21,17 @@ import type {
   SandboxSettings,
   User,
   Contest,
+  AdminContestSummary,
   ContestProblemDetail,
   ContestRegistrationStatus,
   ContestStandingsRow,
   AdminContestDetail,
   ProblemSolutionSummary,
-  ProblemSolutionDetail
+  ProblemSolutionDetail,
+  SystemLog,
+  SystemLogLevel,
+  ProblemPackagePreview,
+  UserStats
 } from '../types'
 
 
@@ -88,6 +93,11 @@ export async function fetchProfile() {
   return response.data.data
 }
 
+export async function fetchUserStats() {
+  const response = await http.get<ApiEnvelope<UserStats>>('/profile/stats')
+  return response.data.data
+}
+
 export async function updateProfile(payload: {
   displayName: string
   studentNo?: string
@@ -116,8 +126,13 @@ export async function changePassword(payload: { code: string; newPassword: strin
   await http.put<ApiEnvelope<null>>('/profile/password', payload)
 }
 
-export async function fetchProblems(params?: { q?: string; status?: ProblemStatus | '' }) {
+export async function fetchProblems(params?: { q?: string; status?: ProblemStatus | ''; tags?: string }) {
   const response = await http.get<ApiEnvelope<ProblemSummary[]>>('/problems', { params })
+  return response.data.data
+}
+
+export async function fetchDailyProblem() {
+  const response = await http.get<ApiEnvelope<ProblemSummary>>('/problems/daily')
   return response.data.data
 }
 
@@ -136,9 +151,10 @@ export async function submitSolution(problemId: number, language: Language, sour
   return response.data.data
 }
 
-export async function runSelfTest(problemId: number, language: Language, sourceCode: string, stdin: string) {
+export async function runSelfTest(problemId: number, language: Language, sourceCode: string, stdin: string, contestId?: number) {
   const response = await http.post<ApiEnvelope<SelfTestResult>>('/self-tests', {
     problemId,
+    contestId,
     language,
     sourceCode,
     stdin
@@ -178,8 +194,9 @@ export interface CreateProblemPayload {
   }>
 }
 
-export async function createProblem(payload: CreateProblemPayload) {
-  const response = await http.post<ApiEnvelope<AdminProblemDetail>>('/admin/problems', payload)
+export async function createProblem(payload: CreateProblemPayload, autolinkTrainingId?: number) {
+  const url = autolinkTrainingId ? `/admin/problems?autolinkTrainingId=${autolinkTrainingId}` : '/admin/problems'
+  const response = await http.post<ApiEnvelope<AdminProblemDetail>>(url, payload)
   return response.data.data
 }
 
@@ -255,6 +272,17 @@ export async function importProblemPackage(file: File) {
   const formData = new FormData()
   formData.append('file', file)
   const response = await http.post<ApiEnvelope<AdminProblemDetail>>('/admin/problems/import-package', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+  return response.data.data
+}
+
+export async function previewProblemPackage(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await http.post<ApiEnvelope<ProblemPackagePreview>>('/admin/problems/import-package/preview', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
@@ -345,13 +373,20 @@ export async function fetchContestLeaderboard(id: number) {
   return response.data.data
 }
 
+export async function downloadContestStandings(id: number): Promise<Blob> {
+  const response = await http.get(`/contests/${id}/leaderboard/export`, {
+    responseType: 'blob'
+  })
+  return response.data
+}
+
 export async function submitContestSolution(contestId: number, problemId: number, language: Language, sourceCode: string) {
   const response = await http.post<ApiEnvelope<Submission>>('/submissions', { problemId, language, sourceCode, contestId })
   return response.data.data
 }
 
 export async function fetchAdminContests() {
-  const response = await http.get<ApiEnvelope<Contest[]>>('/admin/contests')
+  const response = await http.get<ApiEnvelope<AdminContestSummary[]>>('/admin/contests')
   return response.data.data
 }
 
@@ -361,6 +396,8 @@ export interface CreateContestPayload {
   startTime: string
   endTime: string
   visible: boolean
+  type?: 'ACM' | 'OI'
+  freezeDurationMinutes?: number
   problemIds: number[]
 }
 
@@ -376,6 +413,11 @@ export async function fetchAdminContest(id: number) {
 
 export async function updateContest(id: number, payload: CreateContestPayload) {
   const response = await http.put<ApiEnvelope<Contest>>(`/admin/contests/${id}`, payload)
+  return response.data.data
+}
+
+export async function setContestVisibility(id: number, visible: boolean) {
+  const response = await http.patch<ApiEnvelope<Contest>>(`/admin/contests/${id}/visibility`, { visible })
   return response.data.data
 }
 
@@ -411,5 +453,91 @@ export async function fetchAdminUsers(search?: string) {
 
 export async function updateAdminUser(userId: number, payload: Partial<User> & { password?: string }) {
   const response = await http.put<ApiEnvelope<User>>(`/admin/users/${userId}`, payload)
+  return response.data.data
+}
+
+export async function fetchLogToggle() {
+  const response = await http.get<ApiEnvelope<{ enabled: boolean }>>('/admin/logs/toggle')
+  return response.data.data
+}
+
+export async function updateLogToggle(enabled: boolean) {
+  const response = await http.post<ApiEnvelope<void>>('/admin/logs/toggle', { enabled })
+  return response.data.data
+}
+
+export async function downloadAdminLog(type: 'backend' | 'worker') {
+  const response = await http.get(`/admin/logs/download?type=${type}`, {
+    responseType: 'blob'
+  })
+  const blob = new Blob([response.data], { type: 'text/plain;charset=utf-8' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `${type === 'worker' ? 'judge-worker' : 'backend'}.log`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+export async function clearAdminLog(type: 'backend' | 'worker') {
+  const response = await http.delete<ApiEnvelope<void>>(`/admin/logs/clear?type=${type}`)
+  return response.data.data
+}
+
+// ================= DATA MANAGEMENT APIS =================
+
+export async function importUsersBulk(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await http.post<ApiEnvelope<any>>('/admin/data/users/import', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+  return response.data.data
+}
+
+export async function cleanupSubmissions(payload: {
+  confirmationPhrase: string
+  beforeDate?: string
+  problemId?: number
+  userId?: number
+  contestId?: number
+  onlyPractice?: boolean
+  onlyContest?: boolean
+  verdicts?: string[]
+}) {
+  const response = await http.post<ApiEnvelope<{ count: number }>>('/admin/data/submissions/cleanup', payload)
+  return response.data.data
+}
+
+export async function fetchStorageStats() {
+  const response = await http.get<ApiEnvelope<any>>('/admin/data/test-cases/stats')
+  return response.data.data
+}
+
+export async function cleanupOrphanedCases() {
+  const response = await http.delete<ApiEnvelope<{ count: number }>>('/admin/data/test-cases/orphaned')
+  return response.data.data
+}
+
+export async function fetchBackupInfo() {
+  const response = await http.get<ApiEnvelope<any>>('/admin/data/backup/info')
+  return response.data.data
+}
+
+export async function fetchAdminDlq() {
+  const response = await http.get<ApiEnvelope<{ size: number; items: string[] }>>('/admin/dlq')
+  return response.data.data
+}
+
+export async function clearAdminDlq() {
+  await http.post<ApiEnvelope<null>>('/admin/dlq/clear')
+}
+
+export async function requeueAdminDlq() {
+  const response = await http.post<ApiEnvelope<{ requeued: number }>>('/admin/dlq/requeue')
   return response.data.data
 }

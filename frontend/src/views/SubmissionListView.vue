@@ -9,9 +9,9 @@
     </div>
 
     <!-- Interactive Search and Filter Bar -->
-    <div class="panel problem-filters" style="padding: 14px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; border: 1px solid #d8dee6; margin-bottom: 2px;">
+    <div class="filter-card-bar">
       <!-- Search User -->
-      <div style="flex: 1; min-width: 220px;">
+      <div class="filter-search-box">
         <el-input
           v-model="filterUser"
           placeholder="搜索提交者用户名或昵称..."
@@ -19,7 +19,7 @@
           :prefix-icon="Search"
         />
       </div>
-
+ 
       <!-- Filter by Language -->
       <div>
         <el-select v-model="filterLanguage" placeholder="所有语言" clearable style="width: 140px;">
@@ -29,7 +29,7 @@
           <el-option label="Java" value="JAVA" />
         </el-select>
       </div>
-
+ 
       <!-- Filter by Verdict -->
       <div>
         <el-select v-model="filterVerdict" placeholder="所有结果" clearable style="width: 150px;">
@@ -45,7 +45,7 @@
           <el-option label="Running" value="RUNNING" />
         </el-select>
       </div>
-
+ 
       <!-- Reset filters -->
       <el-button v-if="hasFilters" type="warning" plain @click="resetFilters">重置筛选</el-button>
     </div>
@@ -172,7 +172,7 @@ function resetFilters() {
 
 onMounted(() => {
   load()
-  timer = window.setInterval(load, 3000)
+  timer = window.setInterval(() => load(true), 3000)
 })
 
 onUnmounted(() => {
@@ -181,15 +181,19 @@ onUnmounted(() => {
   }
 })
 
-async function load() {
-  loading.value = true
+async function load(isSilent = false) {
+  if (!isSilent) {
+    loading.value = true
+  }
   try {
     submissions.value = await fetchSubmissions()
     if (drawerVisible.value && selected.value) {
       selected.value = await fetchSubmission(selected.value.submission.id)
     }
   } finally {
-    loading.value = false
+    if (!isSilent) {
+      loading.value = false
+    }
   }
 }
 

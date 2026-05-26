@@ -1,18 +1,18 @@
 package com.localoj.common.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.time.LocalDateTime;
 
-@TableName("llm_settings")
-public class LlmSetting {
-    @TableId
+@TableName("training_sets")
+public class TrainingSet {
+    @TableId(type = IdType.AUTO)
     private Long id;
-    private Boolean enabled;
-    private String baseUrl;
-    private String model;
-    private String apiKey;
+    private String title;
+    private String description;
+    private Boolean visible;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -24,36 +24,28 @@ public class LlmSetting {
         this.id = id;
     }
 
-    public Boolean getEnabled() {
-        return enabled;
+    public String getTitle() {
+        return title;
     }
 
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
+    public void setTitle(String title) {
+        this.title = title;
     }
 
-    public String getBaseUrl() {
-        return baseUrl;
+    public String getDescription() {
+        return description;
     }
 
-    public void setBaseUrl(String baseUrl) {
-        this.baseUrl = baseUrl;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
-    public String getModel() {
-        return model;
+    public Boolean getVisible() {
+        return visible;
     }
 
-    public void setModel(String model) {
-        this.model = model;
-    }
-
-    public String getApiKey() {
-        return apiKey;
-    }
-
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
+    public void setVisible(Boolean visible) {
+        this.visible = visible;
     }
 
     public LocalDateTime getCreatedAt() {

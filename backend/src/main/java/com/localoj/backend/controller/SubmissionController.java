@@ -11,6 +11,7 @@ import com.localoj.common.model.SubmissionCaseResult;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,7 +50,12 @@ public class SubmissionController {
         return ApiResponse.ok(new SubmissionDetail(submission, problem, cases));
     }
 
-    public record SubmitRequest(@NotNull Long problemId, @NotNull Language language, @NotBlank String sourceCode, Long contestId) {
+    public record SubmitRequest(
+            @NotNull Long problemId,
+            @NotNull Language language,
+            @NotBlank @Size(max = 100_000) String sourceCode,
+            Long contestId
+    ) {
     }
 
     public record SubmissionDetail(Submission submission, Problem problem, List<SubmissionCaseResult> cases) {

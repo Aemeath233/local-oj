@@ -18,6 +18,12 @@ import ContestDetailView from '../views/ContestDetailView.vue'
 import ContestProblemDetailView from '../views/ContestProblemDetailView.vue'
 import AdminContestListView from '../views/AdminContestListView.vue'
 import AdminContestView from '../views/AdminContestView.vue'
+import AdminLogView from '../views/AdminLogView.vue'
+import AdminDataView from '../views/AdminDataView.vue'
+import TrainingListView from '../views/TrainingListView.vue'
+import TrainingDetailView from '../views/TrainingDetailView.vue'
+import AdminTrainingListView from '../views/AdminTrainingListView.vue'
+import AdminTrainingView from '../views/AdminTrainingView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -37,11 +43,17 @@ const router = createRouter({
     { path: '/admin/problems/new', component: AdminProblemView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/problems/:id', component: AdminProblemView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/submissions', component: AdminSubmissionView, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/logs', component: AdminLogView, meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/admin/contests', component: AdminContestListView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/contests/new', component: AdminContestView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/contests/:id', component: AdminContestView, props: true, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/data', component: AdminDataView, meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/admin/settings', component: AdminSettingsView, meta: { requiresAuth: true, requiresSuperAdmin: true } },
-    { path: '/admin/users', component: AdminUserListView, meta: { requiresAuth: true, requiresSuperAdmin: true } }
+    { path: '/admin/users', component: AdminUserListView, meta: { requiresAuth: true, requiresSuperAdmin: true } },
+    { path: '/training', component: TrainingListView, meta: { requiresAuth: true } },
+    { path: '/training/:id', component: TrainingDetailView, props: true, meta: { requiresAuth: true } },
+    { path: '/admin/training', component: AdminTrainingListView, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/training/:id', component: AdminTrainingView, props: true, meta: { requiresAuth: true, requiresAdmin: true } }
   ]
 })
 

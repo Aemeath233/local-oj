@@ -35,6 +35,11 @@ public class ProfileController {
         return ApiResponse.ok(profileService.profile(SecurityUtils.currentUser()));
     }
 
+    @GetMapping("/stats")
+    public ApiResponse<ProfileService.UserStatsView> stats() {
+        return ApiResponse.ok(profileService.getUserStats(SecurityUtils.currentUser()));
+    }
+
     @PutMapping
     public ApiResponse<ProfileService.ProfileView> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();

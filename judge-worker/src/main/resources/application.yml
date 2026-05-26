@@ -21,9 +21,15 @@ mybatis-plus:
 app:
   queue:
     submission-key: ${JUDGE_QUEUE_KEY:judge:queue}
+    processing-key: ${JUDGE_PROCESSING_KEY:judge:processing}
+    dlq-key: ${JUDGE_DLQ_KEY:judge:dlq}
   go-judge:
     base-url: ${GO_JUDGE_BASE_URL:http://localhost:5050}
   data-root: ${APP_DATA_ROOT:/data}
 
 worker:
   poll-delay-ms: ${WORKER_POLL_DELAY_MS:300}
+
+logging:
+  file:
+    name: ${APP_DATA_ROOT:/data}/logs/judge-worker.log

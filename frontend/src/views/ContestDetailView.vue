@@ -172,7 +172,25 @@
 
       <!-- Tab 4: ICPC Standings -->
       <el-tab-pane v-if="isRegisteredOrAdmin && timeState !== 'UPCOMING'" label="实时排名" name="standings">
-        <div class="panel">
+        <div class="panel" style="padding: 20px;">
+          <!-- Freeze Warning Banner -->
+          <div v-if="isBoardFrozen" class="freeze-warning-banner" :class="{ 'is-admin': auth.isAdmin }">
+            <template v-if="auth.isAdmin">
+              <span class="icon">🛡️</span>
+              <div class="banner-body">
+                <h4>管理员视图</h4>
+                <p>您正在查看实时完整排行榜（普通参赛选手目前只能看到封榜前的数据，封榜时长为 <b>{{ contest.freezeDurationMinutes }}</b> 分钟）。</p>
+              </div>
+            </template>
+            <template v-else>
+              <span class="icon">⚠️</span>
+              <div class="banner-body">
+                <h4>排行榜已封榜！</h4>
+                <p>当前比赛已进入封榜阶段（比赛结束前 <b>{{ contest.freezeDurationMinutes }}</b> 分钟已停止公开更新榜单）。正式完整榜单将在比赛结束后揭晓，祝各位选手取得佳绩！</p>
+              </div>
+            </template>
+          </div>
+
           <div class="standings-toolbar">
             <el-input
               v-model="standingsSearch"
@@ -182,6 +200,7 @@
               :prefix-icon="Search"
             />
             <el-button :icon="Refresh" @click="loadStandings" :loading="standingsLoading">刷新榜单</el-button>
+            <el-button type="success" :icon="Download" @click="exportStandings" :loading="exporting">导出排行榜</el-button>
           </div>
           <el-table v-loading="standingsLoading" :data="filteredStandings" border class="standings-table">
             <el-table-column label="Rank" width="80" align="center" fixed>
@@ -288,7 +307,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowRight, Refresh, DocumentCopy, Search } from '@element-plus/icons-vue'
+import { ArrowRight, Refresh, DocumentCopy, Search, Download } from '@element-plus/icons-vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import VerdictTag from '../components/VerdictTag.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
@@ -299,7 +318,8 @@ import {
   fetchContestLeaderboard,
   fetchSubmission,
   fetchContestRegistration,
-  registerContest
+  registerContest,
+  downloadContestStandings
 } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import type {
@@ -340,6 +360,7 @@ const selectedSubmission = ref<SubmissionDetail | null>(null)
 // live countdown variables
 const nowRef = ref(new Date())
 let countdownInterval: number | undefined
+let submissionsInterval: number | undefined
 
 // Map cache for faster lookup in Submissions tab
 const problemCodeMap = computed(() => {
@@ -389,6 +410,16 @@ const timeState = computed(() => {
   return 'RUNNING'
 })
 
+const isBoardFrozen = computed(() => {
+  if (!contest.value || !contest.value.freezeDurationMinutes || contest.value.freezeDurationMinutes <= 0) {
+    return false
+  }
+  const end = new Date(contest.value.endTime).getTime()
+  const freezeStart = end - contest.value.freezeDurationMinutes * 60 * 1000
+  const now = nowRef.value.getTime()
+  return now >= freezeStart && now < end
+})
+
 const timerLabel = computed(() => {
   const state = timeState.value
   if (state === 'UPCOMING') return '距比赛开始'
@@ -422,6 +453,9 @@ onUnmounted(() => {
   if (countdownInterval) {
     window.clearInterval(countdownInterval)
   }
+  if (submissionsInterval) {
+    window.clearInterval(submissionsInterval)
+  }
 })
 
 watch(activeTab, (tab) => {
@@ -431,6 +465,21 @@ watch(activeTab, (tab) => {
     loadStandings()
   }
 })
+
+// Poll submissions in ContestDetailView when tab is active and there's a pending run
+watch(
+  [activeTab, submissions],
+  ([tab, list]) => {
+    const hasRunning = list.some(s => s.status === 'PENDING' || s.status === 'RUNNING')
+    if (tab === 'submissions' && hasRunning && !submissionsInterval) {
+      submissionsInterval = window.setInterval(() => loadSubmissions(true), 3000)
+    } else if ((tab !== 'submissions' || !hasRunning) && submissionsInterval) {
+      window.clearInterval(submissionsInterval)
+      submissionsInterval = undefined
+    }
+  },
+  { deep: true }
+)
 
 watch(timeState, (newVal, oldVal) => {
   if (oldVal === 'UPCOMING' && newVal === 'RUNNING') {
@@ -479,14 +528,23 @@ async function handleRegister() {
   }
 }
 
-async function loadSubmissions() {
-  submissionsLoading.value = true
+async function loadSubmissions(isSilent = false) {
+  if (!isSilent) {
+    submissionsLoading.value = true
+  }
   try {
     submissions.value = await fetchContestSubmissions(contestId.value)
+
+    // Auto-update drawer if open
+    if (drawerVisible.value && selectedSubmission.value) {
+      selectedSubmission.value = await fetchSubmission(selectedSubmission.value.submission.id)
+    }
   } catch (err) {
     console.error(err)
   } finally {
-    submissionsLoading.value = false
+    if (!isSilent) {
+      submissionsLoading.value = false
+    }
   }
 }
 
@@ -498,6 +556,30 @@ async function loadStandings() {
     console.error(err)
   } finally {
     standingsLoading.value = false
+  }
+}
+
+const exporting = ref(false)
+
+async function exportStandings() {
+  if (!contest.value) return
+  exporting.value = true
+  try {
+    const blob = await downloadContestStandings(contestId.value)
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `contest-${contestId.value}-standings.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('排行榜已成功导出为 CSV！')
+  } catch (err) {
+    console.error(err)
+    ElMessage.error('导出排行榜失败，请稍后重试。')
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -803,5 +885,42 @@ function getDurationStr(startStr: string, endStr: string) {
 }
 .oi-score-bold {
   font-weight: bold;
+}
+
+.freeze-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.freeze-warning-banner.is-admin {
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+}
+.freeze-warning-banner .icon {
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+.freeze-warning-banner .banner-body h4 {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #b45309;
+}
+.freeze-warning-banner.is-admin .banner-body h4 {
+  color: #0369a1;
+}
+.freeze-warning-banner .banner-body p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #78350f;
+}
+.freeze-warning-banner.is-admin .banner-body p {
+  color: #075985;
 }
 </style>

@@ -1,6 +1,12 @@
 package com.localoj.backend.service;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockMultipartFile;
+
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -52,5 +58,52 @@ public class ProblemPackageImportServiceTest {
         assertTrue(config.visible());
         assertTrue(config.samples().isEmpty());
         assertTrue(config.scores().isEmpty());
+    }
+
+    @Test
+    public void testPreviewPackageReadsMetadataAndCases() throws Exception {
+        ProblemPackageImportService service = new ProblemPackageImportService(null, null);
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "preview-problem.zip",
+                "application/zip",
+                zipBytes()
+        );
+
+        ProblemPackageImportService.PackagePreview preview = service.previewPackage(file);
+
+        assertEquals("Preview Problem", preview.title());
+        assertEquals("preview-problem", preview.slug());
+        assertFalse(preview.slugGenerated());
+        assertEquals("statement.md", preview.statementFile());
+        assertEquals(2, preview.cases().size());
+        assertEquals("1", preview.cases().get(0).name());
+        assertEquals(20, preview.cases().get(0).score());
+        assertTrue(preview.cases().get(0).sample());
+        assertEquals(80, preview.cases().get(1).score());
+    }
+
+    private static byte[] zipBytes() throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            addEntry(zip, "config.yml", """
+                    slug: preview-problem
+                    title: Preview Problem
+                    samples: [1]
+                    scores: 1=20,2=80
+                    """);
+            addEntry(zip, "statement.md", "# Preview Problem\n");
+            addEntry(zip, "cases/1.in", "1 2\n");
+            addEntry(zip, "cases/1.out", "3\n");
+            addEntry(zip, "cases/2.in", "2 3\n");
+            addEntry(zip, "cases/2.out", "5\n");
+        }
+        return output.toByteArray();
+    }
+
+    private static void addEntry(ZipOutputStream zip, String name, String content) throws Exception {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(content.getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
     }
 }

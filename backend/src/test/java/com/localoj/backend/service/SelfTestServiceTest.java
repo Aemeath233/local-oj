@@ -6,14 +6,21 @@ import com.localoj.backend.security.CurrentUser;
 import com.localoj.common.enums.Language;
 import com.localoj.common.enums.Role;
 import com.localoj.common.enums.Verdict;
+import com.localoj.common.mapper.ContestMapper;
+import com.localoj.common.mapper.ContestProblemMapper;
+import com.localoj.common.mapper.ContestRegistrationMapper;
 import com.localoj.common.mapper.ProblemMapper;
+import com.localoj.common.model.Contest;
+import com.localoj.common.model.ContestProblem;
 import com.localoj.common.model.Problem;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -31,11 +38,12 @@ class SelfTestServiceTest {
                 List.of(acceptedRun("3\n", "", 4_000_000L, 1_024L))
         );
 
-        SelfTestService service = new SelfTestService(problemMapper, goJudgeClient, sandboxSettingsService);
+        SelfTestService service = service(problemMapper, goJudgeClient, sandboxSettingsService);
 
         SelfTestService.SelfTestResult result = service.run(
                 new CurrentUser(1L, "u", Role.STUDENT),
                 1L,
+                null,
                 Language.PYTHON,
                 "print(sum(map(int, input().split())))",
                 "1 2\n"
@@ -55,11 +63,12 @@ class SelfTestServiceTest {
         when(problemMapper.selectById(1L)).thenReturn(problem());
         when(goJudgeClient.run(anyList())).thenReturn(List.of(failedCompile("SyntaxError\n")));
 
-        SelfTestService service = new SelfTestService(problemMapper, goJudgeClient, sandboxSettingsService);
+        SelfTestService service = service(problemMapper, goJudgeClient, sandboxSettingsService);
 
         SelfTestService.SelfTestResult result = service.run(
                 new CurrentUser(1L, "u", Role.STUDENT),
                 1L,
+                null,
                 Language.PYTHON,
                 "print(",
                 ""
@@ -67,6 +76,47 @@ class SelfTestServiceTest {
 
         assertEquals(Verdict.CE, result.verdict());
         assertEquals("SyntaxError\n", result.stderr());
+    }
+
+    @Test
+    void contestSelfTestAllowsRegisteredUserForHiddenProblem() {
+        ProblemMapper problemMapper = mock(ProblemMapper.class);
+        ContestMapper contestMapper = mock(ContestMapper.class);
+        ContestProblemMapper contestProblemMapper = mock(ContestProblemMapper.class);
+        ContestRegistrationMapper contestRegistrationMapper = mock(ContestRegistrationMapper.class);
+        GoJudgeClient goJudgeClient = mock(GoJudgeClient.class);
+        SandboxSettingsService sandboxSettingsService = sandboxSettingsService();
+
+        Problem problem = problem();
+        problem.setVisible(Boolean.FALSE);
+        when(problemMapper.selectById(1L)).thenReturn(problem);
+        when(contestMapper.selectById(9L)).thenReturn(runningContest());
+        when(contestProblemMapper.selectOne(any())).thenReturn(new ContestProblem(9L, 1L, 0));
+        when(contestRegistrationMapper.selectCount(any())).thenReturn(1L);
+        when(goJudgeClient.run(anyList())).thenReturn(
+                List.of(acceptedCompile()),
+                List.of(acceptedRun("3\n", "", 4_000_000L, 1_024L))
+        );
+
+        SelfTestService service = new SelfTestService(
+                problemMapper,
+                contestMapper,
+                contestProblemMapper,
+                contestRegistrationMapper,
+                goJudgeClient,
+                sandboxSettingsService
+        );
+
+        SelfTestService.SelfTestResult result = service.run(
+                new CurrentUser(1L, "u", Role.STUDENT),
+                1L,
+                9L,
+                Language.PYTHON,
+                "print(sum(map(int, input().split())))",
+                "1 2\n"
+        );
+
+        assertEquals(Verdict.AC, result.verdict());
     }
 
     private Problem problem() {
@@ -78,10 +128,34 @@ class SelfTestServiceTest {
         return problem;
     }
 
+    private Contest runningContest() {
+        Contest contest = new Contest();
+        contest.setId(9L);
+        contest.setVisible(Boolean.TRUE);
+        contest.setStartTime(LocalDateTime.now().minusMinutes(5));
+        contest.setEndTime(LocalDateTime.now().plusMinutes(30));
+        return contest;
+    }
+
     private SandboxSettingsService sandboxSettingsService() {
         SandboxSettingsService service = mock(SandboxSettingsService.class);
         when(service.view()).thenReturn(new SandboxSettingsService.SandboxSettingsView(1, 1, 10000, 1024, 50));
         return service;
+    }
+
+    private SelfTestService service(
+            ProblemMapper problemMapper,
+            GoJudgeClient goJudgeClient,
+            SandboxSettingsService sandboxSettingsService
+    ) {
+        return new SelfTestService(
+                problemMapper,
+                mock(ContestMapper.class),
+                mock(ContestProblemMapper.class),
+                mock(ContestRegistrationMapper.class),
+                goJudgeClient,
+                sandboxSettingsService
+        );
     }
 
     private GoJudgeResult acceptedCompile() {

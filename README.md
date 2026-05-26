@@ -40,7 +40,10 @@ Change `ADMIN_PASSWORD` and `JWT_SECRET` before using the system for real intern
 
 ## Development
 
-For a quick orientation before changing code, read `docx/PROJECT_OVERVIEW.md`. ZIP problem-package details live in `docx/PROBLEM_PACKAGE_SPEC.md`. Keep the `docx/` documents updated when architecture, feature surface, import format, or run/deployment assumptions change.
+For a quick orientation before changing code, read `docx/PROJECT_OVERVIEW.md`.
+Linux deployment notes live in `docx/LINUX_DEPLOYMENT.md`.
+ZIP problem-package details live in `docx/PROBLEM_PACKAGE_SPEC.md`.
+Keep the `docx/` documents updated when architecture, feature surface, import format, or run/deployment assumptions change.
 
 Backend and worker require Java 21:
 

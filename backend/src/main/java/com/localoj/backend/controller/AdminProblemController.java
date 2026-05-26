@@ -5,6 +5,7 @@ import com.localoj.backend.service.AdminService;
 import com.localoj.backend.service.ProblemService;
 import com.localoj.backend.service.ProblemPackageImportService;
 import com.localoj.backend.service.TestCaseFileStorage;
+import com.localoj.backend.service.TrainingService;
 import com.localoj.common.model.TestCase;
 import com.localoj.common.model.Problem;
 import jakarta.validation.Valid;
@@ -42,17 +43,20 @@ public class AdminProblemController {
     private final AdminService adminService;
     private final TestCaseFileStorage testCaseFileStorage;
     private final ProblemPackageImportService problemPackageImportService;
+    private final TrainingService trainingService;
 
     public AdminProblemController(
             ProblemService problemService,
             AdminService adminService,
             TestCaseFileStorage testCaseFileStorage,
-            ProblemPackageImportService problemPackageImportService
+            ProblemPackageImportService problemPackageImportService,
+            TrainingService trainingService
     ) {
         this.problemService = problemService;
         this.adminService = adminService;
         this.testCaseFileStorage = testCaseFileStorage;
         this.problemPackageImportService = problemPackageImportService;
+        this.trainingService = trainingService;
     }
 
     @GetMapping
@@ -61,8 +65,14 @@ public class AdminProblemController {
     }
 
     @PostMapping
-    public ApiResponse<AdminProblemDetail> create(@Valid @RequestBody CreateProblemRequest request) {
+    public ApiResponse<AdminProblemDetail> create(
+            @Valid @RequestBody CreateProblemRequest request,
+            @RequestParam(value = "autolinkTrainingId", required = false) Long autolinkTrainingId
+    ) {
         Problem problem = problemService.createProblem(request.toCommand());
+        if (autolinkTrainingId != null) {
+            trainingService.linkProblems(autolinkTrainingId, List.of(problem.getId()));
+        }
         return ApiResponse.ok(detail(problem.getId()));
     }
 
@@ -106,6 +116,11 @@ public class AdminProblemController {
     public ApiResponse<AdminProblemDetail> importPackage(@RequestParam("file") MultipartFile file) {
         Problem problem = problemPackageImportService.importPackage(file);
         return ApiResponse.ok(detail(problem.getId()));
+    }
+
+    @PostMapping("/import-package/preview")
+    public ApiResponse<ProblemPackageImportService.PackagePreview> previewPackage(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.ok(problemPackageImportService.previewPackage(file));
     }
 
     @GetMapping("/example-package")

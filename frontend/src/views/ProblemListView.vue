@@ -16,19 +16,21 @@
           v-model="keyword"
           :prefix-icon="Search"
           clearable
-          placeholder="搜索序号、标题或题面内容"
+          placeholder="搜索序号、标题、标签或题面内容"
           @keyup.enter="load"
           @clear="load"
+          style="max-width: 280px"
         />
+
         <el-segmented v-model="statusFilter" :options="statusOptions" @change="load" />
         <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
       </div>
       <el-table v-loading="loading" :data="problems" row-key="id" @row-click="openProblem">
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.solveStatus)" size="small" effect="light">
+            <span :class="'status-badge ' + (row.solveStatus || 'UNATTEMPTED').toLowerCase()">
               {{ statusLabel(row.solveStatus) }}
-            </el-tag>
+            </span>
           </template>
         </el-table-column>
         <el-table-column prop="id" label="#" width="80" />
@@ -40,13 +42,23 @@
         </el-table-column>
         <el-table-column prop="difficulty" label="难度" width="110">
           <template #default="{ row }">
-            <el-tag size="small">{{ row.difficulty }}</el-tag>
+            <span :class="'difficulty-badge ' + (row.difficulty || 'Easy').toLowerCase()">
+              {{ row.difficulty }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column label="标签" min-width="180">
           <template #default="{ row }">
             <div class="tag-list">
-              <el-tag v-for="tag in splitTags(row.tags)" :key="tag" size="small" effect="plain">
+              <el-tag
+                v-for="tag in splitTags(row.tags)"
+                :key="tag"
+                size="small"
+                :color="getTagColor(tag) + '20'"
+                :style="{ borderColor: getTagColor(tag), color: getTagColor(tag) }"
+                class="premium-tag"
+                effect="plain"
+              >
                 {{ tag }}
               </el-tag>
             </div>
@@ -68,12 +80,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ArrowRight, Refresh, Search } from '@element-plus/icons-vue'
-import { fetchProblems } from '../api/http'
+import { fetchProblems, fetchProblemTags } from '../api/http'
 import { useAuthStore } from '../stores/auth'
-import type { ProblemStatus, ProblemSummary } from '../types'
+import { getTagColor } from '../utils/tag'
+import type { ProblemStatus, ProblemSummary, ProblemTag } from '../types'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -81,16 +94,19 @@ const problems = ref<ProblemSummary[]>([])
 const loading = ref(false)
 const keyword = ref('')
 const statusFilter = ref<ProblemStatus | ''>('')
-let searchTimer: number | undefined
-
+const allTags = ref<ProblemTag[]>([])
 const statusOptions = [
   { label: '全部', value: '' },
   { label: '未尝试', value: 'UNATTEMPTED' },
   { label: '尝试过', value: 'ATTEMPTED' },
   { label: '已通过', value: 'ACCEPTED' }
 ]
+let searchTimer: number | undefined
 
-onMounted(load)
+onMounted(async () => {
+  await loadTags()
+  await load()
+})
 
 watch(keyword, () => {
   if (searchTimer) {
@@ -99,12 +115,28 @@ watch(keyword, () => {
   searchTimer = window.setTimeout(load, 350)
 })
 
+async function loadTags() {
+  try {
+    allTags.value = await fetchProblemTags()
+  } catch (err) {
+    console.error('Failed to load tags dictionary', err)
+  }
+}
+
 async function load() {
   loading.value = true
   try {
+    const q = keyword.value.trim()
+    // If keyword matches any tag name, include those tags in the search
+    const matchingTags = q
+      ? allTags.value
+          .filter(t => t.name.toLowerCase().includes(q.toLowerCase()))
+          .map(t => t.name)
+      : []
     problems.value = await fetchProblems({
-      q: keyword.value.trim() || undefined,
-      status: statusFilter.value
+      q: q || undefined,
+      status: statusFilter.value,
+      tags: matchingTags.length > 0 ? matchingTags.join(',') : undefined
     })
   } finally {
     loading.value = false
@@ -134,3 +166,21 @@ function splitTags(tags?: string) {
     .filter(Boolean)
 }
 </script>
+
+<style scoped>
+.premium-tag {
+  font-weight: 500;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.5rem;
+  background-color: transparent !important;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+
+</style>

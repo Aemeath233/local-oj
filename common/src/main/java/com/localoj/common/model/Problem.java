@@ -1,6 +1,7 @@
 package com.localoj.common.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -20,6 +21,7 @@ public class Problem {
     private Integer timeLimitMs;
     private Integer memoryLimitKb;
     private String difficulty;
+    @TableField(exist = false)
     private String tags;
     private Boolean visible;
     private LocalDateTime createdAt;

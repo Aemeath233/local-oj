@@ -46,8 +46,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/contests/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/leaderboard").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/profile/avatar/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/admin/tags").permitAll()
                         .requestMatchers("/api/admin/settings/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/admin/users/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/admin/data/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/admin/logs/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/tags/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/tags/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/admin/tags/**").hasRole("SUPER_ADMIN")
@@ -73,7 +76,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.allowed-origins}") String allowedOrigins) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList());
+        configuration.setAllowedOriginPatterns(Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

@@ -29,6 +29,7 @@ public class SelfTestController {
         return ApiResponse.ok(selfTestService.run(
                 user,
                 request.problemId(),
+                request.contestId(),
                 request.language(),
                 request.sourceCode(),
                 request.stdin()
@@ -37,6 +38,7 @@ public class SelfTestController {
 
     public record SelfTestRequest(
             @NotNull Long problemId,
+            Long contestId,
             @NotNull Language language,
             @NotBlank @Size(max = 100_000) String sourceCode,
             @Size(max = 100_000) String stdin

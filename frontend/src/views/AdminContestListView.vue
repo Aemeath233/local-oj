@@ -19,19 +19,35 @@
       <el-table v-loading="loading" :data="contests" row-key="id">
         <el-table-column prop="id" label="#" width="76" />
         <el-table-column prop="title" label="比赛标题" min-width="220" />
-        <el-table-column label="起止时间" width="300">
+        <el-table-column prop="type" label="赛制" width="90">
           <template #default="{ row }">
-            <div class="time-range">
-              <div><el-tag size="small" type="success">起</el-tag> {{ formatTime(row.startTime) }}</div>
-              <div style="margin-top: 4px;"><el-tag size="small" type="danger">止</el-tag> {{ formatTime(row.endTime) }}</div>
-            </div>
+            <el-tag size="small" effect="plain">{{ row.type }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="开始时间" width="170">
+          <template #default="{ row }">
+            <span class="time-range">{{ formatTime(row.startTime) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="结束时间" width="170">
+          <template #default="{ row }">
+            <span class="time-range">{{ formatTime(row.endTime) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="statusType(row)">
+            <span :class="['status-badge', getContestStatus(row) === 'RUNNING' ? 'accepted' : getContestStatus(row) === 'UPCOMING' ? 'attempted' : 'unattempted']">
               {{ statusLabel(row) }}
-            </el-tag>
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="规模" width="210">
+          <template #default="{ row }">
+            <div class="contest-metrics">
+              <span>{{ row.problemCount }} 题</span>
+              <span>{{ row.registrationCount }} 人</span>
+              <span>{{ row.submissionCount }} 次</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="可见" width="110">
@@ -61,13 +77,13 @@ import { RouterLink, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Plus, Refresh, View, Delete } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
-import { fetchAdminContests, updateContest, deleteContest } from '../api/http'
-import type { Contest } from '../types'
+import { fetchAdminContests, setContestVisibility, deleteContest } from '../api/http'
+import type { AdminContestSummary } from '../types'
 
 const router = useRouter()
 const loading = ref(false)
 const visibilityUpdating = ref<number | null>(null)
-const contests = ref<Contest[]>([])
+const contests = ref<AdminContestSummary[]>([])
 
 async function load() {
   loading.value = true
@@ -78,68 +94,17 @@ async function load() {
   }
 }
 
-async function updateVisibility(c: Contest, visible: boolean) {
-  visibilityUpdating.value = c.id
-  const previous = !visible
-  try {
-    const payload = {
-      title: c.title,
-      description: c.description,
-      startTime: c.startTime,
-      endTime: c.endTime,
-      visible,
-      problemIds: [] // Mapped relation doesn't need to change for visibility switch
-    }
-    // Fetch existing problemIds first
-    const detail = await fetchAdminContests() // actually we can fetch individual if needed
-    // Simple lazy backup: we retrieve the specific mapping before editing!
-    // But since the backend requires problemIds inside request payload, we must keep it safe.
-    // Let's call updateContest endpoint
-    await updateContest(c.id, {
-      title: c.title,
-      description: c.description,
-      startTime: c.startTime,
-      endTime: c.endTime,
-      visible,
-      problemIds: [] // Passing empty is safe since we can also just fetch it, or let's fetch to avoid clearing problems!
-    })
-    ElMessage.success(visible ? '比赛已显示' : '比赛已隐藏')
-  } catch (error) {
-    c.visible = previous
-    throw error
-  } finally {
-    visibilityUpdating.value = null
-  }
-}
-
-function onVisibilityChange(c: Contest, value: string | number | boolean) {
-  // Let's implement full fetch-to-update to avoid accidentally wiping out problems!
-  // It is much safer! Let's fetch contest details first:
+function onVisibilityChange(c: AdminContestSummary, value: string | number | boolean) {
   updateVisibilitySafe(c, Boolean(value))
 }
 
-async function updateVisibilitySafe(c: Contest, visible: boolean) {
+async function updateVisibilitySafe(c: AdminContestSummary, visible: boolean) {
   visibilityUpdating.value = c.id
   const previous = !visible
   try {
-    // Import helper dynamic fetch detail
-    const detail = await router.resolve(`/admin/contests/${c.id}`)
-    // Let's fetch the actual details of the contest including problemIds
-    const response = await fetch(`/api/admin/contests/${c.id}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('localoj.token')}` }
-    })
-    const json = await response.json()
-    const problemIds = json.data.problemIds || []
-
-    await updateContest(c.id, {
-      title: c.title,
-      description: c.description,
-      startTime: c.startTime,
-      endTime: c.endTime,
-      visible,
-      problemIds
-    })
+    await setContestVisibility(c.id, visible)
     ElMessage.success(visible ? '比赛已显示' : '比赛已隐藏')
+    await load()
   } catch (error) {
     c.visible = previous
     ElMessage.error('切换可见性失败')
@@ -148,7 +113,7 @@ async function updateVisibilitySafe(c: Contest, visible: boolean) {
   }
 }
 
-async function handleDelete(c: Contest) {
+async function handleDelete(c: AdminContestSummary) {
   try {
     await ElMessageBox.confirm(`确定删除比赛「${c.title}」吗？此操作不可逆！`, '警告', {
       confirmButtonText: '确定',
@@ -168,7 +133,7 @@ async function handleDelete(c: Contest) {
   }
 }
 
-function getContestStatus(c: Contest): 'UPCOMING' | 'RUNNING' | 'FINISHED' {
+function getContestStatus(c: AdminContestSummary): 'UPCOMING' | 'RUNNING' | 'FINISHED' {
   const start = new Date(c.startTime).getTime()
   const end = new Date(c.endTime).getTime()
   const now = new Date().getTime()
@@ -178,14 +143,14 @@ function getContestStatus(c: Contest): 'UPCOMING' | 'RUNNING' | 'FINISHED' {
   return 'RUNNING'
 }
 
-function statusLabel(c: Contest) {
+function statusLabel(c: AdminContestSummary) {
   const status = getContestStatus(c)
   if (status === 'UPCOMING') return '未开始'
   if (status === 'RUNNING') return '进行中'
   return '已结束'
 }
 
-function statusType(c: Contest) {
+function statusType(c: AdminContestSummary) {
   const status = getContestStatus(c)
   if (status === 'UPCOMING') return 'primary'
   if (status === 'RUNNING') return 'success'
@@ -204,5 +169,12 @@ onMounted(load)
   font-family: monospace;
   font-size: 0.85rem;
   color: var(--el-text-color-regular);
+}
+
+.contest-metrics {
+  display: flex;
+  gap: 8px;
+  color: var(--el-text-color-secondary);
+  font-size: 0.85rem;
 }
 </style>

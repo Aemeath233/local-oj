@@ -74,8 +74,9 @@
         <!-- Account Status -->
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag v-if="row.enabled" type="success" size="small" effect="plain">正常</el-tag>
-            <el-tag v-else type="danger" size="small" effect="plain">已禁用</el-tag>
+            <span :class="['status-badge', row.enabled ? 'accepted' : 'verdict-other']">
+              {{ row.enabled ? '正常' : '已禁用' }}
+            </span>
           </template>
         </el-table-column>
 

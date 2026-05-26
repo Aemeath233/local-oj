@@ -7,10 +7,21 @@
         <el-tab-pane label="登录" name="login">
           <el-form :model="loginForm" label-position="top" @submit.prevent="submitLogin">
             <el-form-item label="用户名 / 邮箱">
-              <el-input v-model="loginForm.username" placeholder="输入用户名或邮箱地址" autocomplete="username" />
+              <el-input
+                v-model="loginForm.username"
+                placeholder="输入用户名或邮箱地址"
+                autocomplete="username"
+                @input="loginError = ''"
+              />
             </el-form-item>
             <el-form-item label="密码">
-              <el-input v-model="loginForm.password" type="password" autocomplete="current-password" show-password />
+              <el-input
+                v-model="loginForm.password"
+                type="password"
+                autocomplete="current-password"
+                show-password
+                @input="loginError = ''"
+              />
             </el-form-item>
             <el-alert v-if="loginError" :title="loginError" type="error" show-icon :closable="false" />
             <el-button class="full-button" type="primary" :loading="loginLoading" @click="submitLogin">登录</el-button>
@@ -71,8 +82,8 @@ const codeCountdown = ref(0)
 let countdownTimer: number | null = null
 
 const loginForm = reactive({
-  username: 'admin',
-  password: 'admin123'
+  username: '',
+  password: ''
 })
 
 const registerForm = reactive({
@@ -95,8 +106,9 @@ async function submitLogin() {
   try {
     await auth.login(loginForm.username, loginForm.password)
     router.push(redirectTarget())
-  } catch {
-    loginError.value = '用户名/邮箱或密码不正确'
+  } catch (error: any) {
+    loginError.value = error.response?.data?.message
+      || (error.code === 'ERR_NETWORK' ? '无法连接后端服务，请检查 API 代理或 CORS 配置' : '登录失败，请稍后重试')
   } finally {
     loginLoading.value = false
   }

@@ -270,13 +270,13 @@ function getRemainingStr(endStr: string) {
 }
 
 .filter-tab:hover {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--bg-muted);
+  color: var(--text-primary);
 }
 
 .filter-tab.active {
-  background: #f0f4ff;
-  color: #4f46e5;
+  background: var(--primary-light);
+  color: var(--primary);
   font-weight: 600;
 }
 
@@ -288,8 +288,8 @@ function getRemainingStr(endStr: string) {
 }
 
 .tab-count {
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--border-color);
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
   padding: 1px 7px;
@@ -299,8 +299,8 @@ function getRemainingStr(endStr: string) {
 }
 
 .filter-tab.active .tab-count {
-  background: #ddd6fe;
-  color: #4f46e5;
+  background: var(--primary-light-border);
+  color: var(--primary);
 }
 
 /* ===== Contest list ===== */
@@ -313,23 +313,42 @@ function getRemainingStr(endStr: string) {
 .contest-row {
   display: flex;
   align-items: stretch;
-  background: #fff;
-  border: 1px solid #e8ecf1;
-  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .contest-row:hover {
-  border-color: #c7d2fe;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
-  transform: translateX(4px);
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px -4px rgba(15, 118, 110, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
 }
 
 .contest-row:active {
-  transform: translateX(2px);
+  transform: translateY(-1px);
+}
+
+.status-running {
+  background: linear-gradient(135deg, #fafffe 0%, var(--bg-surface) 100%);
+  border-color: #d1fae5;
+}
+
+.status-upcoming {
+  background: linear-gradient(135deg, #fafbff 0%, var(--bg-surface) 100%);
+  border-color: #dbeafe;
+}
+
+.status-finished {
+  opacity: 0.85;
+}
+
+.status-finished:hover {
+  opacity: 1;
 }
 
 /* ===== Left accent strip ===== */
@@ -358,11 +377,11 @@ function getRemainingStr(endStr: string) {
 /* ===== Main content area ===== */
 .contest-main {
   flex: 1;
-  padding: 18px 20px;
+  padding: 20px 24px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .contest-top-line {
@@ -375,14 +394,15 @@ function getRemainingStr(endStr: string) {
 
 .contest-title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-  color: #1e293b;
+  font-size: 17px;
+  font-weight: 750;
+  color: #0f172a;
   line-height: 1.4;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .contest-badges {
@@ -461,16 +481,20 @@ function getRemainingStr(endStr: string) {
 .contest-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 13px;
   color: #64748b;
+  background: #f8fafc;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #f1f5f9;
 }
 
 .meta-icon {
@@ -493,9 +517,8 @@ function getRemainingStr(endStr: string) {
 }
 
 .meta-divider {
-  width: 1px;
-  height: 14px;
-  background: #e2e8f0;
+  width: 0;
+  height: 0;
   flex-shrink: 0;
 }
 
@@ -544,7 +567,7 @@ function getRemainingStr(endStr: string) {
 .contest-action {
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 24px;
   flex-shrink: 0;
   border-left: 1px solid #f1f5f9;
 }
@@ -553,22 +576,23 @@ function getRemainingStr(endStr: string) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 18px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
+  padding: 10px 22px;
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
 .action-btn:hover {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
 }
 
@@ -584,7 +608,7 @@ function getRemainingStr(endStr: string) {
 
 .status-running .action-btn {
   background: #f0fdf4;
-  border-color: #bbf7d0;
+  border-color: #22c55e;
   color: #15803d;
 }
 

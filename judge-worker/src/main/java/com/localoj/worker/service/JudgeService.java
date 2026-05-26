@@ -38,6 +38,7 @@ public class JudgeService {
     private final OutputComparator outputComparator;
     private final TestCaseDataReader testCaseDataReader;
     private final SandboxSettingsProvider sandboxSettingsProvider;
+    private final WorkerSystemLogService systemLogService;
 
     public JudgeService(
             SubmissionMapper submissionMapper,
@@ -47,7 +48,8 @@ public class JudgeService {
             GoJudgeClient goJudgeClient,
             OutputComparator outputComparator,
             TestCaseDataReader testCaseDataReader,
-            SandboxSettingsProvider sandboxSettingsProvider
+            SandboxSettingsProvider sandboxSettingsProvider,
+            WorkerSystemLogService systemLogService
     ) {
         this.submissionMapper = submissionMapper;
         this.problemMapper = problemMapper;
@@ -57,11 +59,25 @@ public class JudgeService {
         this.outputComparator = outputComparator;
         this.testCaseDataReader = testCaseDataReader;
         this.sandboxSettingsProvider = sandboxSettingsProvider;
+        this.systemLogService = systemLogService;
     }
 
     public void judge(Long submissionId) {
         Submission submission = submissionMapper.selectById(submissionId);
-        if (submission == null || submission.getStatus() == SubmissionStatus.FINISHED) {
+        if (submission == null) {
+            systemLogService.warn("judge", "submission_missing", "判题任务对应提交不存在", submissionId, null, null, null);
+            return;
+        }
+        if (submission.getStatus() == SubmissionStatus.FINISHED) {
+            systemLogService.info(
+                    "judge",
+                    "submission_skipped",
+                    "提交已完成，跳过重复判题任务",
+                    submission.getId(),
+                    submission.getProblemId(),
+                    submission.getUserId(),
+                    "verdict=" + submission.getVerdict()
+            );
             return;
         }
         Problem problem = problemMapper.selectById(submission.getProblemId());
@@ -70,6 +86,15 @@ public class JudgeService {
                 .orderByAsc("sort_order")
                 .orderByAsc("id"));
         if (problem == null || testCases.isEmpty()) {
+            systemLogService.warn(
+                    "judge",
+                    "problem_or_cases_missing",
+                    "题目或测试点缺失，无法判题",
+                    submission.getId(),
+                    submission.getProblemId(),
+                    submission.getUserId(),
+                    "problemExists=" + (problem != null) + "; testCaseCount=" + testCases.size()
+            );
             finish(submission, Verdict.IE, 0, 0L, 0L, "Problem or test cases are missing");
             return;
         }
@@ -78,16 +103,35 @@ public class JudgeService {
         submission.setErrorMessage(null);
         submissionMapper.updateById(submission);
         caseResultMapper.delete(new QueryWrapper<SubmissionCaseResult>().eq("submission_id", submissionId));
+        systemLogService.info(
+                "judge",
+                "started",
+                "提交开始判题",
+                submission.getId(),
+                submission.getProblemId(),
+                submission.getUserId(),
+                "language=" + submission.getLanguage() + "; caseCount=" + testCases.size()
+        );
 
         try {
             JudgeOutcome outcome = judgeWithGoJudge(submission, problem, testCases);
             finish(submission, outcome.verdict(), outcome.score(), outcome.timeMs(), outcome.memoryKb(), outcome.message());
         } catch (CompileFailedException ex) {
+            systemLogService.warn("judge", "compile_failed", "编译失败", submission.getId(), submission.getProblemId(), submission.getUserId(), ex.getMessage());
             finish(submission, Verdict.CE, 0, 0L, 0L, ex.getMessage());
         } catch (Exception ex) {
             log.error("Internal judge error for submission {}", submissionId, ex);
-            finish(submission, Verdict.IE, 0, 0L, 0L, ex.getMessage());
+            systemLogService.error("judge", "internal_error", "判题内部异常", submission.getId(), submission.getProblemId(), submission.getUserId(), ex);
+            throw new RuntimeException("System-level judge error: " + ex.getMessage(), ex);
         }
+    }
+
+    public void failSubmissionPermanently(Long submissionId, String message, Throwable ex) {
+        Submission submission = submissionMapper.selectById(submissionId);
+        if (submission == null) {
+            return;
+        }
+        finish(submission, Verdict.IE, 0, 0L, 0L, message);
     }
 
     private JudgeOutcome judgeWithGoJudge(Submission submission, Problem problem, List<TestCase> testCases) {
@@ -288,6 +332,17 @@ public class JudgeService {
         submission.setErrorMessage(trimForStorage(message));
         submission.setJudgedAt(LocalDateTime.now());
         submissionMapper.updateById(submission);
+        String details = "score=" + submission.getScore()
+                + "; timeMs=" + timeMs
+                + "; memoryKb=" + memoryKb
+                + "; message=" + trimForStorage(message);
+        if (verdict == Verdict.AC) {
+            systemLogService.info("judge", "finished", "判题完成: " + verdict, submission.getId(), submission.getProblemId(), submission.getUserId(), details);
+        } else if (verdict == Verdict.IE) {
+            systemLogService.errorDetails("judge", "finished", "判题完成: " + verdict, submission.getId(), submission.getProblemId(), submission.getUserId(), details);
+        } else {
+            systemLogService.warn("judge", "finished", "判题完成: " + verdict, submission.getId(), submission.getProblemId(), submission.getUserId(), details);
+        }
     }
 
     private Map<String, Object> command(List<String> args) {

@@ -48,6 +48,28 @@
             />
           </el-form-item>
 
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="启用比赛封榜">
+                <el-switch
+                  v-model="enableFreeze"
+                  active-text="启用"
+                  inactive-text="禁用"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item v-if="enableFreeze" label="封榜时长 (比赛结束前多少分钟进行封榜)" required>
+                <el-input-number
+                  v-model="form.freezeDurationMinutes"
+                  :min="1"
+                  :max="2400"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
           <el-form-item label="比赛赛制" required>
             <el-radio-group v-model="form.type">
               <el-radio-button value="ACM">ACM 赛制</el-radio-button>
@@ -158,13 +180,16 @@ const contestId = computed(() => Number(route.params.id))
 const loading = ref(false)
 const saving = ref(false)
 
+const enableFreeze = ref(false)
+
 const form = ref({
   title: '',
   description: '',
   startTime: null as Date | null,
   endTime: null as Date | null,
   visible: true,
-  type: 'ACM' as 'ACM' | 'OI'
+  type: 'ACM' as 'ACM' | 'OI',
+  freezeDurationMinutes: 0
 })
 
 const dbProblems = ref<AdminProblemSummary[]>([])
@@ -175,7 +200,7 @@ const filteredDbProblems = computed(() => {
   const q = problemSearch.value.trim().toLowerCase()
   if (!q) return dbProblems.value
   return dbProblems.value.filter(
-    p => p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q)
+    p => String(p.id).includes(q) || p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q)
   )
 })
 
@@ -198,8 +223,10 @@ async function loadData() {
         startTime: new Date(detail.contest.startTime),
         endTime: new Date(detail.contest.endTime),
         visible: detail.contest.visible,
-        type: detail.contest.type || 'ACM'
+        type: detail.contest.type || 'ACM',
+        freezeDurationMinutes: detail.contest.freezeDurationMinutes || 0
       }
+      enableFreeze.value = (detail.contest.freezeDurationMinutes || 0) > 0
 
       // Map matching problem objects in sequence
       const problemMap = new Map<number, AdminProblemSummary>()
@@ -252,15 +279,13 @@ function moveDown(index: number) {
 }
 
 function getSequenceCode(index: number) {
-  StringBuilder: {
-    let sb = ''
-    let temp = index
-    while (temp >= 0) {
-      sb = String.fromCharCode(65 + (temp % 26)) + sb
-      temp = Math.floor(temp / 26) - 1
-    }
-    return sb
+  let code = ''
+  let temp = index
+  while (temp >= 0) {
+    code = String.fromCharCode(65 + (temp % 26)) + code
+    temp = Math.floor(temp / 26) - 1
   }
+  return code
 }
 
 async function save() {
@@ -280,6 +305,10 @@ async function save() {
     ElMessage.warning('请输入比赛说明或说明规则')
     return
   }
+  if (selectedProblems.value.length === 0) {
+    ElMessage.warning('请至少选择一道比赛题目')
+    return
+  }
 
   saving.value = true
   try {
@@ -290,6 +319,7 @@ async function save() {
       endTime: form.value.endTime.toISOString(),
       visible: form.value.visible,
       type: form.value.type,
+      freezeDurationMinutes: enableFreeze.value ? form.value.freezeDurationMinutes : 0,
       problemIds: selectedProblems.value.map(p => p.id)
     }
 

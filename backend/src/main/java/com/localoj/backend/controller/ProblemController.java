@@ -31,16 +31,33 @@ public class ProblemController {
     @GetMapping
     public ApiResponse<List<ProblemSummary>> list(
             @RequestParam(value = "q", required = false) String keyword,
-            @RequestParam(value = "status", required = false) String status
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "tags", required = false) List<String> tags
     ) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
-        List<Problem> problems = problemService.visibleProblems(keyword);
+        List<Problem> problems = problemService.visibleProblems(keyword, tags);
         Map<Long, String> statuses = problemService.solveStatuses(user, problems.stream().map(Problem::getId).toList());
         String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
         return ApiResponse.ok(problems.stream()
                 .map(problem -> ProblemSummary.from(problem, statuses.getOrDefault(problem.getId(), "UNATTEMPTED")))
                 .filter(summary -> normalizedStatus.isBlank() || normalizedStatus.equals(summary.solveStatus()))
                 .toList());
+    }
+
+    @GetMapping("/daily")
+    public ApiResponse<ProblemSummary> daily() {
+        List<Problem> problems = problemService.visibleProblems();
+        if (problems.isEmpty()) {
+            return ApiResponse.ok(null);
+        }
+        long epochDay = java.time.LocalDate.now().toEpochDay();
+        int index = (int) (epochDay % problems.size());
+        Problem dailyProblem = problems.get(index);
+
+        CurrentUser user = SecurityUtils.optionalCurrentUser();
+        String solveStatus = problemService.solveStatuses(user, List.of(dailyProblem.getId()))
+                .getOrDefault(dailyProblem.getId(), "UNATTEMPTED");
+        return ApiResponse.ok(ProblemSummary.from(dailyProblem, solveStatus));
     }
 
     @GetMapping("/{id}")

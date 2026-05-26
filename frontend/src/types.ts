@@ -3,6 +3,7 @@ export type Language = 'C' | 'CPP' | 'PYTHON' | 'JAVA'
 export type SubmissionStatus = 'PENDING' | 'RUNNING' | 'FINISHED'
 export type Verdict = 'AC' | 'WA' | 'TLE' | 'MLE' | 'OLE' | 'RE' | 'CE' | 'IE'
 export type ProblemStatus = 'UNATTEMPTED' | 'ATTEMPTED' | 'ACCEPTED'
+export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR'
 
 export interface ApiEnvelope<T> {
   data: T
@@ -225,6 +226,33 @@ export interface AdminProblemDetail {
   testCases: TestCase[]
 }
 
+export interface ProblemPackageCasePreview {
+  name: string
+  inputFile: string
+  outputFile: string
+  inputSize: number
+  outputSize: number
+  score: number
+  sample: boolean
+}
+
+export interface ProblemPackagePreview {
+  filename: string
+  configFile: string
+  statementFile: string
+  statementChars: number
+  title: string
+  slug: string
+  slugGenerated: boolean
+  difficulty: string
+  tags?: string
+  timeLimitMs: number
+  memoryLimitKb: number
+  visible: boolean
+  cases: ProblemPackageCasePreview[]
+  warnings: string[]
+}
+
 export interface Contest {
   id: number
   title: string
@@ -233,8 +261,16 @@ export interface Contest {
   endTime: string
   visible: boolean
   type: 'ACM' | 'OI'
+  freezeDurationMinutes?: number
   createdAt: string
   updatedAt: string
+}
+
+export interface AdminContestSummary extends Contest {
+  status: 'UPCOMING' | 'RUNNING' | 'FINISHED'
+  problemCount: number
+  registrationCount: number
+  submissionCount: number
 }
 
 export interface ContestProblemDetail {
@@ -300,4 +336,37 @@ export interface ProblemSolutionDetail {
   content: string
   createdAt: string
   updatedAt: string
+}
+
+export interface SystemLog {
+  id: number
+  level: SystemLogLevel
+  service: string
+  module: string
+  event: string
+  message: string
+  submissionId?: number
+  problemId?: number
+  userId?: number
+  details?: string
+  createdAt: string
+}
+
+export interface SubmissionDailyStats {
+  totalCount: number
+  acCount: number
+}
+
+export interface DifficultyDistribution {
+  easySolved: number
+  easyTotal: number
+  mediumSolved: number
+  mediumTotal: number
+  hardSolved: number
+  hardTotal: number
+}
+
+export interface UserStats {
+  heatmap: Record<string, SubmissionDailyStats>
+  difficultyDistribution: DifficultyDistribution
 }

@@ -85,9 +85,11 @@
                     v-for="tag in selectedTags"
                     :key="tag"
                     closable
+                    :color="getTagColor(tag) + '20'"
+                    :style="{ borderColor: getTagColor(tag), color: getTagColor(tag), marginRight: '6px', marginBottom: '4px' }"
+                    class="premium-tag"
                     effect="plain"
                     @close="removeTag(tag)"
-                    style="margin-right: 6px; margin-bottom: 4px;"
                   >{{ tag }}</el-tag>
                   <el-input
                     v-model="tagInput"
@@ -207,6 +209,7 @@ import {
   importTestCaseFiles,
   updateProblem
 } from '../api/http'
+import { getTagColor } from '../utils/tag'
 import type { CreateProblemPayload } from '../api/http'
 import type { AdminProblemDetail } from '../types'
 
@@ -355,9 +358,17 @@ async function save() {
       ElMessage.success('保存修改成功！')
       router.push(`/problems/${problemId.value}`)
     } else {
-      const detail = await createProblem(buildPayload())
-      ElMessage.success('创建题目成功！')
-      router.push(`/problems/${detail.problem.id}`)
+      const autolinkTrainingId = route.query.autolinkTrainingId
+        ? Number(route.query.autolinkTrainingId)
+        : undefined
+      const detail = await createProblem(buildPayload(), autolinkTrainingId)
+      if (autolinkTrainingId) {
+        ElMessage.success('创建题目成功！并已自动加入题单。')
+        router.push(`/admin/training/${autolinkTrainingId}`)
+      } else {
+        ElMessage.success('创建题目成功！')
+        router.push(`/problems/${detail.problem.id}`)
+      }
     }
   } catch (error) {
     // Handled by request interceptor / UI alert
@@ -580,5 +591,13 @@ function removeTag(tag: string) {
   gap: 4px;
   width: 100%;
   padding: 4px 0;
+}
+
+.premium-tag {
+  font-weight: 500;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.5rem;
+  background-color: transparent !important;
 }
 </style>

@@ -10,10 +10,20 @@
                 <h1>{{ problem.title }}</h1>
                 <p>{{ problem.slug }} · {{ problem.timeLimitMs }} ms · {{ Math.round(problem.memoryLimitKb / 1024) }} MB</p>
                 <div v-if="problemTags.length > 0" class="tag-list" style="margin-top: 8px;">
-                  <el-tag v-for="tag in problemTags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+                  <el-tag
+                    v-for="tag in problemTags"
+                    :key="tag"
+                    size="small"
+                    :color="getTagColor(tag) + '20'"
+                    :style="{ borderColor: getTagColor(tag), color: getTagColor(tag) }"
+                    class="premium-tag"
+                    effect="plain"
+                  >
+                    {{ tag }}
+                  </el-tag>
                 </div>
               </div>
-              <el-tag>{{ problem.difficulty }}</el-tag>
+              <span :class="'difficulty-badge ' + (problem.difficulty || 'Easy').toLowerCase()">{{ problem.difficulty }}</span>
             </div>
 
             <section class="statement-body" :style="{ fontSize: readerFontSize + 'px', fontFamily: readerFontFamily }">
@@ -311,7 +321,7 @@
     </section>
 
     <!-- Submission Details Drawer -->
-    <SubmissionDetailDrawer v-model="drawerVisible" :detail="selectedSubmission" />
+    <SubmissionDetailDrawer v-model="drawerVisible" :detail="selectedSubmission" :current-code="sourceCode" />
   </div>
 </template>
 
@@ -336,6 +346,7 @@ import {
   deleteProblemSolution
 } from '../api/http'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
+import { getTagColor } from '../utils/tag'
 import { useAuthStore } from '../stores/auth'
 import type { Language, ProblemDetail, SelfTestResult, SubmissionSummary, SubmissionDetail, ProblemSolutionSummary, ProblemSolutionDetail } from '../types'
 
@@ -508,16 +519,22 @@ watch(
       (sub) => sub.status === 'PENDING' || sub.status === 'RUNNING'
     )
     if (hasRunning && !timer.value) {
-      timer.value = window.setInterval(loadSubmissions, 3000)
+      timer.value = window.setInterval(() => loadSubmissions(true), 3000)
     } else if (!hasRunning && timer.value) {
       window.clearInterval(timer.value)
       timer.value = undefined
     }
 
     // Automatically reload problem if a judge has finished to reactively update solved lock status
-    const hadFinished = oldSubmissions?.some(sub => sub.status === 'FINISHED') ?? false
-    const hasFinished = newSubmissions.some(sub => sub.status === 'FINISHED')
-    if (hasFinished && !hadFinished) {
+    const runningIds = new Set(
+      (oldSubmissions || [])
+        .filter(sub => sub.status === 'PENDING' || sub.status === 'RUNNING')
+        .map(sub => sub.id)
+    )
+    const justFinished = newSubmissions.some(
+      sub => runningIds.has(sub.id) && sub.status === 'FINISHED'
+    )
+    if (justFinished) {
       await initProblem()
       if (activeLeftTab.value === 'solutions') {
         loadSolutions()
@@ -527,8 +544,10 @@ watch(
   { deep: true }
 )
 
-async function loadSubmissions() {
-  submissionsLoading.value = true
+async function loadSubmissions(isSilent = false) {
+  if (!isSilent) {
+    submissionsLoading.value = true
+  }
   try {
     const allSubmissions = await fetchSubmissions()
     const currentUserId = authStore.user?.id
@@ -543,7 +562,9 @@ async function loadSubmissions() {
   } catch (error) {
     console.error('Failed to load submission history', error)
   } finally {
-    submissionsLoading.value = false
+    if (!isSilent) {
+      submissionsLoading.value = false
+    }
   }
 }
 
@@ -647,6 +668,13 @@ function templateFor(value: Language) {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+@media (min-width: 1041px) {
+  .statement-tabs :deep(.el-tab-pane) {
+    overflow-y: auto;
+    padding-right: 8px;
+  }
 }
 
 /* Solutions Tab styles */
@@ -865,4 +893,13 @@ function templateFor(value: Language) {
   font-size: 14px;
   line-height: 1.7;
 }
+
+.premium-tag {
+  font-weight: 500;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.5rem;
+  background-color: transparent !important;
+}
 </style>
+

@@ -10,7 +10,13 @@
 
     <section class="panel table-panel">
       <el-table v-loading="loading" :data="rows" row-key="userId">
-        <el-table-column prop="rank" label="#" width="80" />
+        <el-table-column label="#" width="80">
+          <template #default="{ $index }">
+            <div class="rank-number-box" :class="$index < 3 ? 'rank-pos-' + ($index + 1) : ''">
+              <span class="rank-num">{{ $index + 1 }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="用户" min-width="220">
           <template #default="{ row }">
             <div class="user-cell">
@@ -61,3 +67,47 @@ function userFallback(row: LeaderboardRow) {
   return (row.displayName || row.username || 'U').slice(0, 1).toUpperCase()
 }
 </script>
+
+<style scoped>
+.rank-number-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: var(--font-mono), monospace;
+}
+
+.rank-pos-1 {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.rank-pos-2 {
+  background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(148, 163, 184, 0.3);
+}
+
+.rank-pos-3 {
+  background: linear-gradient(135deg, #fdba74, #f97316);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
+}
+
+.rank-pos-1 .rank-num,
+.rank-pos-2 .rank-num,
+.rank-pos-3 .rank-num {
+  color: #fff;
+}
+
+.rank-num {
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+</style>

@@ -13,6 +13,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -38,9 +39,9 @@ public class AdminContestController {
     }
 
     @GetMapping
-    public ApiResponse<List<Contest>> list() {
-        CurrentUser user = SecurityUtils.currentUser();
-        return ApiResponse.ok(contestService.listContests(user));
+    public ApiResponse<List<ContestService.AdminContestSummary>> list() {
+        SecurityUtils.currentUser();
+        return ApiResponse.ok(contestService.listAdminContestSummaries());
     }
 
     @PostMapping
@@ -67,6 +68,14 @@ public class AdminContestController {
         return ApiResponse.ok(contestService.updateContest(id, request.toCommand()));
     }
 
+    @PatchMapping("/{id}/visibility")
+    public ApiResponse<Contest> updateVisibility(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody ContestVisibilityRequest request
+    ) {
+        return ApiResponse.ok(contestService.setContestVisibility(id, request.visible()));
+    }
+
     @DeleteMapping("/{id}")
     public ApiResponse<Object> delete(@PathVariable("id") Long id) {
         contestService.deleteContest(id);
@@ -76,6 +85,9 @@ public class AdminContestController {
     public record AdminContestDetail(Contest contest, List<Long> problemIds) {
     }
 
+    public record ContestVisibilityRequest(@NotNull Boolean visible) {
+    }
+
     public record ContestRequest(
             @NotBlank String title,
             String description,
@@ -83,6 +95,7 @@ public class AdminContestController {
             @NotNull LocalDateTime endTime,
             @NotNull Boolean visible,
             String type,
+            Integer freezeDurationMinutes,
             List<Long> problemIds
     ) {
         ContestService.ContestCommand toCommand() {
@@ -93,6 +106,7 @@ public class AdminContestController {
                     endTime,
                     visible,
                     type != null ? type : "ACM",
+                    freezeDurationMinutes != null ? freezeDurationMinutes : 0,
                     problemIds
             );
         }

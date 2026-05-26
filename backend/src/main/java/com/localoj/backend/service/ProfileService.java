@@ -4,7 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.localoj.backend.security.CurrentUser;
 import com.localoj.common.mapper.UserMapper;
+import com.localoj.common.mapper.ProblemMapper;
+import com.localoj.common.mapper.SubmissionMapper;
 import com.localoj.common.model.User;
+import com.localoj.common.model.Problem;
+import com.localoj.common.model.Submission;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,7 +26,11 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.List;
+import java.util.HashMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ProfileService {
@@ -37,17 +45,23 @@ public class ProfileService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final EmailVerificationService emailVerificationService;
+    private final ProblemMapper problemMapper;
+    private final SubmissionMapper submissionMapper;
     private final Path avatarRoot;
 
     public ProfileService(
             UserMapper userMapper,
             PasswordEncoder passwordEncoder,
             EmailVerificationService emailVerificationService,
+            ProblemMapper problemMapper,
+            SubmissionMapper submissionMapper,
             @Value("${app.data-root:/data}") String dataRoot
     ) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.emailVerificationService = emailVerificationService;
+        this.problemMapper = problemMapper;
+        this.submissionMapper = submissionMapper;
         this.avatarRoot = Paths.get(dataRoot).toAbsolutePath().normalize().resolve("avatars").normalize();
     }
 
@@ -262,5 +276,95 @@ public class ProfileService {
     }
 
     public record AvatarFile(byte[] bytes, String contentType) {
+    }
+
+    public record UserStatsView(
+            Map<String, SubmissionDailyStats> heatmap,
+            DifficultyDistribution difficultyDistribution
+    ) {}
+
+    public record SubmissionDailyStats(
+            int totalCount,
+            int acCount
+    ) {}
+
+    public record DifficultyDistribution(
+            int easySolved,
+            int easyTotal,
+            int mediumSolved,
+            int mediumTotal,
+            int hardSolved,
+            int hardTotal
+    ) {}
+
+    public UserStatsView getUserStats(CurrentUser currentUser) {
+        Long userId = currentUser.id();
+
+        // 1. Get all visible problems to count totals by difficulty
+        List<Problem> visibleProblems = problemMapper.selectList(new QueryWrapper<Problem>().eq("visible", true));
+        int easyTotal = 0;
+        int mediumTotal = 0;
+        int hardTotal = 0;
+        Map<Long, String> problemIdToDifficulty = new HashMap<>();
+
+        for (Problem p : visibleProblems) {
+            String diff = p.getDifficulty() == null ? "Easy" : p.getDifficulty();
+            problemIdToDifficulty.put(p.getId(), diff);
+            if ("Easy".equalsIgnoreCase(diff)) {
+                easyTotal++;
+            } else if ("Medium".equalsIgnoreCase(diff)) {
+                mediumTotal++;
+            } else if ("Hard".equalsIgnoreCase(diff)) {
+                hardTotal++;
+            }
+        }
+
+        // 2. Count user's unique solved problems (verdict = AC)
+        List<Submission> acSubmissions = submissionMapper.selectList(new QueryWrapper<Submission>()
+                .eq("user_id", userId)
+                .eq("verdict", com.localoj.common.enums.Verdict.AC));
+        Set<Long> solvedProblemIds = acSubmissions.stream()
+                .map(Submission::getProblemId)
+                .collect(Collectors.toSet());
+
+        int easySolved = 0;
+        int mediumSolved = 0;
+        int hardSolved = 0;
+        for (Long pid : solvedProblemIds) {
+            String diff = problemIdToDifficulty.get(pid);
+            if (diff != null) {
+                if ("Easy".equalsIgnoreCase(diff)) {
+                    easySolved++;
+                } else if ("Medium".equalsIgnoreCase(diff)) {
+                    mediumSolved++;
+                } else if ("Hard".equalsIgnoreCase(diff)) {
+                    hardSolved++;
+                }
+            }
+        }
+
+        DifficultyDistribution difficultyDistribution = new DifficultyDistribution(
+                easySolved, easyTotal,
+                mediumSolved, mediumTotal,
+                hardSolved, hardTotal
+        );
+
+        // 3. Get submissions in the last 365 days for the heatmap
+        LocalDateTime oneYearAgo = LocalDateTime.now().minusYears(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        List<Submission> recentSubmissions = submissionMapper.selectList(new QueryWrapper<Submission>()
+                .eq("user_id", userId)
+                .ge("created_at", oneYearAgo));
+
+        Map<String, SubmissionDailyStats> heatmap = new HashMap<>();
+        for (Submission s : recentSubmissions) {
+            if (s.getCreatedAt() == null) continue;
+            String dateStr = s.getCreatedAt().toLocalDate().toString(); // "yyyy-MM-dd"
+            SubmissionDailyStats stats = heatmap.getOrDefault(dateStr, new SubmissionDailyStats(0, 0));
+            int total = stats.totalCount() + 1;
+            int ac = stats.acCount() + (s.getVerdict() == com.localoj.common.enums.Verdict.AC ? 1 : 0);
+            heatmap.put(dateStr, new SubmissionDailyStats(total, ac));
+        }
+
+        return new UserStatsView(heatmap, difficultyDistribution);
     }
 }

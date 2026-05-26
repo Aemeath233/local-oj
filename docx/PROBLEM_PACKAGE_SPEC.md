@@ -60,6 +60,26 @@ sample-1.in + sample-1.out
 
 The importer rejects packages with no valid paired cases.
 
+## Admin Import Workflow
+
+The admin problem list uses a two-step import flow:
+
+1. Drag or select a `.zip` file in the import dialog.
+2. Click "预检题目包" to parse metadata, statement, paired cases, scores, samples, and warnings without creating a problem.
+3. Confirm the preview and click "确认导入" to create the problem and materialize test data.
+
+Preflight uses the same backend parser as the actual import, so validation errors should be treated as real import blockers. Common blocking errors:
+
+- missing metadata file;
+- missing statement Markdown;
+- no same-basename `.in` + `.out`/`.ans` test pair;
+- duplicate test file names;
+- one case basename has multiple input or output files;
+- `samples` or `scores` references a missing case name;
+- explicit `scores` total exceeds 100.
+
+Unpaired test data files are ignored and reported as warnings in preview.
+
 ## Metadata Format
 
 The parser intentionally supports a simple key-value YAML-like format. Do not use nested YAML objects. Arrays such as `[基础, 输入输出]` are treated as comma-separated text.
@@ -214,5 +234,6 @@ cases/2.out  -> 42
 - A single file inside the package is limited to 64 MB.
 - Paths containing `..` or Windows drive prefixes are rejected.
 - Unrelated files are ignored unless they are accepted config, statement, or test data files.
+- The preview endpoint does not create database rows or materialize test data.
 - Test data is stored under `/data/problems/{problemId}/cases/` after import.
 - Submitted programs never receive raw problem data directories directly; the worker reads test data and sends stdin to go-judge per case.

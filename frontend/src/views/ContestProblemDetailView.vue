@@ -7,7 +7,7 @@
         <span class="contest-title" v-if="problem">{{ problemCode }} - {{ problem.title }}</span>
       </div>
       <div class="header-right">
-        <el-tag v-if="problem">{{ problem.difficulty }}</el-tag>
+        <span v-if="problem" :class="'difficulty-badge ' + (problem.difficulty || 'Easy').toLowerCase()">{{ problem.difficulty }}</span>
         <span class="limits" v-if="problem">{{ problem.timeLimitMs }} ms / {{ Math.round(problem.memoryLimitKb / 1024) }} MB</span>
       </div>
     </div>
@@ -185,7 +185,7 @@
     </section>
 
     <!-- Submission Details Drawer -->
-    <SubmissionDetailDrawer v-model="drawerVisible" :detail="selectedSubmission" />
+    <SubmissionDetailDrawer v-model="drawerVisible" :detail="selectedSubmission" :current-code="sourceCode" />
   </div>
 </template>
 
@@ -301,13 +301,13 @@ async function initProblem() {
 
 onMounted(async () => {
   await initProblem()
-  // Auto-refresh submissions status every 5 seconds to track pending runs!
+  // Auto-refresh submissions status every 3 seconds to track pending runs!
   submissionsTimerId = window.setInterval(async () => {
     const hasPending = submissions.value.some(s => s.status === 'PENDING' || s.status === 'RUNNING')
     if (hasPending) {
-      await loadSubmissions()
+      await loadSubmissions(true)
     }
-  }, 5000)
+  }, 3000)
 })
 
 onUnmounted(() => {
@@ -320,16 +320,25 @@ watch(problemId, async () => {
   await initProblem()
 })
 
-async function loadSubmissions() {
-  submissionsLoading.value = true
+async function loadSubmissions(isSilent = false) {
+  if (!isSilent) {
+    submissionsLoading.value = true
+  }
   try {
     const list = await fetchContestSubmissions(contestId.value)
     // Filter specifically for this problem
     submissions.value = list.filter(s => s.problemId === problemId.value)
+
+    // Auto-update drawer if it's currently showing one of our submissions
+    if (drawerVisible.value && selectedSubmission.value) {
+      selectedSubmission.value = await fetchSubmission(selectedSubmission.value.submission.id)
+    }
   } catch (err) {
     console.error(err)
   } finally {
-    submissionsLoading.value = false
+    if (!isSilent) {
+      submissionsLoading.value = false
+    }
   }
 }
 
@@ -367,7 +376,7 @@ async function runCustomTest() {
   selfTestError.value = ''
   selfTestResult.value = null
   try {
-    selfTestResult.value = await runSelfTest(problemId.value, language.value, sourceCode.value, selfTestInput.value)
+    selfTestResult.value = await runSelfTest(problemId.value, language.value, sourceCode.value, selfTestInput.value, contestId.value)
   } catch (error: any) {
     selfTestError.value = error.response?.data?.message || '自测运行失败'
   } finally {
@@ -430,11 +439,17 @@ function templateFor(value: Language) {
 .problem-page-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 64px - 24px);
   gap: 12px;
   max-width: 100%;
   margin: 0;
   padding: 0;
+}
+@media (min-width: 1041px) {
+  .problem-page-container {
+    height: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+  }
 }
 .workspace-header {
   padding: 10px 16px;
@@ -471,6 +486,11 @@ function templateFor(value: Language) {
   flex-grow: 1;
   overflow: hidden;
   height: 0;
+}
+@media (min-width: 1041px) {
+  .problem-layout {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 .statement {
   overflow-y: auto;

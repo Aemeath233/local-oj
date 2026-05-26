@@ -67,6 +67,27 @@ public class ContestService {
         return contestMapper.selectList(query);
     }
 
+    public List<AdminContestSummary> listAdminContestSummaries() {
+        contestProblemVisibilityService.releaseEndedContestLocks();
+        return contestMapper.selectList(new QueryWrapper<Contest>().orderByDesc("id")).stream()
+                .map(contest -> new AdminContestSummary(
+                        contest.getId(),
+                        contest.getTitle(),
+                        contest.getDescription(),
+                        contest.getStartTime(),
+                        contest.getEndTime(),
+                        contest.getVisible(),
+                        contest.getType(),
+                        contest.getCreatedAt(),
+                        contest.getUpdatedAt(),
+                        contestStatus(contest),
+                        countContestProblems(contest.getId()),
+                        countRegistrations(contest.getId()),
+                        countContestSubmissions(contest.getId())
+                ))
+                .toList();
+    }
+
     public Contest requireContest(Long id, CurrentUser user) {
         contestProblemVisibilityService.releaseEndedContestLocks();
         Contest contest = contestMapper.selectById(id);
@@ -141,7 +162,9 @@ public class ContestService {
 
         // Get solve stats
         List<Submission> submissions = submissionMapper.selectList(new QueryWrapper<Submission>()
-                .eq("contest_id", contestId));
+                .eq("contest_id", contestId)
+                .ge("created_at", contest.getStartTime())
+                .le("created_at", contest.getEndTime()));
         Map<Long, List<Submission>> submissionsByProblem = submissions.stream()
                 .collect(Collectors.groupingBy(Submission::getProblemId));
 
@@ -213,7 +236,7 @@ public class ContestService {
         contest.setUpdatedAt(now);
         contestMapper.insert(contest);
         saveContestProblems(contest.getId(), command.problemIds());
-        contestProblemVisibilityService.hideForContest(contest.getId(), command.problemIds());
+        syncProblemVisibility(contest, command.problemIds());
         return contest;
     }
 
@@ -230,7 +253,20 @@ public class ContestService {
         contestProblemVisibilityService.releaseForContest(id);
         contestProblemMapper.delete(new QueryWrapper<ContestProblem>().eq("contest_id", id));
         saveContestProblems(id, command.problemIds());
-        contestProblemVisibilityService.hideForContest(id, command.problemIds());
+        syncProblemVisibility(contest, command.problemIds());
+        return contest;
+    }
+
+    @Transactional
+    public Contest setContestVisibility(Long id, boolean visible) {
+        Contest contest = contestMapper.selectById(id);
+        if (contest == null) {
+            throw new IllegalArgumentException("Contest not found");
+        }
+        contest.setVisible(visible);
+        contest.setUpdatedAt(LocalDateTime.now());
+        contestMapper.updateById(contest);
+        syncProblemVisibility(contest, contestProblemIds(id));
         return contest;
     }
 
@@ -247,6 +283,15 @@ public class ContestService {
         contest.setEndTime(command.endTime());
         contest.setVisible(command.visible());
         contest.setType(command.type() != null ? command.type() : "ACM");
+        contest.setFreezeDurationMinutes(command.freezeDurationMinutes() != null ? command.freezeDurationMinutes() : 0);
+    }
+
+    private void syncProblemVisibility(Contest contest, List<Long> problemIds) {
+        if (Boolean.TRUE.equals(contest.getVisible())) {
+            contestProblemVisibilityService.hideForContest(contest.getId(), problemIds);
+        } else {
+            contestProblemVisibilityService.releaseForContest(contest.getId());
+        }
     }
 
     private void saveContestProblems(Long contestId, List<Long> problemIds) {
@@ -258,11 +303,27 @@ public class ContestService {
     }
 
     public List<ContestStandingsRow> calculateStandings(Long contestId) {
+        return calculateStandings(contestId, null);
+    }
+
+    public List<ContestStandingsRow> calculateStandings(Long contestId, CurrentUser user) {
         Contest contest = contestMapper.selectById(contestId);
         if (contest == null) {
             throw new IllegalArgumentException("Contest not found");
         }
         LocalDateTime start = contest.getStartTime();
+        LocalDateTime end = contest.getEndTime();
+
+        // Determine if standings are frozen for the current user
+        LocalDateTime queryEnd = end;
+        if (contest.getFreezeDurationMinutes() != null && contest.getFreezeDurationMinutes() > 0) {
+            LocalDateTime freezeStart = end.minusMinutes(contest.getFreezeDurationMinutes());
+            LocalDateTime now = LocalDateTime.now();
+            boolean isAdmin = user != null && (user.role() == com.localoj.common.enums.Role.ADMIN || user.role() == com.localoj.common.enums.Role.SUPER_ADMIN);
+            if (now.isAfter(freezeStart) && now.isBefore(end) && !isAdmin) {
+                queryEnd = freezeStart;
+            }
+        }
 
         List<ContestRegistration> registrations = contestRegistrationMapper.selectList(new QueryWrapper<ContestRegistration>()
                 .eq("contest_id", contestId)
@@ -274,18 +335,27 @@ public class ContestService {
             return List.of();
         }
 
-        // Fetch all submissions for this contest
-        List<Submission> submissions = submissionMapper.selectList(new QueryWrapper<Submission>()
-                .eq("contest_id", contestId)
-                .in("user_id", userIds)
-                .orderByAsc("created_at")
-                .orderByAsc("id"));
-
         // Fetch all problems in this contest
         List<ContestProblem> cpList = contestProblemMapper.selectList(new QueryWrapper<ContestProblem>()
                 .eq("contest_id", contestId)
                 .orderByAsc("sort_order"));
         List<Long> contestProblemIds = cpList.stream().map(ContestProblem::getProblemId).toList();
+        Set<Long> contestProblemIdSet = new LinkedHashSet<>(contestProblemIds);
+
+        // Fetch all submissions for this contest. The Java-side filter is kept on purpose
+        // so the rule is still explicit in tests and resilient to old/manual data.
+        LocalDateTime finalQueryEnd = queryEnd;
+        List<Submission> submissions = submissionMapper.selectList(new QueryWrapper<Submission>()
+                .eq("contest_id", contestId)
+                .in("user_id", userIds)
+                .ge("created_at", start)
+                .le("created_at", queryEnd)
+                .orderByAsc("created_at")
+                .orderByAsc("id")).stream()
+                .filter(s -> s.getCreatedAt() != null)
+                .filter(s -> !s.getCreatedAt().isBefore(start) && !s.getCreatedAt().isAfter(finalQueryEnd))
+                .filter(s -> contestProblemIdSet.contains(s.getProblemId()))
+                .toList();
 
         // Map users
         List<User> users = userIds.isEmpty() ? List.of() : userMapper.selectBatchIds(userIds);
@@ -311,8 +381,8 @@ public class ContestService {
         boolean isOI = "OI".equals(contest.getType());
 
         for (Long userId : userIds) {
-            User user = userMap.get(userId);
-            if (user == null) continue;
+            User contestant = userMap.get(userId);
+            if (contestant == null) continue;
 
             List<Submission> userSubs = submissionsByUser.getOrDefault(userId, List.of());
 
@@ -346,10 +416,8 @@ public class ContestService {
                         if (sScore == 100) {
                             accepted = true;
                         }
-                        if (lastSubTime == null || s.getCreatedAt().isBefore(contest.getEndTime())) {
-                            if (lastSubTime == null || s.getCreatedAt().isAfter(lastSubTime)) {
-                                lastSubTime = s.getCreatedAt();
-                            }
+                        if (lastSubTime == null || s.getCreatedAt().isAfter(lastSubTime)) {
+                            lastSubTime = s.getCreatedAt();
                         }
                     }
                     if (problemScore > 0) {
@@ -390,9 +458,9 @@ public class ContestService {
             rows.add(new ContestStandingsRow(
                     0, // Rank to be populated later
                     userId,
-                    user.getUsername(),
-                    user.getDisplayName(),
-                    user.getAvatarUrl(),
+                    contestant.getUsername(),
+                    contestant.getDisplayName(),
+                    contestant.getAvatarUrl(),
                     acceptedCount,
                     totalPenaltyMinutes,
                     totalScore,
@@ -445,6 +513,95 @@ public class ContestService {
         return rows;
     }
 
+    public byte[] exportStandingsCsv(Long contestId, CurrentUser user) {
+        Contest contest = requireContest(contestId, user);
+        List<ContestStandingsRow> standings = calculateStandings(contestId, user);
+
+        // Fetch problems to map headers
+        List<ContestProblem> cpList = contestProblemMapper.selectList(new QueryWrapper<ContestProblem>()
+                .eq("contest_id", contestId)
+                .orderByAsc("sort_order"));
+
+        List<Long> contestProblemIds = cpList.stream().map(ContestProblem::getProblemId).toList();
+
+        // Fetch problem titles for header
+        Map<Long, String> problemTitleMap = new HashMap<>();
+        if (!contestProblemIds.isEmpty()) {
+            List<Problem> problems = problemMapper.selectBatchIds(contestProblemIds);
+            for (Problem p : problems) {
+                problemTitleMap.put(p.getId(), p.getTitle());
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        // Microsoft Excel UTF-8 BOM
+        sb.append("\uFEFF");
+
+        boolean isOI = "OI".equals(contest.getType());
+
+        // Header Row
+        sb.append("排名,用户名,昵称");
+        if (isOI) {
+            sb.append(",总分");
+        } else {
+            sb.append(",通过数,总罚时");
+        }
+        for (int i = 0; i < cpList.size(); i++) {
+            Long pid = cpList.get(i).getProblemId();
+            String code = getSequenceCode(i);
+            String title = problemTitleMap.getOrDefault(pid, "");
+            sb.append(",").append(escapeCsv(code + " (" + title + ")"));
+        }
+        sb.append("\n");
+
+        // Data Rows
+        for (ContestStandingsRow row : standings) {
+            sb.append(row.rank()).append(",")
+              .append(escapeCsv(row.username())).append(",")
+              .append(escapeCsv(row.displayName()));
+
+            if (isOI) {
+                sb.append(",").append(row.totalScore() != null ? row.totalScore() : 0);
+            } else {
+                sb.append(",").append(row.acceptedCount()).append(",")
+                  .append(row.totalPenaltyMinutes());
+            }
+
+            for (Long pid : contestProblemIds) {
+                ProblemStatusDetail detail = row.problemDetails().get(pid);
+                sb.append(",");
+                if (detail != null) {
+                    if (isOI) {
+                        sb.append(detail.score() != null ? detail.score() : 0);
+                    } else {
+                        if (detail.accepted()) {
+                            if (detail.failedAttempts() > 0) {
+                                sb.append(escapeCsv("+" + detail.failedAttempts() + " (" + detail.acElapsedMinutes() + ")"));
+                            } else {
+                                sb.append(escapeCsv("+ (" + detail.acElapsedMinutes() + ")"));
+                            }
+                        } else if (detail.failedAttempts() > 0) {
+                            sb.append(escapeCsv("-" + detail.failedAttempts()));
+                        }
+                    }
+                }
+            }
+            sb.append("\n");
+        }
+
+        return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private static String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+        if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
+
     private String getSequenceCode(int index) {
         StringBuilder sb = new StringBuilder();
         int temp = index;
@@ -468,6 +625,26 @@ public class ContestService {
         return contest != null && !contest.getEndTime().isAfter(LocalDateTime.now());
     }
 
+    private String contestStatus(Contest contest) {
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(contest.getStartTime())) {
+            return "UPCOMING";
+        }
+        if (contest.getEndTime().isAfter(now)) {
+            return "RUNNING";
+        }
+        return "FINISHED";
+    }
+
+    private List<Long> contestProblemIds(Long contestId) {
+        return contestProblemMapper.selectList(new QueryWrapper<ContestProblem>()
+                        .eq("contest_id", contestId)
+                        .orderByAsc("sort_order"))
+                .stream()
+                .map(ContestProblem::getProblemId)
+                .toList();
+    }
+
     private boolean isAdmin(CurrentUser user) {
         return user != null && (user.role() == Role.ADMIN || user.role() == Role.SUPER_ADMIN);
     }
@@ -483,6 +660,35 @@ public class ContestService {
         Long count = contestRegistrationMapper.selectCount(new QueryWrapper<ContestRegistration>()
                 .eq("contest_id", contestId));
         return count == null ? 0 : count;
+    }
+
+    private long countContestProblems(Long contestId) {
+        Long count = contestProblemMapper.selectCount(new QueryWrapper<ContestProblem>()
+                .eq("contest_id", contestId));
+        return count == null ? 0 : count;
+    }
+
+    private long countContestSubmissions(Long contestId) {
+        Long count = submissionMapper.selectCount(new QueryWrapper<Submission>()
+                .eq("contest_id", contestId));
+        return count == null ? 0 : count;
+    }
+
+    public record AdminContestSummary(
+            Long id,
+            String title,
+            String description,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            Boolean visible,
+            String type,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            String status,
+            long problemCount,
+            long registrationCount,
+            long submissionCount
+    ) {
     }
 
     public record ContestRegistrationStatus(
@@ -511,6 +717,7 @@ public class ContestService {
             LocalDateTime endTime,
             Boolean visible,
             String type,
+            Integer freezeDurationMinutes,
             List<Long> problemIds
     ) {
     }

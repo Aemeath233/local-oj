@@ -15,6 +15,7 @@ public class Contest {
     private LocalDateTime endTime;
     private Boolean visible;
     private String type;
+    private Integer freezeDurationMinutes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -88,5 +89,13 @@ public class Contest {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Integer getFreezeDurationMinutes() {
+        return freezeDurationMinutes;
+    }
+
+    public void setFreezeDurationMinutes(Integer freezeDurationMinutes) {
+        this.freezeDurationMinutes = freezeDurationMinutes;
     }
 }
