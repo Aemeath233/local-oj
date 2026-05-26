@@ -551,7 +551,11 @@ public class ProblemPackageImportService {
                 java.nio.charset.CharsetDecoder decoder = java.nio.charset.StandardCharsets.UTF_8.newDecoder();
                 decoder.onMalformedInput(java.nio.charset.CodingErrorAction.REPORT);
                 decoder.onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT);
-                return decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString();
+                String result = decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString();
+                if (result.contains("\uFFFD")) {
+                    throw new java.nio.charset.CharacterCodingException();
+                }
+                return result;
             } catch (java.nio.charset.CharacterCodingException e) {
                 try {
                     return new String(bytes, java.nio.charset.Charset.forName("GBK"));
