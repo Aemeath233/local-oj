@@ -41,7 +41,7 @@
         <el-slider
           v-model="zoom"
           :min="1.0"
-          :max="3.0"
+          :max="4.0"
           :step="0.01"
           :show-tooltip="false"
           class="zoom-slider"
@@ -130,11 +130,11 @@ function onImageLoaded() {
   const natH = imgRef.value.naturalHeight
   
   if (natW > natH) {
-    renderedHeight.value = containerSize
-    renderedWidth.value = Math.round((natW / natH) * containerSize)
+    renderedHeight.value = cropSize
+    renderedWidth.value = Math.round((natW / natH) * cropSize)
   } else {
-    renderedWidth.value = containerSize
-    renderedHeight.value = Math.round((natH / natW) * containerSize)
+    renderedWidth.value = cropSize
+    renderedHeight.value = Math.round((natH / natW) * cropSize)
   }
   
   translateX.value = 0
