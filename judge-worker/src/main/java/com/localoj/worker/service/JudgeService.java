@@ -175,7 +175,7 @@ public class JudgeService {
     private CompiledArtifact compileIfNeeded(Submission submission, SandboxSettingsProvider.Settings settings) {
         return switch (submission.getLanguage()) {
             case C -> compileNative(submission, settings, "main.c", "main", List.of("/usr/bin/gcc", "-O2", "-pipe", "main.c", "-o", "main"));
-            case CPP -> compileNative(submission, settings, "main.cpp", "main", List.of("/usr/bin/g++", "-std=c++17", "-O2", "-pipe", "main.cpp", "-o", "main"));
+            case CPP -> compileNative(submission, settings, "main.cpp", "main", List.of("/usr/bin/g++", "-std=c++20", "-O2", "-pipe", "main.cpp", "-o", "main"));
             case PYTHON -> compilePython(submission, settings);
             case JAVA -> compileJava(submission, settings);
         };
@@ -217,7 +217,7 @@ public class JudgeService {
     }
 
     private CompiledArtifact compileJava(Submission submission, SandboxSettingsProvider.Settings settings) {
-        Map<String, Object> cmd = command(List.of("/usr/bin/javac", "Main.java"));
+        Map<String, Object> cmd = command(List.of("/bin/bash", "-c", "/usr/bin/javac Main.java && /usr/bin/jar cf Main.jar *.class"));
         cmd.put("files", standardFiles("", settings.outputLimitBytes()));
         cmd.put("cpuLimit", settings.compileCpuLimitNs());
         cmd.put("clockLimit", settings.compileClockLimitNs());
@@ -225,15 +225,15 @@ public class JudgeService {
         cmd.put("procLimit", settings.maxProcessCount());
         cmd.put("copyIn", Map.of("Main.java", memoryFile(submission.getSourceCode())));
         cmd.put("copyOut", List.of("stdout", "stderr"));
-        cmd.put("copyOutCached", List.of("Main.class"));
+        cmd.put("copyOutCached", List.of("Main.jar"));
 
         GoJudgeResult result = singleResult(goJudgeClient.run(List.of(cmd)));
         ensureCompileAccepted(result);
-        String fileId = result.getFileIds() == null ? null : result.getFileIds().get("Main.class");
+        String fileId = result.getFileIds() == null ? null : result.getFileIds().get("Main.jar");
         if (fileId == null) {
-            throw new CompileFailedException("Compiler did not produce Main.class");
+            throw new CompileFailedException("Compiler did not produce Main.jar");
         }
-        return new CompiledArtifact(Language.JAVA, Map.of("Main.class", fileId), List.of(fileId));
+        return new CompiledArtifact(Language.JAVA, Map.of("Main.jar", fileId), List.of(fileId));
     }
 
     private CaseRun runCase(Submission submission, Problem problem, CompiledArtifact artifact, String stdin, SandboxSettingsProvider.Settings settings) {
@@ -269,10 +269,10 @@ public class JudgeService {
     }
 
     private Map<String, Object> javaRunCommand(CompiledArtifact artifact, String stdin, Problem problem, SandboxSettingsProvider.Settings settings) {
-        Map<String, Object> cmd = command(List.of("/usr/bin/java", "Main"));
+        Map<String, Object> cmd = command(List.of("/usr/bin/java", "-cp", "Main.jar", "Main"));
         cmd.put("files", standardFiles(stdin, settings.outputLimitBytes()));
         putRunLimits(cmd, problem, settings);
-        cmd.put("copyIn", Map.of("Main.class", preparedFile(artifact.fileIds().get("Main.class"))));
+        cmd.put("copyIn", Map.of("Main.jar", preparedFile(artifact.fileIds().get("Main.jar"))));
         cmd.put("copyOut", List.of("stdout", "stderr"));
         return cmd;
     }

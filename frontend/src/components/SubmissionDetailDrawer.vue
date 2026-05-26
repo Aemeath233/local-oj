@@ -67,18 +67,29 @@
             <span class="dot green"></span>
           </div>
           <span class="terminal-title">COMPILATION ERROR & DIAGNOSTICS</span>
-          <el-button
-            size="small"
-            type="primary"
-            plain
-            :icon="DocumentCopy"
-            @click="copyText(detail.submission.errorMessage || '', '错误日志复制成功')"
-          >
-            复制日志
-          </el-button>
+          <div class="terminal-actions" style="display: flex; gap: 8px; align-items: center;">
+            <el-button
+              v-if="hasLongError"
+              size="small"
+              type="info"
+              plain
+              @click="showAllError = !showAllError"
+            >
+              {{ showAllError ? '收起日志' : '展开全部' }}
+            </el-button>
+            <el-button
+              size="small"
+              type="primary"
+              plain
+              :icon="DocumentCopy"
+              @click="copyText(detail.submission.errorMessage || '', '错误日志复制成功')"
+            >
+              复制日志
+            </el-button>
+          </div>
         </div>
         <div class="terminal-body">
-          <pre class="terminal-pre">{{ detail.submission.errorMessage }}</pre>
+          <pre class="terminal-pre">{{ displayedError }}</pre>
         </div>
       </div>
 
@@ -144,7 +155,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Cpu, Clock, Odometer, Notebook, View, DocumentCopy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import VerdictTag from './VerdictTag.vue'
@@ -160,6 +171,31 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
+
+const showAllError = ref(false)
+
+const errorLines = computed(() => {
+  const msg = props.detail?.submission?.errorMessage
+  if (!msg) return []
+  return msg.split('\n')
+})
+
+const hasLongError = computed(() => {
+  return errorLines.value.length > 25
+})
+
+const displayedError = computed(() => {
+  const msg = props.detail?.submission?.errorMessage
+  if (!msg) return ''
+  if (showAllError.value || !hasLongError.value) {
+    return msg
+  }
+  return errorLines.value.slice(0, 25).join('\n') + `\n\n[... 已省略余下 ${errorLines.value.length - 25} 行，可点击上方“展开全部”或复制完整日志 ...]`
+})
+
+watch(() => props.detail?.submission?.id, () => {
+  showAllError.value = false
+})
 
 const drawerTitle = computed(() => {
   if (!props.detail) return '提交详情'
@@ -446,12 +482,32 @@ async function copyText(text: string, successMsg = '复制成功') {
 
 .terminal-body {
   padding: 16px;
-  max-height: 240px;
+  max-height: 280px;
   overflow-y: auto;
+}
+
+/* Custom dark scrollbar for the hacker terminal */
+.terminal-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.terminal-body::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+.terminal-body::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+.terminal-body::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 .terminal-pre {
   color: #f1f5f9;
+  background: transparent !important;
+  border: none !important;
+  min-height: auto !important;
+  padding: 0 !important;
   font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   font-size: 13px;
   line-height: 1.5;

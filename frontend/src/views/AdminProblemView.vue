@@ -103,8 +103,8 @@
               <el-form-item label="时间限制 ms">
                 <el-input-number v-model="form.timeLimitMs" :min="100" :step="100" />
               </el-form-item>
-              <el-form-item label="内存限制 KB">
-                <el-input-number v-model="form.memoryLimitKb" :min="16384" :step="16384" />
+              <el-form-item label="内存限制 MB">
+                <el-input-number v-model="form.memoryLimitMb" :min="16" :step="16" />
               </el-form-item>
             </div>
             <el-form-item label="是否可见" style="margin-top: 14px;">
@@ -230,7 +230,7 @@ interface ProblemForm {
   title: string
   description: string
   timeLimitMs: number
-  memoryLimitKb: number
+  memoryLimitMb: number
   difficulty: string
   visible: boolean
   testCases: TestCaseForm[]
@@ -273,7 +273,7 @@ const form = reactive<ProblemForm>({
   title: '',
   description: '',
   timeLimitMs: 1000,
-  memoryLimitKb: 262144,
+  memoryLimitMb: 256,
   difficulty: 'Easy',
   visible: true,
   testCases: []
@@ -287,7 +287,7 @@ onMounted(async () => {
       form.title = detail.problem.title
       form.description = buildEditableStatement(detail)
       form.timeLimitMs = detail.problem.timeLimitMs
-      form.memoryLimitKb = detail.problem.memoryLimitKb
+      form.memoryLimitMb = Math.round(detail.problem.memoryLimitKb / 1024)
       form.difficulty = detail.problem.difficulty
       selectedTags.value = splitTags(detail.problem.tags)
       form.visible = detail.problem.visible
@@ -385,7 +385,7 @@ function buildPayload(): CreateProblemPayload {
     title: form.title,
     description: form.description,
     timeLimitMs: form.timeLimitMs,
-    memoryLimitKb: form.memoryLimitKb,
+    memoryLimitKb: form.memoryLimitMb * 1024,
     difficulty: form.difficulty,
     tags: selectedTags.value.join(', '),
     visible: form.visible,

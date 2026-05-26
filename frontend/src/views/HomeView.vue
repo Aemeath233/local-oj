@@ -1,11 +1,20 @@
 <template>
   <section class="page-stack">
-    <!-- Hero Banner -->
+    <!-- Hero Banner (Personalized Welcome Dashboard) -->
     <div class="home-hero">
       <div class="hero-content">
-        <span class="hero-tag">INTERNAL WORKSPACE</span>
-        <h1>Local Judge <span class="hero-version">v1.1</span></h1>
-        <p>今日练习、题库入口和排行榜概览</p>
+        <span class="hero-tag">PERSONAL WORKSPACE</span>
+        <h1>欢迎回来，{{ auth.user?.displayName || auth.user?.username || '开发者' }}！</h1>
+        <p class="hero-streak-text">
+          🔥 今天是你连续刷题的第 <strong>{{ streakDays }}</strong> 天，保持专注，不断超越！
+        </p>
+        <div class="hero-stats-row">
+          <span class="hero-stat-item">今日已写：<strong>{{ todayAcCount }}</strong> 题</span>
+          <span class="hero-stat-divider">|</span>
+          <span class="hero-stat-item">总共通过：<strong>{{ solvedTotal }}</strong> 题</span>
+          <span class="hero-stat-divider">|</span>
+          <span class="hero-stat-item">当前全站排名：<strong>{{ userRank }}</strong></span>
+        </div>
       </div>
       <RouterLink to="/problems">
         <el-button type="primary" size="large" class="hero-btn" :icon="ArrowRight">
@@ -14,237 +23,204 @@
       </RouterLink>
     </div>
 
-    <!-- Main Grid: Two-column layout -->
+    <!-- Main Grid: Four direct panel panels -->
     <div class="home-grid">
-      <!-- Left Column -->
-      <div class="home-left-col">
-        <!-- Daily Problem Card -->
-        <section class="panel daily-panel">
-          <div class="panel-header">
-            <div class="header-icon-box daily-icon">
-              <el-icon><Calendar /></el-icon>
+      <!-- Daily Problem Card -->
+      <section class="panel daily-panel">
+        <div class="panel-header">
+          <div class="header-icon-box daily-icon">
+            <el-icon><Calendar /></el-icon>
+          </div>
+          <div>
+            <h2>每日一题</h2>
+            <p class="muted">{{ todayText }}</p>
+          </div>
+        </div>
+        
+        <div v-if="dailyProblem" class="daily-problem-card">
+          <div class="card-top">
+            <span class="difficulty-badge" :class="dailyProblem.difficulty.toLowerCase()">
+              {{ dailyProblem.difficulty }}
+            </span>
+            <span class="problem-id">#{{ dailyProblem.id }}</span>
+          </div>
+          
+          <h3 class="problem-title">{{ dailyProblem.title }}</h3>
+          <p class="problem-slug">{{ dailyProblem.slug }}</p>
+          
+          <div class="tag-list">
+            <span
+              v-for="tag in splitTags(dailyProblem.tags)"
+              :key="tag"
+              class="custom-tag-pill"
+              :style="{ '--tag-color': getTagColor(tag) }"
+            >
+              {{ tag }}
+            </span>
+          </div>
+
+          <!-- Daily Stats Block -->
+          <div class="daily-stats">
+            <div class="daily-stat-item">
+              <span class="ds-label">全站通过率</span>
+              <strong class="ds-value">{{ calculateAcRate(dailyProblem) }}</strong>
             </div>
-            <div>
-              <h2>每日一题</h2>
-              <p class="muted">{{ todayText }}</p>
+            <div class="daily-stat-item">
+              <span class="ds-label">总提交数</span>
+              <strong class="ds-value">{{ dailyProblem.submitCount || 0 }} 次</strong>
+            </div>
+            <div class="daily-stat-item">
+              <span class="ds-label">通过人数</span>
+              <strong class="ds-value">{{ dailyProblem.acceptedCount || 0 }} 人</strong>
             </div>
           </div>
           
-          <div v-if="dailyProblem" class="daily-problem-card">
-            <div class="card-top">
-              <span class="difficulty-badge" :class="dailyProblem.difficulty.toLowerCase()">
-                {{ dailyProblem.difficulty }}
-              </span>
-              <span class="problem-id">#{{ dailyProblem.id }}</span>
+          <div class="card-footer">
+            <RouterLink :to="`/problems/${dailyProblem.id}`">
+              <el-button type="primary" size="large" class="start-btn" :icon="ArrowRight">
+                开始挑战
+              </el-button>
+            </RouterLink>
+          </div>
+        </div>
+        <div v-else class="empty-state">
+          <el-empty description="今日暂无可见题目" :image-size="60" />
+        </div>
+      </section>
+
+      <!-- Leaderboard Card -->
+      <section class="panel ranking-panel">
+        <div class="panel-header">
+          <div class="header-icon-box rank-icon">
+            <el-icon><Trophy /></el-icon>
+          </div>
+          <div>
+            <h2>排行榜</h2>
+            <p class="muted">Top 5 最佳榜单</p>
+          </div>
+          <RouterLink to="/leaderboard" class="more-link">
+            <el-button size="small" circle :icon="ArrowRight" />
+          </RouterLink>
+        </div>
+
+        <div class="leaderboard-list">
+          <div v-if="leaderboard.length === 0" class="empty-state">
+            <el-empty description="暂无排行数据" :image-size="60" />
+          </div>
+          <div
+            v-for="(row, index) in leaderboard"
+            :key="row.userId"
+            class="leaderboard-item"
+            :class="'rank-' + (index + 1)"
+          >
+            <div class="item-left">
+              <div class="rank-number-box" :class="'rank-pos-' + (index + 1)">
+                <span class="rank-num">{{ index + 1 }}</span>
+              </div>
+              <div class="user-info">
+                <span class="user-name">{{ row.displayName || row.username }}</span>
+                <span v-if="index === 0" class="top-tag">榜首</span>
+              </div>
             </div>
             
-            <h3 class="problem-title">{{ dailyProblem.title }}</h3>
-            <p class="problem-slug">{{ dailyProblem.slug }}</p>
-            
-            <div class="tag-list">
-              <span
-                v-for="tag in splitTags(dailyProblem.tags)"
-                :key="tag"
-                class="custom-tag-pill"
-                :style="{ '--tag-color': getTagColor(tag) }"
-              >
-                {{ tag }}
-              </span>
+            <div class="item-right">
+              <div class="stat-box">
+                <span class="stat-value">{{ row.acceptedCount }}</span>
+                <span class="stat-label">AC</span>
+              </div>
+              <div class="stat-box">
+                <span class="stat-value">{{ row.submissionCount }}</span>
+                <span class="stat-label">提交</span>
+              </div>
             </div>
-            
-            <div class="card-footer">
-              <RouterLink :to="`/problems/${dailyProblem.id}`">
-                <el-button type="primary" size="large" class="start-btn" :icon="ArrowRight">
-                  开始挑战
-                </el-button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Left Column: Recent Submissions -->
+      <section class="panel submissions-panel">
+        <div class="panel-header">
+          <div class="header-icon-box sub-icon">
+            <el-icon><Message /></el-icon>
+          </div>
+          <div>
+            <h2>全站提交动态</h2>
+            <p class="muted">最近 5 次提交结果实时展示</p>
+          </div>
+          <RouterLink to="/submissions" class="more-link">
+            <el-button size="small" circle :icon="ArrowRight" />
+          </RouterLink>
+        </div>
+
+        <div class="home-sub-list">
+          <div v-if="recentSubmissions.length === 0" class="empty-state">
+            <el-empty description="暂无公共提交记录" :image-size="50" />
+          </div>
+          <div
+            v-for="sub in recentSubmissions.slice(0, 5)"
+            :key="sub.id"
+            class="home-sub-row"
+          >
+            <div class="sub-row-user">
+              <el-avatar :size="22" :src="sub.avatarUrl">
+                {{ (sub.displayName || sub.username || 'U').slice(0, 1).toUpperCase() }}
+              </el-avatar>
+              <span class="sub-user-nick">{{ sub.displayName || sub.username }}</span>
+            </div>
+            <div class="sub-row-problem">
+              <RouterLink :to="`/problems/${sub.problemId}`" class="sub-prob-link">
+                {{ sub.problemTitle || `题目 #${sub.problemId}` }}
               </RouterLink>
             </div>
+            <div class="sub-row-lang">
+              <span class="sub-lang-text">{{ sub.language }}</span>
+            </div>
+            <div class="sub-row-verdict">
+              <VerdictTag :status="sub.status" :verdict="sub.verdict" />
+            </div>
+            <div class="sub-row-time">
+              <span class="sub-time-text">{{ formatRelativeTime(sub.createdAt) }}</span>
+            </div>
           </div>
-          <div v-else class="empty-state">
-            <el-empty description="今日暂无可见题目" :image-size="60" />
-          </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- Quick Navigation -->
-        <section class="panel quick-nav-panel">
-          <div class="panel-header">
-            <div class="header-icon-box nav-icon">
-              <el-icon><Grid /></el-icon>
-            </div>
-            <div>
-              <h2>快捷导航</h2>
-              <p class="muted">常用功能入口</p>
-            </div>
+      <!-- Recent Contests Panel -->
+      <section class="panel contests-panel">
+        <div class="panel-header">
+          <div class="header-icon-box contest-icon">
+            <el-icon><Timer /></el-icon>
           </div>
-          <div class="quick-nav-links">
-            <RouterLink to="/problems" class="quick-link-item">
-              <div class="link-left">
-                <strong>📝 公共题库</strong>
-                <span>浏览及筛选所有公开评测题目</span>
-              </div>
-              <el-icon><ArrowRight /></el-icon>
-            </RouterLink>
-            <RouterLink to="/training" class="quick-link-item">
-              <div class="link-left">
-                <strong>🎯 专项练习</strong>
-                <span>分主题学习，挑战通关题单</span>
-              </div>
-              <el-icon><ArrowRight /></el-icon>
-            </RouterLink>
-            <RouterLink to="/leaderboard" class="quick-link-item">
-              <div class="link-left">
-                <strong>🏆 排行榜</strong>
-                <span>查看当前全站 AC 排名与提交统计</span>
-              </div>
-              <el-icon><ArrowRight /></el-icon>
-            </RouterLink>
-            <RouterLink to="/contests" class="quick-link-item">
-              <div class="link-left">
-                <strong>🏁 比赛大厅</strong>
-                <span>参与限时模拟或官方选拔赛</span>
-              </div>
-              <el-icon><ArrowRight /></el-icon>
-            </RouterLink>
+          <div>
+            <h2>近期比赛</h2>
+            <p class="muted">最新可见的三场比赛</p>
           </div>
-        </section>
-      </div>
+          <RouterLink to="/contests" class="more-link">
+            <el-button size="small" circle :icon="ArrowRight" />
+          </RouterLink>
+        </div>
 
-      <!-- Right Column -->
-      <div class="home-right-col">
-        <!-- Leaderboard Card -->
-        <section class="panel ranking-panel">
-          <div class="panel-header">
-            <div class="header-icon-box rank-icon">
-              <el-icon><Trophy /></el-icon>
-            </div>
-            <div>
-              <h2>排行榜</h2>
-              <p class="muted">Top 5 最佳榜单</p>
-            </div>
-            <RouterLink to="/leaderboard" class="more-link">
-              <el-button size="small" circle :icon="ArrowRight" />
-            </RouterLink>
+        <div class="home-contest-list">
+          <div v-if="contests.length === 0" class="empty-state">
+            <el-empty description="当前无可见比赛" :image-size="40" />
           </div>
-
-          <div class="leaderboard-list">
-            <div v-if="leaderboard.length === 0" class="empty-state">
-              <el-empty description="暂无排行数据" :image-size="60" />
+          <div
+            v-for="c in contests.slice(0, 3)"
+            :key="c.id"
+            class="home-contest-item"
+            @click="router.push(`/contests/${c.id}`)"
+          >
+            <div class="contest-item-left">
+              <span class="contest-type-badge">{{ c.type }}</span>
+              <span class="contest-title">{{ c.title }}</span>
             </div>
-            <div
-              v-for="(row, index) in leaderboard"
-              :key="row.userId"
-              class="leaderboard-item"
-              :class="'rank-' + (index + 1)"
-            >
-              <div class="item-left">
-                <div class="rank-number-box" :class="'rank-pos-' + (index + 1)">
-                  <span class="rank-num">{{ index + 1 }}</span>
-                </div>
-                <div class="user-info">
-                  <span class="user-name">{{ row.displayName || row.username }}</span>
-                  <span v-if="index === 0" class="top-tag">榜首</span>
-                </div>
-              </div>
-              
-              <div class="item-right">
-                <div class="stat-box">
-                  <span class="stat-value">{{ row.acceptedCount }}</span>
-                  <span class="stat-label">AC</span>
-                </div>
-                <div class="stat-box">
-                  <span class="stat-value">{{ row.submissionCount }}</span>
-                  <span class="stat-label">提交</span>
-                </div>
-              </div>
-            </div>
+            <span :class="['contest-status-pill', getContestStatusClass(c)]">
+              {{ getContestStatusText(c) }}
+            </span>
           </div>
-        </section>
-
-        <!-- Recent Contests Panel -->
-        <section class="panel contests-panel">
-          <div class="panel-header">
-            <div class="header-icon-box contest-icon">
-              <el-icon><Timer /></el-icon>
-            </div>
-            <div>
-              <h2>近期比赛</h2>
-              <p class="muted">最新可见的三场比赛</p>
-            </div>
-            <RouterLink to="/contests" class="more-link">
-              <el-button size="small" circle :icon="ArrowRight" />
-            </RouterLink>
-          </div>
-
-          <div class="home-contest-list">
-            <div v-if="contests.length === 0" class="empty-state">
-              <el-empty description="当前无可见比赛" :image-size="40" />
-            </div>
-            <div
-              v-for="c in contests.slice(0, 3)"
-              :key="c.id"
-              class="home-contest-item"
-              @click="router.push(`/contests/${c.id}`)"
-            >
-              <div class="contest-item-left">
-                <span class="contest-type-badge">{{ c.type }}</span>
-                <span class="contest-title">{{ c.title }}</span>
-              </div>
-              <span :class="['contest-status-pill', getContestStatusClass(c)]">
-                {{ getContestStatusText(c) }}
-              </span>
-            </div>
-          </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
-
-    <!-- Bottom Full Width Section: Recent Submissions -->
-    <section class="panel submissions-panel">
-      <div class="panel-header">
-        <div class="header-icon-box sub-icon">
-          <el-icon><Message /></el-icon>
-        </div>
-        <div>
-          <h2>全站提交动态</h2>
-          <p class="muted">最近 5 次提交结果实时展示</p>
-        </div>
-        <RouterLink to="/submissions" class="more-link">
-          <el-button size="small" circle :icon="ArrowRight" />
-        </RouterLink>
-      </div>
-
-      <div class="home-sub-list">
-        <div v-if="recentSubmissions.length === 0" class="empty-state">
-          <el-empty description="暂无公共提交记录" :image-size="50" />
-        </div>
-        <div
-          v-for="sub in recentSubmissions.slice(0, 5)"
-          :key="sub.id"
-          class="home-sub-row"
-        >
-          <div class="sub-row-user">
-            <el-avatar :size="22" :src="sub.avatarUrl">
-              {{ (sub.displayName || sub.username || 'U').slice(0, 1).toUpperCase() }}
-            </el-avatar>
-            <span class="sub-user-nick">{{ sub.displayName || sub.username }}</span>
-          </div>
-          <div class="sub-row-problem">
-            <RouterLink :to="`/problems/${sub.problemId}`" class="sub-prob-link">
-              {{ sub.problemTitle || `题目 #${sub.problemId}` }}
-            </RouterLink>
-          </div>
-          <div class="sub-row-lang">
-            <span class="sub-lang-text">{{ sub.language }}</span>
-          </div>
-          <div class="sub-row-verdict">
-            <VerdictTag :status="sub.status" :verdict="sub.verdict" />
-          </div>
-          <div class="sub-row-time">
-            <span class="sub-time-text">{{ formatRelativeTime(sub.createdAt) }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
   </section>
 </template>
 
@@ -252,17 +228,24 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ArrowRight, Trophy, Calendar, Grid, Timer, Message } from '@element-plus/icons-vue'
-import { fetchLeaderboard, fetchDailyProblem, fetchContests, fetchSubmissions } from '../api/http'
+import { fetchLeaderboard, fetchDailyProblem, fetchContests, fetchSubmissions, fetchUserStats } from '../api/http'
 import { getTagColor } from '../utils/tag'
 import { formatRelativeTime } from '../utils/time'
-import type { LeaderboardRow, ProblemSummary, Contest, SubmissionSummary } from '../types'
+import type { LeaderboardRow, ProblemSummary, Contest, SubmissionSummary, UserStats } from '../types'
 import VerdictTag from '../components/VerdictTag.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 const dailyProblem = ref<ProblemSummary | null>(null)
 const leaderboard = ref<LeaderboardRow[]>([])
 const contests = ref<Contest[]>([])
 const recentSubmissions = ref<SubmissionSummary[]>([])
+
+const streakDays = ref(0)
+const todayAcCount = ref(0)
+const solvedTotal = ref(0)
+const userRank = ref('暂无')
 
 const todayText = new Intl.DateTimeFormat('zh-CN', {
   month: 'long',
@@ -270,17 +253,71 @@ const todayText = new Intl.DateTimeFormat('zh-CN', {
   weekday: 'long'
 }).format(new Date())
 
+function formatDate(d: Date) {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function calculateStreak(heatmap: Record<string, { totalCount: number; acCount: number }>) {
+  let streak = 0
+  const current = new Date()
+  current.setHours(0, 0, 0, 0)
+  
+  const todayStr = formatDate(current)
+  const hasToday = (heatmap[todayStr]?.totalCount || 0) > 0
+  
+  if (!hasToday) {
+    current.setDate(current.getDate() - 1)
+  }
+  
+  while (true) {
+    const dateStr = formatDate(current)
+    if ((heatmap[dateStr]?.totalCount || 0) > 0) {
+      streak++
+      current.setDate(current.getDate() - 1)
+    } else {
+      break
+    }
+  }
+  
+  return streak
+}
+
 onMounted(async () => {
-  const [dailyData, leaderboardData, contestsData, submissionsData] = await Promise.all([
+  const [dailyData, leaderboardData, contestsData, submissionsData, statsData] = await Promise.all([
     fetchDailyProblem(),
-    fetchLeaderboard(5),
+    fetchLeaderboard(100), // Fetch up to 100 ranked users to calculate personal rank
     fetchContests(),
-    fetchSubmissions()
+    fetchSubmissions(),
+    fetchUserStats().catch(() => null) // Suppress failed stats fetch gracefully
   ])
+  
   dailyProblem.value = dailyData
-  leaderboard.value = leaderboardData
+  leaderboard.value = (leaderboardData || []).slice(0, 5) // Display top 5
   contests.value = contestsData || []
   recentSubmissions.value = submissionsData || []
+
+  // Calculate personal rank on the leaderboard
+  if (leaderboardData && auth.user) {
+    const myRankIndex = leaderboardData.findIndex((row) => row.userId === auth.user?.id)
+    userRank.value = myRankIndex !== -1 ? `No.${myRankIndex + 1}` : '暂无'
+  }
+
+  // Parse user stats if available
+  if (statsData) {
+    solvedTotal.value = 
+      (statsData.difficultyDistribution?.easySolved || 0) + 
+      (statsData.difficultyDistribution?.mediumSolved || 0) + 
+      (statsData.difficultyDistribution?.hardSolved || 0)
+
+    const todayStr = formatDate(new Date())
+    if (statsData.heatmap) {
+      todayAcCount.value = statsData.heatmap[todayStr]?.acCount || 0
+      streakDays.value = calculateStreak(statsData.heatmap)
+    }
+  }
 })
 
 function splitTags(tags?: string) {
@@ -288,6 +325,12 @@ function splitTags(tags?: string) {
     .split(/[,，]/)
     .map((tag) => tag.trim())
     .filter(Boolean)
+}
+
+function calculateAcRate(problem: ProblemSummary) {
+  if (!problem.submitCount || problem.submitCount === 0) return '0.0%'
+  const count = problem.acceptedCount || 0
+  return ((count / problem.submitCount) * 100).toFixed(1) + '%'
 }
 
 function getContestStatusText(c: Contest) {
@@ -381,11 +424,42 @@ function getContestStatusClass(c: Contest) {
   vertical-align: middle;
 }
 
-.home-hero p {
+.hero-streak-text {
   font-size: 1.05rem;
-  color: #94a3b8;
-  margin: 0;
+  color: #cbd5e1 !important;
+  margin: 8px 0 14px 0 !important;
   font-weight: 500;
+}
+
+.hero-streak-text strong {
+  color: #f59e0b;
+  font-size: 1.25rem;
+  font-family: var(--font-mono), monospace;
+}
+
+.hero-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.hero-stat-item {
+  font-size: 0.95rem;
+  color: #94a3b8;
+}
+
+.hero-stat-item strong {
+  color: #ffffff;
+  font-family: var(--font-mono), monospace;
+  font-size: 1.05rem;
+}
+
+.hero-stat-divider {
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 0.95rem;
+  user-select: none;
 }
 
 .hero-btn {
@@ -410,10 +484,15 @@ function getContestStatusClass(c: Contest) {
   gap: 24px;
 }
 
-.home-left-col, .home-right-col {
+.daily-panel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+}
+
+.daily-panel .daily-problem-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Panel Header Premium styling */
@@ -568,6 +647,41 @@ function getContestStatusClass(c: Contest) {
   border-radius: 6px;
 }
 
+.daily-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: auto;
+  margin-bottom: 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.daily-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.ds-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.ds-value {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-top: 2px;
+  font-family: var(--font-mono), monospace;
+}
+
 .card-footer {
   width: 100%;
   display: flex;
@@ -588,48 +702,7 @@ function getContestStatusClass(c: Contest) {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3);
 }
 
-/* Quick Navigation */
-.quick-nav-links {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
 
-.quick-link-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: var(--bg-app);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  transition: all 0.2s ease;
-}
-
-.quick-link-item:hover {
-  background: var(--bg-surface);
-  border-color: var(--primary);
-  transform: translateY(-1px) translateX(2px);
-  box-shadow: var(--shadow-sm);
-}
-
-.link-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-}
-
-.link-left strong {
-  font-size: 0.92rem;
-  color: var(--text-primary);
-}
-
-.link-left span {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
 
 /* Leaderboard Premium styling */
 .leaderboard-list {
@@ -756,6 +829,11 @@ function getContestStatusClass(c: Contest) {
 .rank-1 {
   background: linear-gradient(90deg, #fefdf0 0%, var(--bg-app) 100%);
   border-color: #fef3c7;
+}
+
+html.dark .rank-1 {
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.12) 0%, rgba(30, 41, 59, 0.2) 100%) !important;
+  border-color: rgba(217, 119, 6, 0.3) !important;
 }
 
 .rank-1::before {

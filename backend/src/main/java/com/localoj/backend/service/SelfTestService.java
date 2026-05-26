@@ -35,6 +35,7 @@ public class SelfTestService {
     private final ContestRegistrationMapper contestRegistrationMapper;
     private final GoJudgeClient goJudgeClient;
     private final SandboxSettingsService sandboxSettingsService;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
     public SelfTestService(
             ProblemMapper problemMapper,
@@ -42,7 +43,8 @@ public class SelfTestService {
             ContestProblemMapper contestProblemMapper,
             ContestRegistrationMapper contestRegistrationMapper,
             GoJudgeClient goJudgeClient,
-            SandboxSettingsService sandboxSettingsService
+            SandboxSettingsService sandboxSettingsService,
+            org.springframework.data.redis.core.StringRedisTemplate redisTemplate
     ) {
         this.problemMapper = problemMapper;
         this.contestMapper = contestMapper;
@@ -50,6 +52,7 @@ public class SelfTestService {
         this.contestRegistrationMapper = contestRegistrationMapper;
         this.goJudgeClient = goJudgeClient;
         this.sandboxSettingsService = sandboxSettingsService;
+        this.redisTemplate = redisTemplate;
     }
 
     public SelfTestResult run(CurrentUser user, Long problemId, Long contestId, Language language, String sourceCode, String stdin) {
@@ -63,6 +66,14 @@ public class SelfTestService {
             }
         } else {
             requireContestProblemAccess(user, contestId, problemId);
+        }
+
+        if (!isAdmin(user)) {
+            String redisKey = "cooldown:problem:" + problemId + ":user:" + user.id();
+            Boolean success = redisTemplate.opsForValue().setIfAbsent(redisKey, "1", java.time.Duration.ofSeconds(5));
+            if (success == null || !success) {
+                throw new IllegalArgumentException("提交过于频繁，该题目每 5 秒仅允许提交或自测一次！");
+            }
         }
 
         CompiledArtifact artifact = null;
@@ -171,7 +182,7 @@ public class SelfTestService {
     }
 
     private CompiledArtifact compileJava(String sourceCode, SandboxSettingsService.SandboxSettingsView sandboxSettings) {
-        Map<String, Object> cmd = command(List.of("/usr/bin/javac", "Main.java"));
+        Map<String, Object> cmd = command(List.of("/bin/bash", "-c", "/usr/bin/javac Main.java && /usr/bin/jar cf Main.jar *.class"));
         cmd.put("files", standardFiles("", outputLimitBytes(sandboxSettings)));
         cmd.put("cpuLimit", compileCpuLimitNs(sandboxSettings));
         cmd.put("clockLimit", compileClockLimitNs(sandboxSettings));
@@ -179,15 +190,15 @@ public class SelfTestService {
         cmd.put("procLimit", sandboxSettings.maxProcessCount());
         cmd.put("copyIn", Map.of("Main.java", memoryFile(sourceCode)));
         cmd.put("copyOut", List.of("stdout", "stderr"));
-        cmd.put("copyOutCached", List.of("Main.class"));
+        cmd.put("copyOutCached", List.of("Main.jar"));
 
         GoJudgeResult result = singleResult(goJudgeClient.run(List.of(cmd)));
         ensureCompileAccepted(result);
-        String fileId = result.getFileIds() == null ? null : result.getFileIds().get("Main.class");
+        String fileId = result.getFileIds() == null ? null : result.getFileIds().get("Main.jar");
         if (fileId == null) {
-            throw new CompileFailedException("Compiler did not produce Main.class");
+            throw new CompileFailedException("Compiler did not produce Main.jar");
         }
-        return new CompiledArtifact(Language.JAVA, Map.of("Main.class", fileId), List.of(fileId));
+        return new CompiledArtifact(Language.JAVA, Map.of("Main.jar", fileId), List.of(fileId));
     }
 
     private CaseRun runCase(
@@ -230,10 +241,10 @@ public class SelfTestService {
     }
 
     private Map<String, Object> javaRunCommand(CompiledArtifact artifact, Problem problem, String stdin, SandboxSettingsService.SandboxSettingsView sandboxSettings) {
-        Map<String, Object> cmd = command(List.of("/usr/bin/java", "Main"));
+        Map<String, Object> cmd = command(List.of("/usr/bin/java", "-cp", "Main.jar", "Main"));
         cmd.put("files", standardFiles(stdin, outputLimitBytes(sandboxSettings)));
         putRunLimits(cmd, problem, sandboxSettings);
-        cmd.put("copyIn", Map.of("Main.class", preparedFile(artifact.fileIds().get("Main.class"))));
+        cmd.put("copyIn", Map.of("Main.jar", preparedFile(artifact.fileIds().get("Main.jar"))));
         cmd.put("copyOut", List.of("stdout", "stderr"));
         return cmd;
     }

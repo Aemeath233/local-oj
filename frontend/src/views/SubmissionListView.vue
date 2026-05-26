@@ -23,9 +23,9 @@
       <!-- Filter by Language -->
       <div>
         <el-select v-model="filterLanguage" placeholder="所有语言" clearable style="width: 140px;">
-          <el-option label="C++" value="CPP" />
+          <el-option label="C++20" value="CPP" />
           <el-option label="C" value="C" />
-          <el-option label="Python 3" value="PYTHON" />
+          <el-option label="Python 3.12" value="PYTHON" />
           <el-option label="Java" value="JAVA" />
         </el-select>
       </div>
@@ -60,16 +60,17 @@
                 {{ userFallback(row) }}
               </el-avatar>
               <div>
-                <div>{{ row.displayName || row.username || `用户 #${row.userId}` }}</div>
-                <div class="muted">{{ row.username || '-' }}</div>
+                <div style="font-weight: 600;">{{ row.displayName || row.username || `用户 #${row.userId}` }}</div>
               </div>
             </div>
           </template>
         </el-table-column>
         <el-table-column label="题目" min-width="180">
           <template #default="{ row }">
-            <div>{{ row.problemTitle || `题目 #${row.problemId}` }}</div>
-            <div class="muted">#{{ row.problemId }}</div>
+            <div class="problem-link-cell" @click.stop="goToProblem(row.problemId)">
+              <div class="problem-title-text">{{ row.problemTitle || `题目 #${row.problemId}` }}</div>
+              <div class="muted">#{{ row.problemId }}</div>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="language" label="语言" width="110" />
@@ -104,6 +105,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { fetchSubmission, fetchSubmissions } from '../api/http'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
@@ -206,6 +208,12 @@ async function openDetail(row: SubmissionSummary) {
   }
 }
 
+const router = useRouter()
+
+function goToProblem(problemId: number) {
+  router.push(`/problems/${problemId}`)
+}
+
 function userFallback(row: SubmissionSummary) {
   return (row.displayName || row.username || 'U').slice(0, 1).toUpperCase()
 }
@@ -217,3 +225,22 @@ function formatMemory(kb: number) {
   return kb + ' KB'
 }
 </script>
+
+<style scoped>
+.problem-link-cell {
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.problem-link-cell:hover .problem-title-text {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.problem-title-text {
+  font-weight: 650;
+  color: var(--text-primary);
+  transition: color 0.15s ease;
+}
+</style>

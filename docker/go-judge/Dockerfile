@@ -1,8 +1,14 @@
 # syntax=docker/dockerfile:1.7
 
+FROM python:3.12-slim AS python-base
+
 FROM criyle/go-judge:v1.12.0
 
 USER root
+
+# Copy Python 3.12 from python-base to ensure precise Python 3.12 environment in sandbox
+COPY --from=python-base /usr/local /usr/local
+RUN ln -sf /usr/local/bin/python3 /usr/bin/python3 && ldconfig
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -31,8 +37,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     retry_install \
         gcc \
         g++ \
-        openjdk-21-jdk-headless \
-        python3; \
+        openjdk-21-jdk-headless; \
     for cmd in gcc g++ java javac python3; do \
         if ! command -v "$cmd" >/dev/null; then \
             echo "missing runtime command: $cmd" >&2; \

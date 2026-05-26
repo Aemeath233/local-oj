@@ -1,22 +1,75 @@
 package com.localoj.backend.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class LeaderboardService {
-    private final JdbcTemplate jdbcTemplate;
+    private static final Logger log = LoggerFactory.getLogger(LeaderboardService.class);
+    private static final String CACHE_KEY = "cache:leaderboard:top200";
+    private static final long CACHE_TTL_SECONDS = 3;
 
-    public LeaderboardService(JdbcTemplate jdbcTemplate) {
+    private final JdbcTemplate jdbcTemplate;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
+
+    public LeaderboardService(
+            JdbcTemplate jdbcTemplate,
+            StringRedisTemplate redisTemplate,
+            ObjectMapper objectMapper
+    ) {
         this.jdbcTemplate = jdbcTemplate;
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
     }
 
     public List<LeaderboardRow> top(int limit) {
         int boundedLimit = Math.max(1, Math.min(limit, 200));
+        
+        // 1. Try to read from Redis cache
+        try {
+            String cachedJson = redisTemplate.opsForValue().get(CACHE_KEY);
+            if (cachedJson != null && !cachedJson.isBlank()) {
+                List<LeaderboardRow> cachedRows = objectMapper.readValue(
+                        cachedJson, 
+                        new TypeReference<List<LeaderboardRow>>() {}
+                );
+                if (cachedRows != null && !cachedRows.isEmpty()) {
+                    return cachedRows.subList(0, Math.min(boundedLimit, cachedRows.size()));
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to read leaderboard from Redis cache", e);
+        }
+
+        // 2. Cache miss or error -> query MySQL
+        List<LeaderboardRow> rows = queryLeaderboardFromDb(200);
+
+        // 3. Write back to Redis with a short TTL to protect MySQL
+        if (rows != null && !rows.isEmpty()) {
+            try {
+                String json = objectMapper.writeValueAsString(rows);
+                redisTemplate.opsForValue().set(CACHE_KEY, json, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.error("Failed to write leaderboard to Redis cache", e);
+            }
+        }
+
+        return rows == null ? Collections.emptyList() : rows.subList(0, Math.min(boundedLimit, rows.size()));
+    }
+
+    private List<LeaderboardRow> queryLeaderboardFromDb(int limit) {
         String sql = """
                 SELECT
                     u.id AS user_id,
@@ -39,7 +92,7 @@ public class LeaderboardService {
                          u.id ASC
                 LIMIT ?
                 """;
-        List<LeaderboardRow> rows = jdbcTemplate.query(sql, (rs, rowNum) -> new LeaderboardRow(
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new LeaderboardRow(
                 rowNum + 1,
                 rs.getLong("user_id"),
                 rs.getString("username"),
@@ -50,8 +103,7 @@ public class LeaderboardService {
                 rs.getLong("accepted_count"),
                 rs.getLong("submission_count"),
                 toLocalDateTime(rs.getTimestamp("last_accepted_at"))
-        ), boundedLimit);
-        return rows;
+        ), limit);
     }
 
     private LocalDateTime toLocalDateTime(Timestamp timestamp) {

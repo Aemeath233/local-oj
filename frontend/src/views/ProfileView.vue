@@ -91,9 +91,9 @@
               <div class="form-grid">
                 <el-form-item label="默认编程语言">
                   <el-select v-model="prefLanguage" style="width: 100%;">
-                    <el-option label="C++17" value="CPP" />
+                    <el-option label="C++20" value="CPP" />
                     <el-option label="C" value="C" />
-                    <el-option label="Python 3" value="PYTHON" />
+                    <el-option label="Python 3.12" value="PYTHON" />
                     <el-option label="Java 21" value="JAVA" />
                   </el-select>
                 </el-form-item>
@@ -161,9 +161,9 @@ int main() {
                   <div style="display: flex; gap: 12px; align-items: center; width: 100%; flex-wrap: wrap;">
                     <span style="font-size: 0.9rem; font-weight: 500;">选择编辑语言：</span>
                     <el-select v-model="templateLang" style="width: 140px;" @change="loadTemplateForLang">
-                      <el-option label="C++17" value="CPP" />
+                      <el-option label="C++20" value="CPP" />
                       <el-option label="C" value="C" />
-                      <el-option label="Python 3" value="PYTHON" />
+                      <el-option label="Python 3.12" value="PYTHON" />
                       <el-option label="Java 21" value="JAVA" />
                     </el-select>
                     <el-button type="info" plain size="small" style="margin-left: auto;" @click="resetTemplateToDefault">恢复当前语言默认</el-button>
@@ -320,22 +320,18 @@ int main() {
             <!-- Grid Cells -->
             <g v-for="(week, wIndex) in weeks" :key="'w-' + wIndex">
               <template v-for="(day, dIndex) in week" :key="'d-' + dIndex">
-                <el-tooltip
+                <rect
                   v-if="day.level >= 0"
-                  :content="getTooltipContent(day)"
-                  placement="top"
-                  :show-after="50"
-                >
-                  <rect
-                    :x="30 + wIndex * 13"
-                    :y="20 + dIndex * 13"
-                    width="10"
-                    height="10"
-                    rx="2"
-                    ry="2"
-                    :class="['heatmap-cell', `level-${day.level}`]"
-                  />
-                </el-tooltip>
+                  :x="30 + wIndex * 13"
+                  :y="20 + dIndex * 13"
+                  width="10"
+                  height="10"
+                  rx="2"
+                  ry="2"
+                  :class="['heatmap-cell', `level-${day.level}`]"
+                  @mouseenter="showTooltip($event, day)"
+                  @mouseleave="hideTooltip"
+                />
               </template>
             </g>
 
@@ -350,9 +346,28 @@ int main() {
               <text x="86" y="9" class="heatmap-label" font-size="9" fill="#64748b">多</text>
             </g>
           </svg>
+          <Teleport to="body">
+            <Transition name="fade-fast">
+              <div
+                v-show="tooltipVisible"
+                class="custom-heatmap-tooltip"
+                :style="tooltipStyle"
+              >
+                {{ tooltipContent }}
+                <div class="tooltip-arrow"></div>
+              </div>
+            </Transition>
+          </Teleport>
         </div>
       </div>
     </section>
+
+    <!-- Interactive Avatar Cropping Dialog -->
+    <AvatarCropperDialog
+      v-model="cropperVisible"
+      :image-file="selectedFile"
+      @crop="onAvatarCropped"
+    />
   </section>
 </template>
 
@@ -371,6 +386,7 @@ import {
 import { useAuthStore } from '../stores/auth'
 import type { User, Language, UserStats } from '../types'
 import CodeEditor from '../components/CodeEditor.vue'
+import AvatarCropperDialog from '../components/AvatarCropperDialog.vue'
 
 const auth = useAuthStore()
 const loading = ref(false)
@@ -378,25 +394,86 @@ const saving = ref(false)
 const uploading = ref(false)
 const sendingCode = ref(false)
 const changingPassword = ref(false)
+
+// Heatmap Virtual Tooltip handlers to prevent SVG hover flickering
+const tooltipVisible = ref(false)
+const tooltipContent = ref('')
+const tooltipStyle = ref({
+  left: '0px',
+  top: '0px'
+})
+
+let activeCell: any = null
+let hoverTimeout: number | undefined
+let hideTimeout: number | undefined
+
+function showTooltip(event: MouseEvent, day: any) {
+  const rectEl = event.currentTarget as SVGRectElement
+  if (!rectEl) return
+
+  if (hideTimeout) {
+    clearTimeout(hideTimeout)
+    hideTimeout = undefined
+  }
+  if (activeCell === day) return
+  activeCell = day
+  if (hoverTimeout) {
+    clearTimeout(hoverTimeout)
+  }
+  hoverTimeout = window.setTimeout(() => {
+    const rectBounds = rectEl.getBoundingClientRect()
+    const left = rectBounds.left + window.scrollX + rectBounds.width / 2
+    const top = rectBounds.top + window.scrollY - 8
+    
+    tooltipStyle.value = {
+      left: `${left}px`,
+      top: `${top}px`
+    }
+
+    tooltipContent.value = getTooltipContent(day)
+    tooltipVisible.value = true
+  }, 20)
+}
+
+function hideTooltip() {
+  if (hoverTimeout) {
+    clearTimeout(hoverTimeout)
+    hoverTimeout = undefined
+  }
+  activeCell = null
+  if (hideTimeout) {
+    clearTimeout(hideTimeout)
+  }
+  hideTimeout = window.setTimeout(() => {
+    tooltipVisible.value = false
+  }, 40)
+}
 const activeTab = ref('profile')
 const codeCountdown = ref(0)
 const avatarInput = ref<HTMLInputElement | null>(null)
+const cropperVisible = ref(false)
+const selectedFile = ref<File | null>(null)
 let countdownTimer: number | undefined
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
-const AVATAR_MAX_SIDE = 512
 
 // Editor Preferences Configurations
 const fontSizes = [14, 15, 16, 18, 20]
 const fontFamilies = [
   { label: 'JetBrains Mono', value: "'JetBrains Mono', 'Cascadia Code', Consolas, monospace" },
   { label: 'Fira Code', value: "'Fira Code', 'JetBrains Mono', Consolas, monospace" },
+  { label: 'Source Code Pro', value: "'Source Code Pro', 'JetBrains Mono', Consolas, monospace" },
+  { label: 'IBM Plex Mono', value: "'IBM Plex Mono', Consolas, monospace" },
+  { label: 'Ubuntu Mono', value: "'Ubuntu Mono', Consolas, monospace" },
   { label: '系统等宽', value: "ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace" }
 ]
 const readerFontSizes = [15, 16, 18]
 const readerFontFamilies = [
-  { label: '系统无衬线', value: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif" },
-  { label: '系统宋体', value: "'Songti SC', 'SimSun', Georgia, serif" },
-  { label: '系统黑体', value: "'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif" }
+  { label: '系统默认无衬线', value: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif" },
+  { label: '苹方 / 微软雅黑 (现代黑体)', value: "'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif" },
+  { label: '思源黑体 / 华文细黑', value: "'Source Han Sans SC', 'STHeiti', sans-serif" },
+  { label: '官方宋体 / 中易宋体', value: "'Songti SC', 'SimSun', 'STSong', Georgia, serif" },
+  { label: '官方楷体 / 华文楷体', value: "'STKaiti', 'KaiTi', 'Kaiti SC', serif" },
+  { label: '仿宋 / 华文仿宋', value: "'FangSong', 'STFangsong', serif" }
 ]
 
 const prefLanguage = ref(localStorage.getItem('localoj.editor.defaultLanguage') || 'CPP')
@@ -671,86 +748,35 @@ function openAvatarPicker() {
   avatarInput.value?.click()
 }
 
-async function onAvatarSelected(event: Event) {
+function onAvatarSelected(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+  
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('请选择图片文件')
+    input.value = ''
+    return
+  }
+  
+  selectedFile.value = file
+  cropperVisible.value = true
+  input.value = '' // Clear input so the same file can be selected again
+}
+
+async function onAvatarCropped(croppedFile: File) {
+  cropperVisible.value = false
   uploading.value = true
   try {
-    const optimizedFile = await optimizeAvatar(file)
-    const profile = await uploadAvatar(optimizedFile)
+    const profile = await uploadAvatar(croppedFile)
     applyProfile(profile)
     ElMessage.success('头像已更新')
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || error.message || '头像上传失败')
   } finally {
     uploading.value = false
-    input.value = ''
+    selectedFile.value = null
   }
-}
-
-async function optimizeAvatar(file: File) {
-  if (!file.type.startsWith('image/')) {
-    throw new Error('请选择图片文件')
-  }
-  const image = await loadImage(file)
-  const scale = Math.min(1, AVATAR_MAX_SIDE / Math.max(image.width, image.height))
-  const width = Math.max(1, Math.round(image.width * scale))
-  const height = Math.max(1, Math.round(image.height * scale))
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const context = canvas.getContext('2d')
-  if (!context) {
-    throw new Error('浏览器无法处理头像')
-  }
-  context.drawImage(image, 0, 0, width, height)
-
-  let lastBlob: Blob | null = null
-  for (let quality = 0.86; quality >= 0.42; quality -= 0.08) {
-    const blob = await canvasToBlob(canvas, 'image/webp', quality)
-    lastBlob = blob
-    if (blob.size <= MAX_AVATAR_BYTES) {
-      return new File([blob], webpName(file.name), { type: 'image/webp' })
-    }
-  }
-  if (lastBlob && lastBlob.size <= MAX_AVATAR_BYTES) {
-    return new File([lastBlob], webpName(file.name), { type: 'image/webp' })
-  }
-  throw new Error('头像压缩后仍超过 2MB，请换一张图片')
-}
-
-function loadImage(file: File) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const url = URL.createObjectURL(file)
-    const image = new Image()
-    image.onload = () => {
-      URL.revokeObjectURL(url)
-      resolve(image)
-    }
-    image.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('图片读取失败'))
-    }
-    image.src = url
-  })
-}
-
-function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error('头像转换失败'))
-        return
-      }
-      resolve(blob)
-    }, type, quality)
-  })
-}
-
-function webpName(filename: string) {
-  const base = filename.replace(/\.[^.]+$/, '') || 'avatar'
-  return `${base}.webp`
 }
 
 async function sendCode() {
@@ -817,6 +843,12 @@ function startCountdown() {
 onUnmounted(() => {
   if (countdownTimer) {
     window.clearInterval(countdownTimer)
+  }
+  if (hoverTimeout) {
+    clearTimeout(hoverTimeout)
+  }
+  if (hideTimeout) {
+    clearTimeout(hideTimeout)
   }
 })
 </script>
@@ -1017,6 +1049,7 @@ onUnmounted(() => {
 }
 
 .heatmap-container {
+  position: relative;
   overflow-x: auto;
   padding: 4px 0;
   flex: 1;
@@ -1030,13 +1063,13 @@ onUnmounted(() => {
 
 .heatmap-cell {
   fill: #f1f5f9;
-  transition: fill 0.15s ease, transform 0.1s ease;
+  transition: fill 0.15s ease;
   cursor: pointer;
 }
 
 .heatmap-cell:hover {
-  transform: scale(1.2);
-  transform-origin: center;
+  stroke: #0f172a;
+  stroke-width: 1.5;
 }
 
 .heatmap-cell.level-0 {
@@ -1068,5 +1101,42 @@ onUnmounted(() => {
   .stats-dashboard-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.custom-heatmap-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  z-index: 100;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.tooltip-arrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: #0f172a;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.fade-fast-enter-active,
+.fade-fast-leave-active {
+  transition: opacity 0.12s ease;
+}
+.fade-fast-enter-from,
+.fade-fast-leave-to {
+  opacity: 0;
 }
 </style>

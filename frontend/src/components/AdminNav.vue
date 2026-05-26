@@ -73,4 +73,24 @@ const auth = useAuthStore()
   background: #fefce8 !important;
   color: #b45309 !important;
 }
+
+/* Dark mode overrides */
+html.dark .admin-nav-super {
+  border-color: rgba(217, 119, 6, 0.25) !important;
+  background: rgba(217, 119, 6, 0.06) !important;
+}
+
+html.dark .admin-nav-super a {
+  color: #fbbf24 !important;
+}
+
+html.dark .admin-nav-super .router-link-active {
+  background: rgba(217, 119, 6, 0.25) !important;
+  color: #fef08a !important;
+}
+
+html.dark .admin-nav-super a:hover {
+  background: rgba(217, 119, 6, 0.15) !important;
+  color: #fef08a !important;
+}
 </style>

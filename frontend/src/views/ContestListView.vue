@@ -670,4 +670,60 @@ function getRemainingStr(endStr: string) {
     display: none;
   }
 }
+
+/* ===== Dark mode overrides ===== */
+html.dark .filter-tabs {
+  background: var(--bg-surface) !important;
+  border-color: var(--border-color) !important;
+}
+
+html.dark .filter-tab:hover {
+  background: var(--bg-muted) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark .filter-tab.active {
+  background: rgba(45, 212, 191, 0.15) !important;
+  color: var(--el-color-primary-light-3) !important;
+}
+
+html.dark .status-running {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, var(--bg-surface) 100%) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+}
+
+html.dark .status-upcoming {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, var(--bg-surface) 100%) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+html.dark .type-badge,
+html.dark .meta-item {
+  background: var(--bg-muted) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}
+
+html.dark .meta-value {
+  color: var(--text-primary) !important;
+}
+
+html.dark .contest-action {
+  border-color: var(--border-color) !important;
+}
+
+html.dark .badge-running {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #4ade80 !important;
+}
+
+html.dark .badge-upcoming {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+}
+
+html.dark .badge-finished {
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #94a3b8 !important;
+}
 </style>

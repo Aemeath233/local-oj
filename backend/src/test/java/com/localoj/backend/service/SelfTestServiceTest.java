@@ -104,7 +104,8 @@ class SelfTestServiceTest {
                 contestProblemMapper,
                 contestRegistrationMapper,
                 goJudgeClient,
-                sandboxSettingsService
+                sandboxSettingsService,
+                mockRedisTemplate()
         );
 
         SelfTestService.SelfTestResult result = service.run(
@@ -154,8 +155,18 @@ class SelfTestServiceTest {
                 mock(ContestProblemMapper.class),
                 mock(ContestRegistrationMapper.class),
                 goJudgeClient,
-                sandboxSettingsService
+                sandboxSettingsService,
+                mockRedisTemplate()
         );
+    }
+
+    @SuppressWarnings("unchecked")
+    private org.springframework.data.redis.core.StringRedisTemplate mockRedisTemplate() {
+        org.springframework.data.redis.core.StringRedisTemplate redisTemplate = mock(org.springframework.data.redis.core.StringRedisTemplate.class);
+        org.springframework.data.redis.core.ValueOperations<String, String> valueOps = mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.setIfAbsent(any(), any(), any())).thenReturn(Boolean.TRUE);
+        return redisTemplate;
     }
 
     private GoJudgeResult acceptedCompile() {

@@ -91,6 +91,14 @@ public class SubmissionService {
             throw new IllegalArgumentException("Problem not found");
         }
 
+        if (!isAdmin(user)) {
+            String redisKey = "cooldown:problem:" + problemId + ":user:" + user.id();
+            Boolean success = redisTemplate.opsForValue().setIfAbsent(redisKey, "1", java.time.Duration.ofSeconds(5));
+            if (success == null || !success) {
+                throw new IllegalArgumentException("提交过于频繁，该题目每 5 秒仅允许提交或自测一次！");
+            }
+        }
+
         Submission submission = new Submission();
         submission.setUserId(user.id());
         submission.setProblemId(problemId);

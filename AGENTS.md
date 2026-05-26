@@ -101,7 +101,9 @@ Current pinned versions to preserve unless there is a reason to upgrade:
 - Java: 21
 - Spring Boot: 3.5.x line
 - MyBatis-Plus: 3.5.x line
-- go-judge Docker image: `criyle/go-judge:v1.12.0`
+- go-judge Docker image: `criyle/go-judge:v1.12.0` (with custom Python 3.12 layer)
+- C++ compilation standard: C++20 (`-std=c++20` using G++ 14.2)
+- Python interpreter standard: Python 3.12
 
 ## Judge Flow
 

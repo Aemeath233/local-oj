@@ -226,13 +226,17 @@
       <aside class="submit-panel panel" :style="rightStyle">
         <div class="submit-toolbar">
           <el-select v-model="language" class="language-select">
-            <el-option label="C++17" value="CPP" />
+            <el-option label="C++20" value="CPP" />
             <el-option label="C" value="C" />
-            <el-option label="Python 3" value="PYTHON" />
+            <el-option label="Python 3.12" value="PYTHON" />
             <el-option label="Java 21" value="JAVA" />
           </el-select>
-          <el-button :icon="VideoPlay" :loading="selfTesting" @click="runCustomTest">自测</el-button>
-          <el-button :icon="Upload" type="primary" :loading="submitting" @click="submit">提交</el-button>
+          <el-button :icon="VideoPlay" :loading="selfTesting" :disabled="cooldownSeconds > 0" @click="runCustomTest">
+            {{ cooldownSeconds > 0 ? `自测 (${cooldownSeconds}s)` : '自测' }}
+          </el-button>
+          <el-button :icon="Upload" type="primary" :loading="submitting" :disabled="cooldownSeconds > 0" @click="submit">
+            {{ cooldownSeconds > 0 ? `提交 (${cooldownSeconds}s)` : '提交' }}
+          </el-button>
         </div>
         <CodeEditor v-model="sourceCode" :language="language" />
 
@@ -428,6 +432,24 @@ const loading = ref(false)
 const submitting = ref(false)
 const selfTesting = ref(false)
 const message = ref('')
+const cooldownSeconds = ref(0)
+let cooldownTimer: any = null
+
+function startCooldown() {
+  if (cooldownTimer) {
+    clearInterval(cooldownTimer)
+  }
+  cooldownSeconds.value = 5
+  cooldownTimer = window.setInterval(() => {
+    cooldownSeconds.value--
+    if (cooldownSeconds.value <= 0) {
+      if (cooldownTimer) {
+        clearInterval(cooldownTimer)
+        cooldownTimer = null
+      }
+    }
+  }, 1000)
+}
 const selfTestInput = ref('')
 const selfTestError = ref('')
 const selfTestResult = ref<SelfTestResult | null>(null)
@@ -582,6 +604,9 @@ onUnmounted(() => {
   if (timer.value) {
     window.clearInterval(timer.value)
   }
+  if (cooldownTimer) {
+    window.clearInterval(cooldownTimer)
+  }
 })
 
 // Poll submission statuses when there is pending or running submissions
@@ -653,9 +678,13 @@ async function submit() {
     const submission = await submitSolution(problemId.value, language.value, sourceCode.value)
     message.value = `提交 #${submission.id} 已入队`
     ElMessage.success(`提交 #${submission.id} 已入队`)
+    startCooldown()
     await loadSubmissions()
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '提交失败')
+    if (error.response?.data?.message?.includes('频繁')) {
+      startCooldown()
+    }
   } finally {
     submitting.value = false
   }
@@ -669,8 +698,12 @@ async function runCustomTest() {
   selfTestResult.value = null
   try {
     selfTestResult.value = await runSelfTest(problemId.value, language.value, sourceCode.value, selfTestInput.value)
+    startCooldown()
   } catch (error: any) {
     selfTestError.value = error.response?.data?.message || '自测运行失败'
+    if (error.response?.data?.message?.includes('频繁')) {
+      startCooldown()
+    }
   } finally {
     selfTesting.value = false
   }

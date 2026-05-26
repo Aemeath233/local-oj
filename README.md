@@ -8,7 +8,7 @@ A lightweight internal Online Judge system built around Spring Boot, Vue, Redis,
 - Backend: Spring Boot 3, Java 21, MyBatis-Plus, Spring Security
 - Database: MySQL 8
 - Queue: Redis
-- Judge: judge-worker + go-judge
+- Judge: judge-worker + go-judge (custom container with G++ 14.2/C++20, and Python 3.12)
 - Deployment: Docker Compose
 
 ## Local Notes
