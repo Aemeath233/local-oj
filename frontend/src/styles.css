@@ -888,7 +888,8 @@ pre.empty {
 }
 
 .submit-panel {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   padding: 18px;
   position: sticky;
@@ -903,6 +904,7 @@ pre.empty {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .language-select {
@@ -920,6 +922,7 @@ pre.empty {
   flex-direction: column;
   background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
 }
 
 .editor-settings-bar {
@@ -970,6 +973,7 @@ pre.empty {
   overflow: hidden;
   transition: all 0.25s ease;
   margin-top: 8px;
+  flex-shrink: 0;
 }
 
 .console-section.is-expanded {
@@ -1317,6 +1321,7 @@ pre.empty {
   flex-direction: column;
   gap: 12px;
   box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
 }
 
 .mini-panel-header {
