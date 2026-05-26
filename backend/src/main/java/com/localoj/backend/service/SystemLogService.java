@@ -10,10 +10,22 @@ import java.io.StringWriter;
 @Service
 public class SystemLogService {
     private static final Logger log = LoggerFactory.getLogger(SystemLogService.class);
-    private boolean loggingEnabled = true;
+    private boolean loggingEnabled = false;
 
     public SystemLogService() {
         // Empty constructor, no database dependencies!
+    }
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        try {
+            ch.qos.logback.classic.LoggerContext loggerContext = 
+                (ch.qos.logback.classic.LoggerContext) LoggerFactory.getILoggerFactory();
+            ch.qos.logback.classic.Logger logger = loggerContext.getLogger("com.localoj");
+            if (logger != null) {
+                logger.setLevel(ch.qos.logback.classic.Level.OFF);
+            }
+        } catch (Throwable ignored) {}
     }
 
     public boolean isLoggingEnabled() {
