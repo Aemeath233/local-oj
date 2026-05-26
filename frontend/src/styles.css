@@ -1476,14 +1476,48 @@ pre.empty {
     flex-direction: column !important;
   }
 
-  /* Make problem-layout 50/50 columns */
+  /* Make problem-layout resizable flex rows */
   .main:has(.problem-page-container) .problem-layout {
-    grid-template-columns: 1fr 1fr !important;
+    display: flex !important;
+    flex-direction: row !important;
     height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
-    gap: 16px !important;
+    gap: 0 !important;
     align-items: stretch !important;
+  }
+
+  /* Resize Divider styles */
+  .resize-divider {
+    display: flex;
+    width: 14px;
+    cursor: col-resize;
+    position: relative;
+    flex: 0 0 14px;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .resize-divider:hover,
+  .resize-divider:active {
+    background-color: var(--primary-light);
+  }
+
+  .resize-divider-line {
+    width: 2px;
+    height: 40px;
+    background-color: var(--border-color);
+    border-radius: 99px;
+    transition: background-color 0.2s ease, height 0.2s ease;
+  }
+
+  .resize-divider:hover .resize-divider-line,
+  .resize-divider:active .resize-divider-line {
+    background-color: var(--primary);
+    height: 60px;
   }
 
   /* Independently scrollable columns */

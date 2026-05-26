@@ -1,7 +1,7 @@
 <template>
   <div class="problem-page-container" v-loading="loading">
-    <section class="problem-layout">
-      <article v-if="problem" class="statement panel" style="display: flex; flex-direction: column;">
+    <section class="problem-layout" ref="problemLayoutRef">
+      <article v-if="problem" class="statement panel" style="display: flex; flex-direction: column;" :style="leftStyle">
         <el-tabs v-model="activeLeftTab" class="statement-tabs" style="flex: 1; display: flex; flex-direction: column;">
           <!-- Tab 1: Problem Description -->
           <el-tab-pane label="题目描述" name="statement" style="padding-top: 10px;">
@@ -218,7 +218,12 @@
         </el-dialog>
       </article>
 
-      <aside class="submit-panel panel">
+      <!-- Drag Resizable Divider -->
+      <div v-if="problem" class="resize-divider" @mousedown="startDrag">
+        <div class="resize-divider-line"></div>
+      </div>
+
+      <aside class="submit-panel panel" :style="rightStyle">
         <div class="submit-toolbar">
           <el-select v-model="language" class="language-select">
             <el-option label="C++17" value="CPP" />
@@ -353,6 +358,72 @@ import type { Language, ProblemDetail, SelfTestResult, SubmissionSummary, Submis
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+const problemLayoutRef = ref<HTMLElement | null>(null)
+const leftWidthPercent = ref(50)
+let startX = 0
+let startWidthPercent = 0
+
+// Check if mobile or desktop split screen is active
+const isWideScreen = ref(window.innerWidth >= 1041)
+function handleResize() {
+  isWideScreen.value = window.innerWidth >= 1041
+}
+
+const leftStyle = computed(() => {
+  if (!isWideScreen.value) return {}
+  return {
+    width: `${leftWidthPercent.value}%`,
+    flex: `0 0 ${leftWidthPercent.value}%`
+  }
+})
+
+const rightStyle = computed(() => {
+  if (!isWideScreen.value) return {}
+  return {
+    width: `${100 - leftWidthPercent.value}%`,
+    flex: `0 0 ${100 - leftWidthPercent.value}%`
+  }
+})
+
+function startDrag(event: MouseEvent) {
+  event.preventDefault()
+  startX = event.clientX
+  startWidthPercent = leftWidthPercent.value
+  
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  
+  window.addEventListener('mousemove', doDrag)
+  window.addEventListener('mouseup', stopDrag)
+}
+
+function doDrag(event: MouseEvent) {
+  if (!problemLayoutRef.value) return
+  const containerWidth = problemLayoutRef.value.getBoundingClientRect().width
+  if (containerWidth === 0) return
+  
+  const deltaX = event.clientX - startX
+  const deltaPercent = (deltaX / containerWidth) * 100
+  let newPercent = startWidthPercent + deltaPercent
+  
+  if (newPercent < 20) newPercent = 20
+  if (newPercent > 80) newPercent = 80
+  
+  leftWidthPercent.value = newPercent
+}
+
+function stopDrag() {
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  
+  window.removeEventListener('mousemove', doDrag)
+  window.removeEventListener('mouseup', stopDrag)
+  
+  // Force Monaco to recalculate layout
+  window.dispatchEvent(new Event('resize'))
+}
+
 const loading = ref(false)
 const submitting = ref(false)
 const selfTesting = ref(false)
@@ -498,6 +569,7 @@ async function deleteSolutionPrompt(id: number) {
 }
 
 onMounted(async () => {
+  window.addEventListener('resize', handleResize)
   await initProblem()
 })
 
@@ -506,6 +578,7 @@ watch(problemId, async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
   if (timer.value) {
     window.clearInterval(timer.value)
   }

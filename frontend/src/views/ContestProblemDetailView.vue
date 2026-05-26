@@ -12,9 +12,9 @@
       </div>
     </div>
 
-    <section class="problem-layout">
+    <section class="problem-layout" ref="problemLayoutRef">
       <!-- Left side: Statement -->
-      <article v-if="problem" class="statement panel">
+      <article v-if="problem" class="statement panel" :style="leftStyle">
         <section class="statement-body" :style="{ fontSize: readerFontSize + 'px', fontFamily: readerFontFamily }">
           <MarkdownView :source="statementMarkdown" />
         </section>
@@ -75,8 +75,13 @@
         </section>
       </article>
 
+      <!-- Drag Resizable Divider -->
+      <div v-if="problem" class="resize-divider" @mousedown="startDrag">
+        <div class="resize-divider-line"></div>
+      </div>
+
       <!-- Right side: Code Editor & Submissions & Custom Stdin Test Console -->
-      <aside class="sidebar">
+      <aside class="sidebar" :style="rightStyle">
         <!-- Editor Header -->
         <div class="editor-bar panel">
           <div class="bar-left">
@@ -216,6 +221,71 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
+const problemLayoutRef = ref<HTMLElement | null>(null)
+const leftWidthPercent = ref(50)
+let startX = 0
+let startWidthPercent = 0
+
+// Check if mobile or desktop split screen is active
+const isWideScreen = ref(window.innerWidth >= 1041)
+function handleResize() {
+  isWideScreen.value = window.innerWidth >= 1041
+}
+
+const leftStyle = computed(() => {
+  if (!isWideScreen.value) return {}
+  return {
+    width: `${leftWidthPercent.value}%`,
+    flex: `0 0 ${leftWidthPercent.value}%`
+  }
+})
+
+const rightStyle = computed(() => {
+  if (!isWideScreen.value) return {}
+  return {
+    width: `${100 - leftWidthPercent.value}%`,
+    flex: `0 0 ${100 - leftWidthPercent.value}%`
+  }
+})
+
+function startDrag(event: MouseEvent) {
+  event.preventDefault()
+  startX = event.clientX
+  startWidthPercent = leftWidthPercent.value
+  
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  
+  window.addEventListener('mousemove', doDrag)
+  window.addEventListener('mouseup', stopDrag)
+}
+
+function doDrag(event: MouseEvent) {
+  if (!problemLayoutRef.value) return
+  const containerWidth = problemLayoutRef.value.getBoundingClientRect().width
+  if (containerWidth === 0) return
+  
+  const deltaX = event.clientX - startX
+  const deltaPercent = (deltaX / containerWidth) * 100
+  let newPercent = startWidthPercent + deltaPercent
+  
+  if (newPercent < 20) newPercent = 20
+  if (newPercent > 80) newPercent = 80
+  
+  leftWidthPercent.value = newPercent
+}
+
+function stopDrag() {
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  
+  window.removeEventListener('mousemove', doDrag)
+  window.removeEventListener('mouseup', stopDrag)
+  
+  // Force Monaco to recalculate layout
+  window.dispatchEvent(new Event('resize'))
+}
+
 const contestId = computed(() => Number(route.params.contestId))
 const problemId = computed(() => Number(route.params.id))
 
@@ -300,6 +370,7 @@ async function initProblem() {
 }
 
 onMounted(async () => {
+  window.addEventListener('resize', handleResize)
   await initProblem()
   // Auto-refresh submissions status every 3 seconds to track pending runs!
   submissionsTimerId = window.setInterval(async () => {
@@ -311,6 +382,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
   if (submissionsTimerId) {
     window.clearInterval(submissionsTimerId)
   }
