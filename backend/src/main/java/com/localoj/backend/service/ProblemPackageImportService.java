@@ -547,7 +547,18 @@ public class ProblemPackageImportService {
 
     private record PackageEntry(String path, String simpleName, byte[] bytes) {
         String text() {
-            return new String(bytes, StandardCharsets.UTF_8);
+            try {
+                java.nio.charset.CharsetDecoder decoder = java.nio.charset.StandardCharsets.UTF_8.newDecoder();
+                decoder.onMalformedInput(java.nio.charset.CodingErrorAction.REPORT);
+                decoder.onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT);
+                return decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString();
+            } catch (java.nio.charset.CharacterCodingException e) {
+                try {
+                    return new String(bytes, java.nio.charset.Charset.forName("GBK"));
+                } catch (Exception ex) {
+                    return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                }
+            }
         }
     }
 
