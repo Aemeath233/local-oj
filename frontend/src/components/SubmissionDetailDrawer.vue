@@ -82,75 +82,37 @@
         </div>
       </div>
 
-      <!-- Part 4: Interactive Test Case Bubbles & Focused Details -->
+      <!-- Part 4: Sleek Test Case Grid showing all metrics at a glance -->
       <section v-if="detail.cases && detail.cases.length > 0" class="cases-section">
         <div class="section-title-bar">
           <h2>测试点分析 ({{ detail.cases.length }} 个测试点)</h2>
-          <span class="section-subtitle">点击下方气泡可查看对应测试点的输入输出细节</span>
         </div>
 
-        <!-- Bubbles Row -->
-        <div class="case-bubbles-grid">
-          <button
-            v-for="(c, idx) in detail.cases"
+        <div class="cases-grid">
+          <div
+            v-for="c in detail.cases"
             :key="c.id"
-            :class="['case-bubble', bubbleStatusClass(c.verdict), { 'is-active': activeCaseIdx === idx }]"
-            @click="activeCaseIdx = idx"
+            :class="['case-status-card', cardStatusClass(c.verdict)]"
           >
-            <span class="bubble-num">{{ c.caseIndex }}</span>
-            <span class="bubble-status">{{ c.verdict }}</span>
-          </button>
-        </div>
-
-        <!-- Focused Case detail card -->
-        <div v-if="selectedCase" class="focused-case-card">
-          <div class="case-card-header">
-            <div class="case-card-title">
-              <h3>测试点 #{{ selectedCase.caseIndex }}</h3>
-              <VerdictTag status="FINISHED" :verdict="selectedCase.verdict" />
+            <div class="case-card-top">
+              <span class="case-index">测试点 #{{ c.caseIndex }}</span>
+              <VerdictTag status="FINISHED" :verdict="c.verdict" size="small" />
             </div>
-            <div class="case-card-stats">
-              <span><el-icon><Clock /></el-icon> {{ selectedCase.timeMs ?? 0 }} ms</span>
-              <span><el-icon><Odometer /></el-icon> {{ selectedCase.memoryKb ?? 0 }} KB</span>
-            </div>
-          </div>
-
-          <div class="case-detail-terminal-grid">
-            <div class="output-block">
-              <div class="block-title">
-                <span>标准输出 (stdout)</span>
-                <el-button
-                  v-if="selectedCase.stdoutText"
-                  size="small"
-                  link
-                  :icon="DocumentCopy"
-                  @click="copyText(selectedCase.stdoutText, '标准输出复制成功')"
-                >
-                  复制
-                </el-button>
+            <div class="case-card-metrics">
+              <div class="metric-item">
+                <el-icon><Clock /></el-icon>
+                <span>{{ c.timeMs ?? 0 }} ms</span>
               </div>
-              <pre :class="['terminal-view', { empty: !selectedCase.stdoutText }]">{{ selectedCase.stdoutText || '无标准输出' }}</pre>
-            </div>
-            <div class="output-block">
-              <div class="block-title">
-                <span>异常与提示 (stderr / message)</span>
-                <el-button
-                  v-if="caseMessage(selectedCase)"
-                  size="small"
-                  link
-                  :icon="DocumentCopy"
-                  @click="copyText(caseMessage(selectedCase), '调试消息复制成功')"
-                >
-                  复制
-                </el-button>
+              <div class="metric-item">
+                <el-icon><Odometer /></el-icon>
+                <span>{{ c.memoryKb != null ? formatMemory(c.memoryKb) : '0 KB' }}</span>
               </div>
-              <pre :class="['terminal-view', { empty: !caseMessage(selectedCase), error: isErrorVerdict(selectedCase.verdict) }]">{{ caseMessage(selectedCase) || '无系统/异常消息' }}</pre>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Part 5: Code Editor & Comparison Split Section -->
+      <!-- Part 5: Code Editor Section -->
       <section class="source-section">
         <div class="source-section-header">
           <div class="title-with-icon">
@@ -158,11 +120,6 @@
             <h2>提交源码</h2>
           </div>
           <div class="editor-actions">
-            <!-- Diff Mode Switch -->
-            <div v-if="currentCode" class="diff-switch-wrapper">
-              <span class="diff-label">与当前编辑器代码对比</span>
-              <el-switch v-model="diffMode" active-color="#409eff" inactive-color="#dcdfe6" />
-            </div>
             <el-button
               type="primary"
               size="small"
@@ -175,16 +132,7 @@
         </div>
 
         <div class="source-editor-container">
-          <!-- Diff Mode enabled -->
-          <CodeDiffEditor
-            v-if="diffMode && currentCode"
-            :original="currentCode"
-            :modified="detail.submission.sourceCode || ''"
-            :language="detail.submission.language"
-          />
-          <!-- View code only -->
           <CodeEditor
-            v-else
             :model-value="detail.submission.sourceCode || ''"
             :language="detail.submission.language"
             :read-only="true"
@@ -196,13 +144,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { Cpu, Clock, Odometer, Notebook, View, DocumentCopy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import VerdictTag from './VerdictTag.vue'
 import CodeEditor from './CodeEditor.vue'
-import CodeDiffEditor from './CodeDiffEditor.vue'
-import type { SubmissionCaseResult, SubmissionDetail, Verdict } from '../types'
+import type { SubmissionDetail, Verdict } from '../types'
 
 const props = defineProps<{
   modelValue: boolean
@@ -214,27 +161,9 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-// Active test case index for bubble view
-const activeCaseIdx = ref(0)
-const diffMode = ref(false)
-
-// Reset active index when detail changes
-watch(
-  () => props.detail?.submission.id,
-  () => {
-    activeCaseIdx.value = 0
-    diffMode.value = false
-  }
-)
-
 const drawerTitle = computed(() => {
   if (!props.detail) return '提交详情'
   return `提交详情 #${props.detail.submission.id}`
-})
-
-const selectedCase = computed(() => {
-  if (!props.detail || !props.detail.cases || props.detail.cases.length === 0) return null
-  return props.detail.cases[activeCaseIdx.value] || props.detail.cases[0]
 })
 
 // Verdict banner classes and text configurations
@@ -280,20 +209,12 @@ const verdictBannerTip = computed(() => {
   return '评测引擎沙箱分配失败或内部模块抛出异常，如非程序格式问题，请及时联系超级管理员处理。'
 })
 
-function caseMessage(row: SubmissionCaseResult) {
-  return row.message || row.stderrText || ''
-}
-
-function isErrorVerdict(v: Verdict) {
-  return v !== 'AC'
-}
-
-function bubbleStatusClass(v: Verdict) {
-  if (v === 'AC') return 'bubble-ac'
-  if (v === 'WA') return 'bubble-wa'
-  if (v === 'CE') return 'bubble-ce'
-  if (v === 'TLE' || v === 'MLE') return 'bubble-tle'
-  return 'bubble-other'
+function cardStatusClass(v: Verdict) {
+  if (v === 'AC') return 'card-ac'
+  if (v === 'WA') return 'card-wa'
+  if (v === 'CE') return 'card-ce'
+  if (v === 'TLE' || v === 'MLE') return 'card-tle'
+  return 'card-other'
 }
 
 function formatMemory(kb: number) {
@@ -539,7 +460,7 @@ async function copyText(text: string, successMsg = '复制成功') {
   word-break: break-all;
 }
 
-/* Cases analysis bubbles section */
+/* Cases analysis grid */
 .cases-section {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -558,202 +479,106 @@ async function copyText(text: string, successMsg = '复制成功') {
   margin: 0;
 }
 
-.section-subtitle {
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 4px;
-  display: inline-block;
+.cases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
 }
 
-/* Bubbles list */
-.case-bubbles-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.case-bubble {
+.case-status-card {
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 58px;
-  height: 52px;
-  border-radius: 8px;
-  border: 1.5px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 4px;
-}
-
-.case-bubble:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-}
-
-.case-bubble.is-active {
-  transform: scale(1.08);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  border-color: #0f172a !important;
-}
-
-.bubble-num {
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.bubble-status {
-  font-size: 9px;
-  font-weight: 700;
-  margin-top: 2px;
-  letter-spacing: 0.5px;
-}
-
-/* Case bubbles color definitions */
-.bubble-ac {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #16a34a;
-}
-.bubble-ac.is-active {
-  background-color: #dcfce7;
-}
-
-.bubble-wa {
-  background-color: #fef2f2;
-  border-color: #fecaca;
-  color: #dc2626;
-}
-.bubble-wa.is-active {
-  background-color: #fee2e2;
-}
-
-.bubble-ce {
-  background-color: #fffbeb;
-  border-color: #fde68a;
-  color: #d97706;
-}
-.bubble-ce.is-active {
-  background-color: #fef3c7;
-}
-
-.bubble-tle {
-  background-color: #fff7ed;
-  border-color: #ffedd5;
-  color: #ea580c;
-}
-
-.bubble-other {
-  background-color: #fafafa;
-  border-color: #e4e4e7;
-  color: #71717a;
-}
-
-/* Focused Case details card */
-.focused-case-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 16px;
-  animation: fadeIn 0.25s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.case-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px dashed #e2e8f0;
-  margin-bottom: 14px;
-}
-
-.case-card-title {
-  display: flex;
-  align-items: center;
   gap: 10px;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+  border-color: #e2e8f0;
 }
 
-.case-card-title h3 {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
+.case-status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.case-card-stats {
+.case-card-top {
   display: flex;
-  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.case-index {
   font-size: 13px;
+  font-weight: 750;
+  color: #334155;
+}
+
+.case-card-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  padding-top: 8px;
+}
+
+.metric-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   color: #64748b;
   font-weight: 500;
 }
 
-.case-card-stats span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.case-detail-terminal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
-}
-
-.output-block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.block-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: #475569;
-  font-weight: 600;
-}
-
-.terminal-view {
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: #e2e8f0;
-  border-radius: 6px;
-  padding: 12px;
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 12.5px;
-  line-height: 1.5;
-  max-height: 180px;
-  overflow-y: auto;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.terminal-view.empty {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+.metric-item .el-icon {
+  font-size: 13px;
   color: #94a3b8;
-  font-style: italic;
 }
 
-.terminal-view.error {
+/* Card color themes */
+.card-ac {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.card-ac .case-index {
+  color: #15803d;
+}
+
+.card-wa {
+  background-color: #fef2f2;
   border-color: #fecaca;
-  background: #fef2f2;
+}
+.card-wa .case-index {
   color: #b91c1c;
 }
 
-/* Source code & comparison view */
+.card-ce {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+}
+.card-ce .case-index {
+  color: #b45309;
+}
+
+.card-tle {
+  background-color: #fff7ed;
+  border-color: #ffedd5;
+}
+.card-tle .case-index {
+  color: #c2410c;
+}
+
+.card-other {
+  background-color: #fafafa;
+  border-color: #e4e4e7;
+}
+.card-other .case-index {
+  color: #52525b;
+}
+
+/* Source code view */
 .source-section {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -794,22 +619,6 @@ async function copyText(text: string, successMsg = '复制成功') {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-}
-
-.diff-switch-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f1f5f9;
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-}
-
-.diff-label {
-  font-size: 12px;
-  color: #475569;
-  font-weight: 600;
 }
 
 .source-editor-container {
