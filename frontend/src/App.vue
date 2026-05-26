@@ -18,6 +18,7 @@
         </nav>
 
         <div class="account">
+          <el-button :icon="themeStore.isDark ? Sunny : Moon" circle @click="themeStore.toggle" />
           <template v-if="auth.isLoggedIn">
             <RouterLink class="profile-link" to="/profile">
               <el-avatar :size="30" :src="auth.user?.avatarUrl">
@@ -44,11 +45,13 @@
 import { computed, onBeforeUnmount } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { SwitchButton } from '@element-plus/icons-vue'
+import { SwitchButton, Sunny, Moon } from '@element-plus/icons-vue'
 import { SESSION_EXPIRED_EVENT } from './api/http'
 import { useAuthStore } from './stores/auth'
+import { useThemeStore } from './stores/theme'
 
 const auth = useAuthStore()
+const themeStore = useThemeStore()
 const router = useRouter()
 const avatarFallback = computed(() => (auth.user?.displayName || auth.user?.username || 'U').slice(0, 1).toUpperCase())
 

@@ -9,6 +9,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as monaco from 'monaco-editor'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import type { Language } from '../types'
+import { useThemeStore } from '../stores/theme'
 
 const props = defineProps<{
   modelValue: string
@@ -22,6 +23,8 @@ const emit = defineEmits<{
 
 const container = ref<HTMLElement | null>(null)
 let editor: monaco.editor.IStandaloneCodeEditor | null = null
+
+const themeStore = useThemeStore()
 
 const fontSize = ref(Number(localStorage.getItem('localoj.editor.fontSize')) || 14)
 const fontFamily = ref(localStorage.getItem('localoj.editor.fontFamily') || "'JetBrains Mono', 'Cascadia Code', Consolas, monospace")
@@ -39,7 +42,7 @@ onMounted(() => {
   editor = monaco.editor.create(container.value, {
     value: props.modelValue,
     language: toMonacoLanguage(props.language),
-    theme: 'vs',
+    theme: themeStore.isDark ? 'vs-dark' : 'vs',
     automaticLayout: true,
     minimap: { enabled: false },
     fontSize: fontSize.value,
@@ -56,6 +59,13 @@ onMounted(() => {
     })
   }
 })
+
+watch(
+  () => themeStore.isDark,
+  (isDark) => {
+    monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs')
+  }
+)
 
 watch(
   () => props.modelValue,

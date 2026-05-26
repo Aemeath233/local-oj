@@ -16,6 +16,7 @@
   --bg-app: #f8fafc;
   --bg-surface: #ffffff;
   --bg-muted: #f1f5f9;
+  --bg-topbar: rgba(255, 255, 255, 0.85);
   
   --text-primary: #0f172a;
   --text-secondary: #334155;
@@ -75,6 +76,44 @@
   font-family: var(--font-sans);
 }
 
+html.dark {
+  --primary: #0d9488;
+  --primary-hover: #14b8a6;
+  --primary-light: #0d2e2e;
+  --primary-light-border: #115e59;
+  --primary-dark: #2dd4bf;
+
+  --bg-app: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-muted: #334155;
+  --bg-topbar: rgba(15, 23, 42, 0.85);
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
+
+  --success: #10b981;
+  --success-hover: #34d399;
+  --success-light: #062f22;
+  
+  --error: #ef4444;
+  --error-hover: #f87171;
+  --error-light: #450a0a;
+  
+  --warning: #f59e0b;
+  --warning-hover: #fbbf24;
+  --warning-light: #451a03;
+
+  --border-color: #334155;
+  --border-light: #1e293b;
+
+  --el-color-primary: var(--primary);
+  --el-bg-color-overlay: #1e293b;
+  --el-bg-color: #1e293b;
+  --el-border-color-light: #334155;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -101,7 +140,7 @@ a {
 .topbar {
   height: 64px;
   border-bottom: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-topbar);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   padding: 0 28px;
@@ -305,9 +344,9 @@ a {
 }
 
 .panel {
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-surface);
   overflow: hidden;
 }
 
