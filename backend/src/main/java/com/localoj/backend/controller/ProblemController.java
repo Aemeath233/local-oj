@@ -36,10 +36,16 @@ public class ProblemController {
     ) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         List<Problem> problems = problemService.visibleProblems(keyword, tags);
-        Map<Long, String> statuses = problemService.solveStatuses(user, problems.stream().map(Problem::getId).toList());
+        List<Long> problemIds = problems.stream().map(Problem::getId).toList();
+        Map<Long, String> statuses = problemService.solveStatuses(user, problemIds);
+        Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(problemIds);
         String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
         return ApiResponse.ok(problems.stream()
-                .map(problem -> ProblemSummary.from(problem, statuses.getOrDefault(problem.getId(), "UNATTEMPTED")))
+                .map(problem -> ProblemSummary.from(
+                        problem,
+                        statuses.getOrDefault(problem.getId(), "UNATTEMPTED"),
+                        stats.getOrDefault(problem.getId(), new ProblemService.SubmissionStats(0, 0))
+                ))
                 .filter(summary -> normalizedStatus.isBlank() || normalizedStatus.equals(summary.solveStatus()))
                 .toList());
     }
@@ -57,7 +63,9 @@ public class ProblemController {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         String solveStatus = problemService.solveStatuses(user, List.of(dailyProblem.getId()))
                 .getOrDefault(dailyProblem.getId(), "UNATTEMPTED");
-        return ApiResponse.ok(ProblemSummary.from(dailyProblem, solveStatus));
+        Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(List.of(dailyProblem.getId()));
+        ProblemService.SubmissionStats dailyStats = stats.getOrDefault(dailyProblem.getId(), new ProblemService.SubmissionStats(0, 0));
+        return ApiResponse.ok(ProblemSummary.from(dailyProblem, solveStatus, dailyStats));
     }
 
     @GetMapping("/{id}")
@@ -74,7 +82,9 @@ public class ProblemController {
                 .toList();
         String solveStatus = problemService.solveStatuses(user, List.of(id))
                 .getOrDefault(id, "UNATTEMPTED");
-        return ApiResponse.ok(ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus));
+        Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(List.of(id));
+        ProblemService.SubmissionStats pStats = stats.getOrDefault(id, new ProblemService.SubmissionStats(0, 0));
+        return ApiResponse.ok(ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus, pStats));
     }
 
     public record ProblemSummary(
@@ -85,9 +95,11 @@ public class ProblemController {
             String tags,
             Integer timeLimitMs,
             Integer memoryLimitKb,
-            String solveStatus
+            String solveStatus,
+            Integer acceptedCount,
+            Integer submitCount
     ) {
-        static ProblemSummary from(Problem problem, String solveStatus) {
+        static ProblemSummary from(Problem problem, String solveStatus, ProblemService.SubmissionStats stats) {
             return new ProblemSummary(
                     problem.getId(),
                     problem.getSlug(),
@@ -96,7 +108,9 @@ public class ProblemController {
                     problem.getTags(),
                     problem.getTimeLimitMs(),
                     problem.getMemoryLimitKb(),
-                    solveStatus
+                    solveStatus,
+                    stats.acceptedCount(),
+                    stats.submitCount()
             );
         }
     }
@@ -111,9 +125,11 @@ public class ProblemController {
             String difficulty,
             String tags,
             List<SampleCase> samples,
-            String solveStatus
+            String solveStatus,
+            Integer acceptedCount,
+            Integer submitCount
     ) {
-        static ProblemDetail from(Problem problem, List<TestCase> samples, TestCaseFileStorage testCaseFileStorage, String solveStatus) {
+        static ProblemDetail from(Problem problem, List<TestCase> samples, TestCaseFileStorage testCaseFileStorage, String solveStatus, ProblemService.SubmissionStats stats) {
             return new ProblemDetail(
                     problem.getId(),
                     problem.getSlug(),
@@ -124,7 +140,9 @@ public class ProblemController {
                     problem.getDifficulty(),
                     problem.getTags(),
                     samples.stream().map(testCase -> SampleCase.from(testCase, testCaseFileStorage)).toList(),
-                    solveStatus
+                    solveStatus,
+                    stats.acceptedCount(),
+                    stats.submitCount()
             );
         }
     }

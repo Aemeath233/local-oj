@@ -324,4 +324,64 @@ public class ProblemService {
             Boolean sample
     ) {
     }
+
+    public Map<Long, SubmissionStats> submissionStats(List<Long> problemIds) {
+        Map<Long, SubmissionStats> stats = new HashMap<>();
+        for (Long id : problemIds) {
+            stats.put(id, new SubmissionStats(0, 0));
+        }
+        if (problemIds.isEmpty()) {
+            return stats;
+        }
+
+        // Query total submission count per problem
+        List<Map<String, Object>> totalCounts = submissionMapper.selectMaps(new QueryWrapper<Submission>()
+                .select("problem_id", "COUNT(*) as cnt")
+                .in("problem_id", problemIds)
+                .groupBy("problem_id"));
+        for (Map<String, Object> map : totalCounts) {
+            Long problemIdVal = getLongValue(map, "problem_id");
+            Integer cntVal = getIntValue(map, "cnt");
+            if (problemIdVal != null && cntVal != null) {
+                stats.put(problemIdVal, new SubmissionStats(0, cntVal));
+            }
+        }
+
+        // Query accepted (AC) submission count per problem
+        List<Map<String, Object>> acCounts = submissionMapper.selectMaps(new QueryWrapper<Submission>()
+                .select("problem_id", "COUNT(*) as cnt")
+                .in("problem_id", problemIds)
+                .eq("verdict", Verdict.AC.name())
+                .groupBy("problem_id"));
+        for (Map<String, Object> map : acCounts) {
+            Long problemIdVal = getLongValue(map, "problem_id");
+            Integer cntVal = getIntValue(map, "cnt");
+            if (problemIdVal != null && cntVal != null) {
+                SubmissionStats current = stats.get(problemIdVal);
+                if (current != null) {
+                    stats.put(problemIdVal, new SubmissionStats(cntVal, current.submitCount()));
+                }
+            }
+        }
+
+        return stats;
+    }
+
+    private Long getLongValue(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        if (val == null) {
+            val = map.get(key.toUpperCase());
+        }
+        return val instanceof Number ? ((Number) val).longValue() : null;
+    }
+
+    private Integer getIntValue(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        if (val == null) {
+            val = map.get(key.toUpperCase());
+        }
+        return val instanceof Number ? ((Number) val).intValue() : null;
+    }
+
+    public record SubmissionStats(int acceptedCount, int submitCount) {}
 }

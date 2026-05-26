@@ -69,6 +69,13 @@
             {{ row.timeLimitMs }} ms / {{ Math.round(row.memoryLimitKb / 1024) }} MB
           </template>
         </el-table-column>
+        <el-table-column label="AC / 提交" width="130" align="center">
+          <template #default="{ row }">
+            <span style="font-family: var(--font-mono); font-size: 0.9rem; font-weight: 550; color: var(--text-secondary);">
+              {{ row.acceptedCount ?? 0 }} / {{ row.submitCount ?? 0 }}
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column width="90" align="right">
           <template #default="{ row }">
             <el-button :icon="ArrowRight" circle @click.stop="router.push(`/problems/${row.id}`)" />

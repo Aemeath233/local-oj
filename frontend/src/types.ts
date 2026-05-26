@@ -37,6 +37,8 @@ export interface ProblemSummary {
   timeLimitMs: number
   memoryLimitKb: number
   solveStatus?: ProblemStatus
+  acceptedCount?: number
+  submitCount?: number
 }
 
 export interface AdminProblemSummary extends ProblemSummary {

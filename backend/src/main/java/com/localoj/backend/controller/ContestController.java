@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/contests")
@@ -77,7 +78,9 @@ public class ContestController {
                 .toList();
         String solveStatus = problemService.solveStatuses(user, List.of(problemId))
                 .getOrDefault(problemId, "UNATTEMPTED");
-        return ApiResponse.ok(ProblemController.ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus));
+        Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(List.of(problemId));
+        ProblemService.SubmissionStats pStats = stats.getOrDefault(problemId, new ProblemService.SubmissionStats(0, 0));
+        return ApiResponse.ok(ProblemController.ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus, pStats));
     }
 
     @GetMapping("/{id}/submissions")
