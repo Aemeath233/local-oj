@@ -138,8 +138,6 @@ public class AdminProblemController {
                     samples: [1]
                     """);
             addZipText(zip, "statement.md", """
-                    # A + B Problem
-
                     Read two integers and output their sum.
 
                     ## Input
@@ -157,9 +155,32 @@ public class AdminProblemController {
             addZipText(zip, "README.md", """
                     # LocalOJ 题目导入包规范说明
 
-                    本压缩包是一个标准的题目包示例，用于快速在后台导入题目。
+                    本压缩包是一个标准的题目包示例，用于快速在后台导入题目。如果您使用 AI Agent（如 Claude, GPT）来为您自动批量生成题目包，可以把本规范作为提示词（Prompt）约束直接提供给 Agent 遵守。
 
-                    ## 目录与文件说明
+                    ## ⚠️ 核心参数约束 (Core Constraints)
+
+                    为了使导入后的题目在系统中完美契合并运行，请务必严格遵守以下参数约束：
+
+                    1. **题目难度 (Difficulty)**:
+                       - 题目难度只分为三挡：**`Easy`**、**`Medium`**、**`Hard`**。
+                       - 请在配置文件中仅在这三者中选取一个，首字母务必大写。
+
+                    2. **时间限制 (Time Limit)**:
+                       - 如果没有特殊的时间限制要求，时间限制统一默认为 **`1000`** ms (即 1s)。
+                       - 字段名：`timeLimitMs`。最低限制 `100`，最大限制依据系统配置（一般不超过 `10000`）。
+
+                    3. **内存限制 (Memory Limit)**:
+                       - 如果没有特殊的内存开销要求，内存限制统一默认为 **`262144`** KB (即 256MB)。
+                       - 字段名：`memoryLimitKb`。最低限制 `16384` (16MB)。
+
+                    4. **题面不要包含主标题 (No Double Title)**:
+                       - **禁止**在 `statement.md` 的开头书写诸如 `# A + B Problem`、`# 题目名称` 的一级主标题！
+                       - 因为系统在前台题目详情页面已经自动加载并渲染了在 `config.yml` 中定义的 `title`。如果题面文件里再写一遍标题，会导致前台页面顶部出现两个重叠的一模一样的标题，十分突兀和不美观。
+                       - `statement.md` 直接以题目的背景/描述段落开始即可。
+
+                    ---
+
+                    ## 目录与文件说明 (Folder Structure)
 
                     1. **config.yml** (必须):
                        题目元数据配置文件。指定题目 Slug、标题、难度、标签、时间限制 (ms)、内存限制 (KB)、公开可见状态、分数分配方式以及充当样例展示的测试点名称。
@@ -172,7 +193,9 @@ public class AdminProblemController {
                        测试数据文件夹。包含成对的测试输入与输出文件。
                        * 每一个测试点需要有同名的输入文件 `.in` 和输出文件 `.out` 或 `.ans`（如 `1.in` 与 `1.out`）。
 
-                    ## 数学公式书写规范
+                    ---
+
+                    ## 数学公式书写规范 (LaTeX Math Syntax)
 
                     为了防止 Markdown 解析器与数学公式中的特殊字符发生冲突（如 `_` 误识别为斜体，`^` 误识别为上标，`<=` 或 `<` 误识别为 HTML 标签），本系统支持标准的 **LaTeX** 数学公式语法，并通过 KaTeX 引擎在前端进行渲染：
 
@@ -180,6 +203,8 @@ public class AdminProblemController {
                       *注意*: 起始 `$` 后面不能紧跟空格，结束 `$` 前面不能紧贴空格。
                     * **块级公式 (Block Math)**: 使用双个 `$$` 包裹，独占一行或单独展示。例如：`$$ -10^9 \\le a_i \\le 10^9 $$`。
                     * **特殊字符书写**: 请**避免**直接在普通 Markdown 文本中书写含有 `_`、`^`、`<=` 或 `<` 的复杂算式，务必将此类公式用 `$` 或 `$$` 包裹起来，或者使用 LaTeX 的对应转义符（如 `\\le` 代表小于等于 `≤`，`\\ge` 代表大于等于 `≥`）。
+
+                    ---
 
                     ## 导入机制说明
 

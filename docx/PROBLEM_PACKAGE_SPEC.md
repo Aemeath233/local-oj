@@ -120,10 +120,10 @@ Supported keys:
 | --- | --- | --- |
 | `title` | yes | Problem title. |
 | `slug` | no | Unique URL slug. If omitted, backend generates one from ZIP name/title plus time. |
-| `difficulty` | no | Defaults to `Easy`. |
+| `difficulty` | no | Defaults to `Easy`. Strictly choose from `Easy`, `Medium`, or `Hard` (three tiers only). |
 | `tags` | no | Stored as comma-separated tag names on the problem row. |
-| `timeLimitMs` / `timeLimit` | no | Milliseconds. Defaults to `1000`, minimum `100`. |
-| `memoryLimitKb` / `memoryLimit` | no | Kilobytes. Defaults to `262144`, minimum `16384`. |
+| `timeLimitMs` / `timeLimit` | no | Milliseconds. Defaults to `1000` (1s) if there is no special requirement. Minimum `100`. |
+| `memoryLimitKb` / `memoryLimit` | no | Kilobytes. Defaults to `262144` (256MB) if there is no special requirement. Minimum `16384`. |
 | `visible` | no | Defaults to `true`. Accepts `true/false`, `yes/no`, `1/0`, `on/off`, `visible/hidden`, `可见/隐藏`. |
 | `samples` / `sampleCases` | no | Case basenames to expose as samples, comma or semicolon separated. |
 | `scores` | no | Score map like `1=20,2=80`. Missing cases share the remaining points. Explicit total cannot exceed 100. |
@@ -134,11 +134,12 @@ Key names are case-insensitive and ignore spaces, underscores, and hyphens. For 
 
 The statement file is stored as the full problem statement. Put all description, input/output requirements, constraints, notes, and examples here. The admin UI no longer splits input and output description into separate fields.
 
+> [!IMPORTANT]
+> **DO NOT include a top-level title header** (e.g. `# A + B Problem`) inside `statement.md`. The problem title is already configured in `config.yml` and displayed at the top of the Problem Details view in the frontend UI. If you include a title header in `statement.md`, it will display twice in the UI.
+
 Recommended `statement.md`:
 
 ```markdown
-# A + B Problem
-
 Read two integers and output their sum.
 
 ## Input
@@ -199,8 +200,6 @@ samples: [1]
 `statement.md` in the example:
 
 ```markdown
-# A + B Problem
-
 Read two integers and output their sum.
 
 ## Input
