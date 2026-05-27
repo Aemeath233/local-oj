@@ -16,8 +16,20 @@
       </div>
     </div>
 
+    <!-- Batch Actions Toolbar -->
+    <div v-if="selectedIds.length > 0" class="batch-toolbar animate-fade-in">
+      <span class="selected-text">已选中 {{ selectedIds.length }} 个题目</span>
+      <div class="batch-buttons">
+        <el-button size="small" type="primary" :icon="Download" @click="handleBatchExport">批量导出</el-button>
+        <el-button size="small" type="success" :icon="View" @click="handleBatchVisibility(true)">批量公开</el-button>
+        <el-button size="small" type="warning" :icon="Hide" @click="handleBatchVisibility(false)">批量隐藏</el-button>
+        <el-button size="small" type="danger" :icon="Delete" @click="handleBatchDelete">批量删除</el-button>
+      </div>
+    </div>
+
     <section class="panel table-panel">
-      <el-table v-loading="loading" :data="problems" row-key="id">
+      <el-table v-loading="loading" :data="problems" row-key="id" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="50" />
         <el-table-column prop="id" label="#" width="76" />
         <el-table-column label="题目" min-width="240">
           <template #default="{ row }">
@@ -179,7 +191,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Download, Edit, Plus, Refresh, Upload, UploadFilled, View } from '@element-plus/icons-vue'
+import { Delete, Download, Edit, Plus, Refresh, Upload, UploadFilled, View, Hide } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
 import { deleteProblem, fetchAdminProblems, http, importProblemPackage, setProblemVisibility } from '../api/http'
 import { getTagColor } from '../utils/tag'
@@ -202,6 +214,97 @@ async function load() {
   loading.value = true
   try {
     problems.value = await fetchAdminProblems()
+  } finally {
+    loading.value = false
+  }
+}
+
+const selectedIds = ref<number[]>([])
+
+function handleSelectionChange(selection: AdminProblemSummary[]) {
+  selectedIds.value = selection.map(row => row.id)
+}
+
+async function handleBatchExport() {
+  if (selectedIds.value.length === 0) return
+  try {
+    loading.value = true
+    const response = await http.get('/admin/problems/export', {
+      params: { ids: selectedIds.value.join(',') },
+      responseType: 'blob'
+    })
+    
+    const contentDisposition = response.headers['content-disposition']
+    let filename = 'problems-export.zip'
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename=(.+)/)
+      if (match && match[1]) {
+        filename = match[1].replace(/["']/g, '')
+      }
+    } else if (selectedIds.value.length === 1) {
+      const singleProb = problems.value.find(p => p.id === selectedIds.value[0])
+      if (singleProb) {
+        filename = `${singleProb.slug}.zip`
+      }
+    }
+    
+    const blob = new Blob([response.data], { type: 'application/zip' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(link.href)
+    ElMessage.success('批量导出成功！')
+  } catch (error) {
+    ElMessage.error('批量导出失败，请重试')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleBatchVisibility(visible: boolean) {
+  if (selectedIds.value.length === 0) return
+  try {
+    loading.value = true
+    await http.post('/admin/problems/batch-visibility', {
+      ids: selectedIds.value,
+      visible
+    })
+    ElMessage.success(visible ? '所选题目已批量设置为公开' : '所选题目已批量设置为隐藏')
+    await load()
+    selectedIds.value = []
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '批量修改可见性失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleBatchDelete() {
+  if (selectedIds.value.length === 0) return
+  try {
+    await ElMessageBox.confirm(
+      `确定要永久删除选中的 ${selectedIds.value.length} 个题目吗？此操作将同时清空这些题目的所有评测点、历史提交记录及题解，且不可恢复！`,
+      '警告',
+      {
+        confirmButtonText: '确定批量删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        buttonSize: 'default',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    loading.value = true
+    await http.post('/admin/problems/batch-delete', {
+      ids: selectedIds.value
+    })
+    ElMessage.success('批量删除成功')
+    await load()
+    selectedIds.value = []
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.response?.data?.message || '批量删除失败')
+    }
   } finally {
     loading.value = false
   }
@@ -591,5 +694,50 @@ onMounted(load)
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+/* ===== Batch Toolbar Styling ===== */
+.batch-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 12px 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 12px -2px rgba(22, 163, 74, 0.08);
+  animation: slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.selected-text {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.batch-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode overrides for batch toolbar */
+html.dark .batch-toolbar {
+  background: rgba(22, 163, 74, 0.1) !important;
+  border-color: rgba(22, 163, 74, 0.25) !important;
+}
+html.dark .selected-text {
+  color: #4ade80 !important;
 }
 </style>

@@ -469,4 +469,13 @@ public class TestCaseFileStorage {
         Path problemDir = caseDir(problemId).getParent();
         deleteRecursivelyIfExists(problemDir);
     }
+
+    public Path getCaseFilePath(Long problemId, String fileName) {
+        Path directory = dataRoot.resolve("problems").resolve(String.valueOf(problemId)).resolve("cases").normalize();
+        ensureInside(dataRoot, directory);
+        Path root = directory.toAbsolutePath().normalize();
+        Path resolved = root.resolve(fileName).normalize();
+        ensureInside(root, resolved);
+        return resolved;
+    }
 }

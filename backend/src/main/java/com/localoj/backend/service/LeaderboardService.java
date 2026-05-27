@@ -34,39 +34,53 @@ public class LeaderboardService {
         this.objectMapper = objectMapper;
     }
 
-    public List<LeaderboardRow> top(int limit) {
-        int boundedLimit = Math.max(1, Math.min(limit, 200));
-        
-        // 1. Try to read from Redis cache
+    private List<LeaderboardRow> getAllLeaderboard() {
         try {
-            String cachedJson = redisTemplate.opsForValue().get(CACHE_KEY);
+            String cachedJson = redisTemplate.opsForValue().get("cache:leaderboard:all1000");
             if (cachedJson != null && !cachedJson.isBlank()) {
                 List<LeaderboardRow> cachedRows = objectMapper.readValue(
                         cachedJson, 
                         new TypeReference<List<LeaderboardRow>>() {}
                 );
                 if (cachedRows != null && !cachedRows.isEmpty()) {
-                    return cachedRows.subList(0, Math.min(boundedLimit, cachedRows.size()));
+                    return cachedRows;
                 }
             }
         } catch (Exception e) {
             log.error("Failed to read leaderboard from Redis cache", e);
         }
 
-        // 2. Cache miss or error -> query MySQL
-        List<LeaderboardRow> rows = queryLeaderboardFromDb(200);
+        List<LeaderboardRow> rows = queryLeaderboardFromDb(1000);
 
-        // 3. Write back to Redis with a short TTL to protect MySQL
         if (rows != null && !rows.isEmpty()) {
             try {
                 String json = objectMapper.writeValueAsString(rows);
-                redisTemplate.opsForValue().set(CACHE_KEY, json, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set("cache:leaderboard:all1000", json, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.error("Failed to write leaderboard to Redis cache", e);
             }
         }
 
-        return rows == null ? Collections.emptyList() : rows.subList(0, Math.min(boundedLimit, rows.size()));
+        return rows == null ? Collections.emptyList() : rows;
+    }
+
+    public List<LeaderboardRow> top(int limit) {
+        List<LeaderboardRow> all = getAllLeaderboard();
+        int boundedLimit = Math.max(1, Math.min(limit, 1000));
+        return all.subList(0, Math.min(boundedLimit, all.size()));
+    }
+
+    public LeaderboardRow myRank(Long currentUserId) {
+        if (currentUserId == null) {
+            return null;
+        }
+        List<LeaderboardRow> all = getAllLeaderboard();
+        for (LeaderboardRow row : all) {
+            if (row.userId().equals(currentUserId)) {
+                return row;
+            }
+        }
+        return null;
     }
 
     private List<LeaderboardRow> queryLeaderboardFromDb(int limit) {

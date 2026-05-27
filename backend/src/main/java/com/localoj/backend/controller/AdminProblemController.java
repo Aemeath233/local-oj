@@ -31,6 +31,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -221,6 +224,135 @@ public class AdminProblemController {
                 .body(output.toByteArray());
     }
 
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportProblems(@RequestParam("ids") List<Long> ids) throws IOException {
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("请选择要导出的题目");
+        }
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        String filename;
+
+        if (ids.size() == 1) {
+            // Export single problem
+            Problem problem = problemService.requireProblem(ids.get(0));
+            filename = problem.getSlug() + ".zip";
+            try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+                exportProblemToZip(problem, zip);
+            }
+        } else {
+            // Export multiple problems into individual zips inside a parent zip
+            filename = "problems-export-" + System.currentTimeMillis() + ".zip";
+            try (ZipOutputStream parentZip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+                for (Long id : ids) {
+                    Problem problem = problemService.requireProblem(id);
+                    ByteArrayOutputStream singleOutput = new ByteArrayOutputStream();
+                    try (ZipOutputStream singleZip = new ZipOutputStream(singleOutput, StandardCharsets.UTF_8)) {
+                        exportProblemToZip(problem, singleZip);
+                    }
+                    parentZip.putNextEntry(new ZipEntry(problem.getSlug() + ".zip"));
+                    parentZip.write(singleOutput.toByteArray());
+                    parentZip.closeEntry();
+                }
+            }
+        }
+
+        byte[] bytes = output.toByteArray();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setContentLength(bytes.length);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(bytes);
+    }
+
+    @PostMapping("/batch-visibility")
+    public ApiResponse<Void> batchVisibility(@Valid @RequestBody BatchVisibilityRequest request) {
+        if (request.ids() != null) {
+            for (Long id : request.ids()) {
+                adminService.updateProblemVisibility(id, request.visible());
+            }
+        }
+        return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/batch-delete")
+    public ApiResponse<Void> batchDelete(@Valid @RequestBody BatchDeleteRequest request) {
+        if (request.ids() != null) {
+            for (Long id : request.ids()) {
+                problemService.deleteProblem(id);
+            }
+        }
+        return ApiResponse.ok(null);
+    }
+
+    private void exportProblemToZip(Problem problem, ZipOutputStream zip) throws IOException {
+        // 1. Write config.yml
+        StringBuilder config = new StringBuilder();
+        config.append("slug: ").append(problem.getSlug()).append("\n");
+        config.append("title: ").append(problem.getTitle()).append("\n");
+        config.append("difficulty: ").append(problem.getDifficulty() == null ? "Easy" : problem.getDifficulty()).append("\n");
+        config.append("visible: ").append(problem.getVisible() != null && problem.getVisible()).append("\n");
+        config.append("timeLimitMs: ").append(problem.getTimeLimitMs() == null ? 1000 : problem.getTimeLimitMs()).append("\n");
+        config.append("memoryLimitKb: ").append(problem.getMemoryLimitKb() == null ? 262144 : problem.getMemoryLimitKb()).append("\n");
+
+        if (problem.getTags() != null && !problem.getTags().isBlank()) {
+            config.append("tags: ").append(problem.getTags()).append("\n");
+        }
+
+        List<TestCase> cases = problemService.testCases(problem.getId());
+
+        // Extract sample cases
+        List<String> samples = new ArrayList<>();
+        List<String> scores = new ArrayList<>();
+        for (TestCase c : cases) {
+            if (Boolean.TRUE.equals(c.getSample())) {
+                samples.add(c.getCaseName());
+            }
+            scores.add(c.getCaseName() + ":" + (c.getScore() == null ? 0 : c.getScore()));
+        }
+
+        if (!samples.isEmpty()) {
+            config.append("samples: ").append(String.join(",", samples)).append("\n");
+        }
+        if (!scores.isEmpty()) {
+            config.append("scores: ").append(String.join(",", scores)).append("\n");
+        }
+
+        // Add config.yml entry
+        zip.putNextEntry(new ZipEntry("config.yml"));
+        zip.write(config.toString().getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
+
+        // 2. Write statement.md
+        zip.putNextEntry(new ZipEntry("statement.md"));
+        String description = problem.getDescription() == null ? "" : problem.getDescription();
+        zip.write(description.getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
+
+        // 3. Write cases
+        for (TestCase c : cases) {
+            if (c.getInputFile() != null && !c.getInputFile().isBlank()) {
+                Path inputPath = testCaseFileStorage.getCaseFilePath(problem.getId(), c.getInputFile());
+                if (Files.exists(inputPath)) {
+                    zip.putNextEntry(new ZipEntry("cases/" + c.getInputFile()));
+                    Files.copy(inputPath, zip);
+                    zip.closeEntry();
+                }
+            }
+            if (c.getOutputFile() != null && !c.getOutputFile().isBlank()) {
+                Path outputPath = testCaseFileStorage.getCaseFilePath(problem.getId(), c.getOutputFile());
+                if (Files.exists(outputPath)) {
+                    zip.putNextEntry(new ZipEntry("cases/" + c.getOutputFile()));
+                    Files.copy(outputPath, zip);
+                    zip.closeEntry();
+                }
+            }
+        }
+    }
+
     private void addZipText(ZipOutputStream zip, String name, String content) throws IOException {
         zip.putNextEntry(new ZipEntry(name));
         zip.write(content.getBytes(StandardCharsets.UTF_8));
@@ -290,5 +422,14 @@ public class AdminProblemController {
 
     public record VisibilityRequest(@NotNull Boolean visible) {
     }
+
+    public record BatchVisibilityRequest(
+            @NotEmpty List<Long> ids,
+            @NotNull Boolean visible
+    ) {}
+
+    public record BatchDeleteRequest(
+            @NotEmpty List<Long> ids
+    ) {}
 
 }

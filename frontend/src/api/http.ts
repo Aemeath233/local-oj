@@ -141,6 +141,11 @@ export async function fetchLeaderboard(limit = 100) {
   return response.data.data
 }
 
+export async function fetchMyRank() {
+  const response = await http.get<ApiEnvelope<LeaderboardRow>>('/leaderboard/my-rank')
+  return response.data.data
+}
+
 export async function fetchProblem(id: number) {
   const response = await http.get<ApiEnvelope<ProblemDetail>>(`/problems/${id}`)
   return response.data.data
