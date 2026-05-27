@@ -227,8 +227,10 @@
         <div class="submit-toolbar">
           <el-select v-model="language" class="language-select">
             <el-option label="C++20" value="CPP" />
+            <el-option label="C++20 (O3氧气优化)" value="CPP_O3" />
             <el-option label="C" value="C" />
             <el-option label="Python 3.12" value="PYTHON" />
+            <el-option label="PyPy 3" value="PYPY3" />
             <el-option label="Java 21" value="JAVA" />
           </el-select>
           <el-button :icon="VideoPlay" :loading="selfTesting" :disabled="cooldownSeconds > 0" @click="runCustomTest">
@@ -747,7 +749,7 @@ function templateFor(value: Language) {
   if (custom !== null) {
     return custom
   }
-  if (value === 'PYTHON') {
+  if (value === 'PYTHON' || value === 'PYPY3') {
     return 'a, b = map(int, input().split())\nprint(a + b)\n'
   }
   if (value === 'JAVA') {

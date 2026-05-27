@@ -8,6 +8,8 @@ import com.localoj.common.mapper.TrainingSetMapper;
 import com.localoj.common.model.Problem;
 import com.localoj.common.model.TrainingProblemRelation;
 import com.localoj.common.model.TrainingSet;
+import com.localoj.common.mapper.UserMapper;
+import com.localoj.common.model.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,17 +25,20 @@ public class TrainingService {
     private final TrainingProblemRelationMapper trainingProblemRelationMapper;
     private final ProblemMapper problemMapper;
     private final ProblemService problemService;
+    private final UserMapper userMapper;
 
     public TrainingService(
             TrainingSetMapper trainingSetMapper,
             TrainingProblemRelationMapper trainingProblemRelationMapper,
             ProblemMapper problemMapper,
-            ProblemService problemService
+            ProblemService problemService,
+            UserMapper userMapper
     ) {
         this.trainingSetMapper = trainingSetMapper;
         this.trainingProblemRelationMapper = trainingProblemRelationMapper;
         this.problemMapper = problemMapper;
         this.problemService = problemService;
+        this.userMapper = userMapper;
     }
 
     public List<TrainingSetDto> listTrainingSets(CurrentUser user, boolean includeInvisible) {
@@ -61,7 +66,8 @@ public class TrainingService {
                     set.getVisible(),
                     total,
                     solved,
-                    set.getCreatedAt()
+                    set.getCreatedAt(),
+                    set.getCreatorNickname() != null ? set.getCreatorNickname() : "管理员"
             ));
         }
         return dtos;
@@ -128,11 +134,23 @@ public class TrainingService {
     }
 
     @Transactional
-    public TrainingSet createTrainingSet(String title, String description, boolean visible) {
+    public TrainingSet createTrainingSet(String title, String description, boolean visible, Long creatorUserId) {
         TrainingSet set = new TrainingSet();
         set.setTitle(title);
         set.setDescription(description);
         set.setVisible(visible);
+
+        if (creatorUserId != null) {
+            User creator = userMapper.selectById(creatorUserId);
+            if (creator != null) {
+                set.setCreatorNickname(creator.getDisplayName());
+            } else {
+                set.setCreatorNickname("管理员");
+            }
+        } else {
+            set.setCreatorNickname("管理员");
+        }
+
         LocalDateTime now = LocalDateTime.now();
         set.setCreatedAt(now);
         set.setUpdatedAt(now);
@@ -227,7 +245,8 @@ public class TrainingService {
             Boolean visible,
             int totalProblems,
             int solvedProblems,
-            LocalDateTime createdAt
+            LocalDateTime createdAt,
+            String creatorNickname
     ) {}
 
     public record ProblemWithStatusDto(

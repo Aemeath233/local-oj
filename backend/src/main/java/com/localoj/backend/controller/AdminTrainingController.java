@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import com.localoj.backend.security.CurrentUser;
+import com.localoj.backend.security.SecurityUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,10 +30,12 @@ public class AdminTrainingController {
 
     @PostMapping
     public ApiResponse<TrainingSet> create(@Valid @RequestBody UpsertTrainingRequest request) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
         TrainingSet set = trainingService.createTrainingSet(
                 request.title(),
                 request.description(),
-                request.visible() == null || request.visible()
+                request.visible() == null || request.visible(),
+                currentUser.id()
         );
         return ApiResponse.ok(set);
     }

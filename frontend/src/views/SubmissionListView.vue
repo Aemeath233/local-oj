@@ -22,11 +22,13 @@
  
       <!-- Filter by Language -->
       <div>
-        <el-select v-model="filterLanguage" placeholder="所有语言" clearable style="width: 140px;">
+        <el-select v-model="filterLanguage" placeholder="所有语言" clearable style="width: 180px;">
           <el-option label="C++20" value="CPP" />
+          <el-option label="C++20 (O3氧气优化)" value="CPP_O3" />
           <el-option label="C" value="C" />
           <el-option label="Python 3.12" value="PYTHON" />
-          <el-option label="Java" value="JAVA" />
+          <el-option label="PyPy 3" value="PYPY3" />
+          <el-option label="Java 21" value="JAVA" />
         </el-select>
       </div>
  

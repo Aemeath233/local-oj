@@ -51,7 +51,13 @@
           </div>
 
           <div class="card-footer">
-            <span class="card-time">创建于 {{ formatDate(set.createdAt) }}</span>
+            <div class="card-meta">
+              <span class="card-author">
+                <el-icon class="meta-icon"><User /></el-icon>
+                {{ set.creatorNickname || '管理员' }}
+              </span>
+              <span class="card-time">创建于 {{ formatDate(set.createdAt) }}</span>
+            </div>
             <el-button link type="primary" class="enter-btn">
               开始练习
               <el-icon style="margin-left: 4px;"><ArrowRight /></el-icon>
@@ -66,7 +72,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, ArrowRight } from '@element-plus/icons-vue'
+import { Search, ArrowRight, User } from '@element-plus/icons-vue'
 import { http } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 
@@ -78,6 +84,7 @@ interface TrainingSetDto {
   totalProblems: number
   solvedProblems: number
   createdAt: string
+  creatorNickname?: string
 }
 
 const router = useRouter()
@@ -220,6 +227,22 @@ function formatDate(dateStr: string) {
   align-items: center;
   border-top: 1px solid #f1f5f9;
   padding-top: 12px;
+}
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.card-author {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.card-author .el-icon {
+  font-size: 13px;
 }
 .card-time {
   font-size: 11px;

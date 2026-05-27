@@ -86,11 +86,13 @@
         <div class="editor-bar panel">
           <div class="bar-left">
             <span class="editor-title">✏️ 编写代码</span>
-            <el-select v-model="language" size="small" style="width: 120px;">
+            <el-select v-model="language" size="small" style="width: 140px;">
               <el-option label="C (GCC)" value="C" />
               <el-option label="C++20 (G++)" value="CPP" />
+              <el-option label="C++20 (O3氧气优化)" value="CPP_O3" />
               <el-option label="Java (JDK 21)" value="JAVA" />
               <el-option label="Python 3.12" value="PYTHON" />
+              <el-option label="PyPy 3" value="PYPY3" />
             </el-select>
           </div>
           <div class="bar-right">
@@ -527,7 +529,7 @@ function templateFor(value: Language) {
   if (custom !== null) {
     return custom
   }
-  if (value === 'PYTHON') {
+  if (value === 'PYTHON' || value === 'PYPY3') {
     return 'a, b = map(int, input().split())\nprint(a + b)\n'
   }
   if (value === 'JAVA') {

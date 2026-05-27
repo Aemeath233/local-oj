@@ -176,8 +176,10 @@ public class JudgeService {
         return switch (submission.getLanguage()) {
             case C -> compileNative(submission, settings, "main.c", "main", List.of("/usr/bin/gcc", "-O2", "-pipe", "main.c", "-o", "main"));
             case CPP -> compileNative(submission, settings, "main.cpp", "main", List.of("/usr/bin/g++", "-std=c++20", "-O2", "-pipe", "main.cpp", "-o", "main"));
+            case CPP_O3 -> compileNative(submission, settings, "main.cpp", "main", List.of("/usr/bin/g++", "-std=c++20", "-O3", "-pipe", "main.cpp", "-o", "main"));
             case PYTHON -> compilePython(submission, settings);
             case JAVA -> compileJava(submission, settings);
+            case PYPY3 -> compilePyPy3(submission, settings);
         };
     }
 
@@ -216,6 +218,21 @@ public class JudgeService {
         return new CompiledArtifact(Language.PYTHON, Map.of(), List.of());
     }
 
+    private CompiledArtifact compilePyPy3(Submission submission, SandboxSettingsProvider.Settings settings) {
+        Map<String, Object> cmd = command(List.of("/usr/bin/pypy3", "-m", "py_compile", "main.py"));
+        cmd.put("files", standardFiles("", settings.outputLimitBytes()));
+        cmd.put("cpuLimit", settings.compileCpuLimitNs());
+        cmd.put("clockLimit", settings.compileClockLimitNs());
+        cmd.put("memoryLimit", COMPILE_MEMORY_LIMIT_BYTES);
+        cmd.put("procLimit", settings.maxProcessCount());
+        cmd.put("copyIn", Map.of("main.py", memoryFile(submission.getSourceCode())));
+        cmd.put("copyOut", List.of("stdout", "stderr"));
+
+        GoJudgeResult result = singleResult(goJudgeClient.run(List.of(cmd)));
+        ensureCompileAccepted(result);
+        return new CompiledArtifact(Language.PYPY3, Map.of(), List.of());
+    }
+
     private CompiledArtifact compileJava(Submission submission, SandboxSettingsProvider.Settings settings) {
         Map<String, Object> cmd = command(List.of("/bin/bash", "-c", "/usr/bin/javac Main.java && /usr/bin/jar cf Main.jar *.class"));
         cmd.put("files", standardFiles("", settings.outputLimitBytes()));
@@ -238,9 +255,10 @@ public class JudgeService {
 
     private CaseRun runCase(Submission submission, Problem problem, CompiledArtifact artifact, String stdin, SandboxSettingsProvider.Settings settings) {
         Map<String, Object> cmd = switch (submission.getLanguage()) {
-            case C, CPP -> nativeRunCommand(artifact, stdin, problem, settings);
+            case C, CPP, CPP_O3 -> nativeRunCommand(artifact, stdin, problem, settings);
             case PYTHON -> pythonRunCommand(submission, stdin, problem, settings);
             case JAVA -> javaRunCommand(artifact, stdin, problem, settings);
+            case PYPY3 -> pypy3RunCommand(submission, stdin, problem, settings);
         };
         GoJudgeResult result = singleResult(goJudgeClient.run(List.of(cmd)));
         Verdict verdict = verdictFrom(result);
@@ -261,6 +279,15 @@ public class JudgeService {
 
     private Map<String, Object> pythonRunCommand(Submission submission, String stdin, Problem problem, SandboxSettingsProvider.Settings settings) {
         Map<String, Object> cmd = command(List.of("/usr/bin/python3", "main.py"));
+        cmd.put("files", standardFiles(stdin, settings.outputLimitBytes()));
+        putRunLimits(cmd, problem, settings);
+        cmd.put("copyIn", Map.of("main.py", memoryFile(submission.getSourceCode())));
+        cmd.put("copyOut", List.of("stdout", "stderr"));
+        return cmd;
+    }
+
+    private Map<String, Object> pypy3RunCommand(Submission submission, String stdin, Problem problem, SandboxSettingsProvider.Settings settings) {
+        Map<String, Object> cmd = command(List.of("/usr/bin/pypy3", "main.py"));
         cmd.put("files", standardFiles(stdin, settings.outputLimitBytes()));
         putRunLimits(cmd, problem, settings);
         cmd.put("copyIn", Map.of("main.py", memoryFile(submission.getSourceCode())));

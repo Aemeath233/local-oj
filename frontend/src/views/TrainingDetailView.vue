@@ -7,6 +7,16 @@
     <div v-if="set" class="training-header panel">
       <div class="header-main">
         <h1 class="header-title">{{ set.title }}</h1>
+        <div class="header-meta-row">
+          <span class="meta-item">
+            <el-icon class="meta-icon"><User /></el-icon>
+            创建人：<strong class="author-name">{{ set.creatorNickname || '管理员' }}</strong>
+          </span>
+          <span class="meta-item">
+            <el-icon class="meta-icon"><Calendar /></el-icon>
+            创建时间：{{ formatDate(set.createdAt) }}
+          </span>
+        </div>
         <p class="header-desc">{{ set.description || '暂无详细描述。' }}</p>
       </div>
       <div class="header-stats">
@@ -88,7 +98,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, User, Calendar } from '@element-plus/icons-vue'
 import { http } from '../api/http'
 import { getTagColor } from '../utils/tag'
 import type { ProblemStatus } from '../types'
@@ -158,6 +168,12 @@ function splitTags(tags?: string) {
     .map((tag) => tag.trim())
     .filter(Boolean)
 }
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return '未知时间'
+  const date = new Date(dateStr)
+  return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
+}
 </script>
 
 <style scoped>
@@ -187,6 +203,26 @@ function splitTags(tags?: string) {
   font-size: 14px;
   color: #64748b;
   line-height: 1.6;
+}
+.header-meta-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #64748b;
+}
+.meta-icon {
+  font-size: 14px;
+}
+.author-name {
+  color: #1e293b;
+  font-weight: 600;
 }
 .header-stats {
   display: flex;

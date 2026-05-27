@@ -4,5 +4,7 @@ public enum Language {
     C,
     CPP,
     PYTHON,
-    JAVA
+    JAVA,
+    PYPY3,
+    CPP_O3
 }

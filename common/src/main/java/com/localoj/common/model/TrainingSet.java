@@ -13,6 +13,7 @@ public class TrainingSet {
     private String title;
     private String description;
     private Boolean visible;
+    private String creatorNickname;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -46,6 +47,14 @@ public class TrainingSet {
 
     public void setVisible(Boolean visible) {
         this.visible = visible;
+    }
+
+    public String getCreatorNickname() {
+        return creatorNickname;
+    }
+
+    public void setCreatorNickname(String creatorNickname) {
+        this.creatorNickname = creatorNickname;
     }
 
     public LocalDateTime getCreatedAt() {

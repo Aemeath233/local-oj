@@ -54,7 +54,9 @@ function toMonacoLanguage(language: Language) {
     C: 'c',
     CPP: 'cpp',
     PYTHON: 'python',
-    JAVA: 'java'
+    JAVA: 'java',
+    PYPY3: 'python',
+    CPP_O3: 'cpp'
   }[language] || 'cpp'
 }
 

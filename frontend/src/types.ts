@@ -1,5 +1,5 @@
 export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'STUDENT'
-export type Language = 'C' | 'CPP' | 'PYTHON' | 'JAVA'
+export type Language = 'C' | 'CPP' | 'PYTHON' | 'JAVA' | 'PYPY3' | 'CPP_O3'
 export type SubmissionStatus = 'PENDING' | 'RUNNING' | 'FINISHED'
 export type Verdict = 'AC' | 'WA' | 'TLE' | 'MLE' | 'OLE' | 'RE' | 'CE' | 'IE'
 export type ProblemStatus = 'UNATTEMPTED' | 'ATTEMPTED' | 'ACCEPTED'
