@@ -93,7 +93,7 @@
                   <el-select v-model="prefLanguage" style="width: 100%;">
                     <el-option label="C++20 (O2)" value="CPP" />
                     <el-option label="C++20 (O3)" value="CPP_O3" />
-                    <el-option label="C" value="C" />
+                    <el-option label="C17 (O2)" value="C" />
                     <el-option label="Python 3.12" value="PYTHON" />
                     <el-option label="PyPy 3" value="PYPY3" />
                     <el-option label="Java 21" value="JAVA" />
@@ -165,7 +165,7 @@ int main() {
                     <el-select v-model="templateLang" style="width: 180px;" @change="loadTemplateForLang">
                       <el-option label="C++20 (O2)" value="CPP" />
                       <el-option label="C++20 (O3)" value="CPP_O3" />
-                      <el-option label="C" value="C" />
+                      <el-option label="C17 (O2)" value="C" />
                       <el-option label="Python 3.12" value="PYTHON" />
                       <el-option label="PyPy 3" value="PYPY3" />
                       <el-option label="Java 21" value="JAVA" />

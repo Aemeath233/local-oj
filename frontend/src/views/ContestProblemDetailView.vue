@@ -87,7 +87,7 @@
           <div class="bar-left">
             <span class="editor-title">✏️ 编写代码</span>
             <el-select v-model="language" size="small" style="width: 140px;">
-              <el-option label="C (GCC)" value="C" />
+              <el-option label="C17 (O2)" value="C" />
               <el-option label="C++20 (O2)" value="CPP" />
               <el-option label="C++20 (O3)" value="CPP_O3" />
               <el-option label="Java (JDK 21)" value="JAVA" />
