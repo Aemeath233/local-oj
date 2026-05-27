@@ -37,8 +37,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     retry_install \
         gcc \
         g++ \
-        openjdk-21-jdk-headless; \
-    for cmd in gcc g++ java javac python3; do \
+        openjdk-21-jdk-headless \
+        pypy3; \
+    for cmd in gcc g++ java javac python3 pypy3; do \
         if ! command -v "$cmd" >/dev/null; then \
             echo "missing runtime command: $cmd" >&2; \
             exit 1; \
