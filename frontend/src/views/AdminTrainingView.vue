@@ -124,7 +124,7 @@
       <div class="search-bar" style="margin-bottom: 16px;">
         <el-input
           v-model="searchProblemQuery"
-          placeholder="搜索题目名称、缩略名..."
+          placeholder="搜索题目 ID、名称、缩略名、标签..."
           clearable
           :prefix-icon="Search"
         />
@@ -141,7 +141,22 @@
           >
             <el-checkbox :value="p.id">
               <span class="lib-id">#{{ p.id }}</span>
-              <span class="lib-title">{{ p.title }}</span>
+              <div class="lib-meta">
+                <span class="lib-title">{{ p.title }}</span>
+                <div v-if="p.tags" class="lib-tags">
+                  <el-tag
+                    v-for="tag in splitTags(p.tags)"
+                    :key="tag"
+                    size="small"
+                    :color="getTagColor(tag) + '20'"
+                    :style="{ borderColor: getTagColor(tag), color: getTagColor(tag) }"
+                    class="mini-tag"
+                    effect="plain"
+                  >
+                    {{ tag }}
+                  </el-tag>
+                </div>
+              </div>
               <el-tag size="small" type="info" class="lib-slug">{{ p.slug }}</el-tag>
             </el-checkbox>
           </div>
@@ -183,6 +198,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import { http, fetchAdminProblems } from '../api/http'
+import { getTagColor } from '../utils/tag'
 
 const props = defineProps<{
   id: string
@@ -218,9 +234,19 @@ const filteredLibraryProblems = computed(() => {
   if (!query) return pool
   
   return pool.filter(
-    p => p.title.toLowerCase().includes(query) || p.slug.toLowerCase().includes(query) || String(p.id).includes(query)
+    p => p.title.toLowerCase().includes(query) ||
+         p.slug.toLowerCase().includes(query) ||
+         String(p.id).includes(query) ||
+         (p.tags && p.tags.toLowerCase().includes(query))
   )
 })
+
+function splitTags(tags?: string) {
+  return (tags || '')
+    .split(/[,，]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+}
 
 onMounted(() => {
   load()
@@ -439,9 +465,29 @@ async function moveProblem(index: number, direction: number) {
   color: #64748b;
   width: 40px;
 }
+.lib-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
 .lib-title {
   font-weight: 600;
   color: #1e293b;
+}
+.lib-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.mini-tag {
+  font-size: 10px;
+  height: 18px;
+  line-height: 16px;
+  padding: 0 6px;
+  font-weight: 500;
+  border-radius: 4px;
+  background-color: transparent !important;
 }
 .lib-slug {
   margin-left: auto;

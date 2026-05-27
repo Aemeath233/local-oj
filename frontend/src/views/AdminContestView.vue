@@ -130,9 +130,9 @@
             <h3>🔍 系统题库</h3>
             <el-input
               v-model="problemSearch"
-              placeholder="搜索题目名或Slug..."
+              placeholder="搜索题目、Slug或标签..."
               clearable
-              style="width: 200px;"
+              style="width: 210px;"
             />
           </div>
 
@@ -147,7 +147,22 @@
               <el-checkbox :model-value="isSelected(p.id)" @click.stop="toggleProblem(p)" />
               <div class="db-item-meta">
                 <span class="db-title">{{ p.title }}</span>
-                <span class="db-slug">{{ p.slug }}</span>
+                <div class="db-slug-row">
+                  <span class="db-slug">{{ p.slug }}</span>
+                  <div v-if="p.tags" class="db-tags">
+                    <el-tag
+                      v-for="tag in splitTags(p.tags)"
+                      :key="tag"
+                      size="small"
+                      :color="getTagColor(tag) + '20'"
+                      :style="{ borderColor: getTagColor(tag), color: getTagColor(tag) }"
+                      class="mini-tag"
+                      effect="plain"
+                    >
+                      {{ tag }}
+                    </el-tag>
+                  </div>
+                </div>
               </div>
               <el-tag size="small">{{ p.difficulty }}</el-tag>
             </div>
@@ -163,12 +178,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
-import {
-  fetchAdminContest,
-  createContest,
-  updateContest,
-  fetchAdminProblems
-} from '../api/http'
+import { fetchAdminContest, createContest, updateContest, fetchAdminProblems } from '../api/http'
+import { getTagColor } from '../utils/tag'
 import type { AdminProblemSummary } from '../types'
 
 const route = useRoute()
@@ -200,9 +211,19 @@ const filteredDbProblems = computed(() => {
   const q = problemSearch.value.trim().toLowerCase()
   if (!q) return dbProblems.value
   return dbProblems.value.filter(
-    p => String(p.id).includes(q) || p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q)
+    p => String(p.id).includes(q) ||
+         p.title.toLowerCase().includes(q) ||
+         p.slug.toLowerCase().includes(q) ||
+         (p.tags && p.tags.toLowerCase().includes(q))
   )
 })
+
+function splitTags(tags?: string) {
+  return (tags || '')
+    .split(/[,，]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+}
 
 onMounted(async () => {
   await loadData()
@@ -465,5 +486,25 @@ async function save() {
 .db-slug {
   font-size: 0.75rem;
   color: var(--el-text-color-secondary);
+}
+.db-slug-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.db-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.mini-tag {
+  font-size: 9px;
+  height: 16px;
+  line-height: 14px;
+  padding: 0 4px;
+  font-weight: 500;
+  border-radius: 4px;
+  background-color: transparent !important;
 }
 </style>
