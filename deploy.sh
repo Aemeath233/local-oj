@@ -337,6 +337,44 @@ show_report() {
     echo ""
 }
 
+rebuild_single_service() {
+    echo ""
+    echo -e "${BOLD}--- 独立重建并重启单个指定服务 ---${NC}"
+    echo -e " 请选择需要独立重构的服务:"
+    echo -e "  ${BOLD}[1]${NC} Vue 3 前端界面 (frontend)"
+    echo -e "  ${BOLD}[2]${NC} Spring Boot 后端 API (backend)"
+    echo -e "  ${BOLD}[3]${NC} 评测判题消费机 (judge-worker)"
+    echo -e "  ${BOLD}[4]${NC} go-judge 评测沙箱 (go-judge)"
+    echo -e "  ${BOLD}[5]${NC} 返回主菜单"
+    echo ""
+    read -r -p "请输入对应的操作数字 (1-5): " svc_choice
+    case $svc_choice in
+        1)
+            log_info "正在独立重建并重启前端服务..."
+            docker compose up -d --build frontend
+            log_success "前端服务重建重启成功！"
+            ;;
+        2)
+            log_info "正在独立重建并重启后端服务..."
+            docker compose up -d --build backend
+            log_success "后端服务重建重启成功！"
+            ;;
+        3)
+            log_info "正在独立重建并重启判题机服务..."
+            docker compose up -d --build judge-worker
+            log_success "判题机服务重建重启成功！"
+            ;;
+        4)
+            log_info "正在独立重建并重启沙箱服务..."
+            docker compose up -d --build go-judge
+            log_success "沙箱服务重建重启成功！"
+            ;;
+        *)
+            log_info "返回主菜单。"
+            ;;
+    esac
+}
+
 # 管理面板
 menu() {
     print_logo
@@ -353,9 +391,10 @@ menu() {
     echo -e "  ${BOLD}[3]${NC} 停止服务 (docker compose down)"
     echo -e "  ${BOLD}[4]${NC} 查看所有服务运行日志 (docker compose logs -f)"
     echo -e "  ${BOLD}[5]${NC} 强制拉取最新代码并热重构升级 (不丢失用户及题目数据)"
-    echo -e "  ${BOLD}[6]${NC} 退出脚本"
+    echo -e "  ${BOLD}[6]${NC} 独立重建并重启单个指定服务 (前端/后端/判题等)"
+    echo -e "  ${BOLD}[7]${NC} 退出脚本"
     echo ""
-    read -r -p "请输入对应的操作数字 (1-6): " choice
+    read -r -p "请输入对应的操作数字 (1-7): " choice
     case $choice in
         1)
             check_root
@@ -407,7 +446,12 @@ menu() {
             docker compose up -d --build
             log_success "系统平滑升级与重建完成！"
             ;;
-        6|*)
+        6)
+            check_root
+            check_directory
+            rebuild_single_service
+            ;;
+        7|*)
             log_info "感谢使用，退出脚本。"
             exit 0
             ;;
