@@ -226,8 +226,8 @@
       <aside class="submit-panel panel" :style="rightStyle">
         <div class="submit-toolbar">
           <el-select v-model="language" class="language-select">
-            <el-option label="C++20" value="CPP" />
-            <el-option label="C++20 (O3氧气优化)" value="CPP_O3" />
+            <el-option label="C++20 (O2)" value="CPP" />
+            <el-option label="C++20 (O3)" value="CPP_O3" />
             <el-option label="C" value="C" />
             <el-option label="Python 3.12" value="PYTHON" />
             <el-option label="PyPy 3" value="PYPY3" />

@@ -91,8 +91,8 @@
               <div class="form-grid">
                 <el-form-item label="默认编程语言">
                   <el-select v-model="prefLanguage" style="width: 100%;">
-                    <el-option label="C++20" value="CPP" />
-                    <el-option label="C++20 (O3氧气优化)" value="CPP_O3" />
+                    <el-option label="C++20 (O2)" value="CPP" />
+                    <el-option label="C++20 (O3)" value="CPP_O3" />
                     <el-option label="C" value="C" />
                     <el-option label="Python 3.12" value="PYTHON" />
                     <el-option label="PyPy 3" value="PYPY3" />
@@ -163,8 +163,8 @@ int main() {
                   <div style="display: flex; gap: 12px; align-items: center; width: 100%; flex-wrap: wrap;">
                     <span style="font-size: 0.9rem; font-weight: 500;">选择编辑语言：</span>
                     <el-select v-model="templateLang" style="width: 180px;" @change="loadTemplateForLang">
-                      <el-option label="C++20" value="CPP" />
-                      <el-option label="C++20 (O3氧气优化)" value="CPP_O3" />
+                      <el-option label="C++20 (O2)" value="CPP" />
+                      <el-option label="C++20 (O3)" value="CPP_O3" />
                       <el-option label="C" value="C" />
                       <el-option label="Python 3.12" value="PYTHON" />
                       <el-option label="PyPy 3" value="PYPY3" />
