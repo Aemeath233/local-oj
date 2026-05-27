@@ -238,6 +238,12 @@ function getRemainingStr(endStr: string) {
 </script>
 
 <style scoped>
+.page-stack {
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 /* ===== Filter bar ===== */
 .contest-filter-bar {
   margin-bottom: 20px;
