@@ -285,6 +285,37 @@ def show_monitor_view(ports):
     except KeyboardInterrupt:
         pass
 
+def rebuild_single_service():
+    """Let the user select and rebuild/restart a specific service."""
+    print(f"\n{BLUE}🛠️  请选择要独立重建并重启的服务：{RESET}")
+    buildable = [
+        {"service": "frontend", "desc": "Vue 3 前端界面"},
+        {"service": "backend", "desc": "Spring Boot 后端 API"},
+        {"service": "judge-worker", "desc": "评测判题消费机"},
+        {"service": "go-judge", "desc": "go-judge 评测沙箱"}
+    ]
+    for i, s in enumerate(buildable, 1):
+        print(f"  {BOLD}[{i}]{RESET} {s['desc']} ({s['service']})")
+    print("  [0] 返回主菜单")
+    
+    choice = input(f"\n{BOLD}请输入选项序号: {RESET}").strip()
+    if choice == "0" or not choice:
+        return
+        
+    try:
+        idx = int(choice)
+        if 1 <= idx <= len(buildable):
+            target = buildable[idx - 1]["service"]
+            desc = buildable[idx - 1]["desc"]
+            run_command(["docker", "compose", "up", "-d", "--build", target], f"独立重建并重启 {desc}")
+            input(f"\n{GREEN}服务 {target} 已成功完成重建与重启。按回车键返回...{RESET}")
+        else:
+            print(f"{RED}❌ 输入序号无效！{RESET}")
+            time.sleep(1.5)
+    except ValueError:
+        print(f"{RED}❌ 输入序列无效！{RESET}")
+        time.sleep(1.5)
+
 def tail_logs():
     """Tail Docker Compose logs interactively."""
     print(f"\n{BLUE}📄 请选择要查看日志的服务：{RESET}")
@@ -334,16 +365,17 @@ def main_menu():
         status_banner = f"{GREEN}● 运行中 ({running_count}/6 已启动){RESET}" if running_count > 0 else f"{RED}○ 已停止{RESET}"
         print(f"当前系统状态: {status_banner}")
         print("=" * 50)
-        print(f"{BOLD}1. 🚀 一键启动系统 (增量/热启动){RESET}")
-        print(f"{BOLD}2. 🔄 重新打包并编译启动 (全量构建/更新后推荐){RESET}")
-        print(f"{BOLD}3. 🛑 关闭并停止系统 (保留数据卷){RESET}")
-        print(f"{BOLD}4. 📊 查看系统监控与健康台{RESET}")
-        print(f"{BOLD}5. 📄 查看服务运行日志{RESET}")
-        print(f"{BOLD}6. 🗑️  全量清理 (停止服务并彻底删除数据和缓存){RESET}")
+        print(f"{BOLD}1. 🚀 一键启动整个系统 (增量/热启动){RESET}")
+        print(f"{BOLD}2. 🔄 重新编译并启动整个系统 (全量构建){RESET}")
+        print(f"{BOLD}3. ⚡ 独立重建并重启单个指定服务 (前端/后端/判题等){RESET}")
+        print(f"{BOLD}4. 🛑 关闭并停止整个系统 (保留数据卷){RESET}")
+        print(f"{BOLD}5. 📊 查看系统监控与健康台{RESET}")
+        print(f"{BOLD}6. 📄 查看服务运行日志{RESET}")
+        print(f"{BOLD}7. 🗑️  全量清理 (停止服务并彻底删除数据和缓存){RESET}")
         print("0. 🚪 退出脚本")
         print("=" * 50)
         
-        choice = input(f"{BOLD}请选择操作序号 [0-6]: {RESET}").strip()
+        choice = input(f"{BOLD}请选择操作序号 [0-7]: {RESET}").strip()
         
         if choice == "1":
             if check_requirements():
@@ -351,19 +383,22 @@ def main_menu():
                 show_monitor_view(ports)
         elif choice == "2":
             if check_requirements():
-                run_command(["docker", "compose", "up", "-d", "--build"], "重新编译并启动系统")
+                run_command(["docker", "compose", "up", "-d", "--build"], "重新编译并启动整个系统")
                 show_monitor_view(ports)
         elif choice == "3":
             if check_requirements():
-                run_command(["docker", "compose", "down"], "停止 Local OJ 系统")
-                input(f"\n{GREEN}系统已成功停止。按回车键返回...{RESET}")
+                rebuild_single_service()
         elif choice == "4":
             if check_requirements():
-                show_monitor_view(ports)
+                run_command(["docker", "compose", "down"], "停止 Local OJ 系统")
+                input(f"\n{GREEN}系统已成功停止。按回车键返回...{RESET}")
         elif choice == "5":
             if check_requirements():
-                tail_logs()
+                show_monitor_view(ports)
         elif choice == "6":
+            if check_requirements():
+                tail_logs()
+        elif choice == "7":
             if check_requirements():
                 confirm = input(f"\n{RED}{BOLD}⚠️  警告：此操作将永久删除数据库、Redis 队列及题目数据！输入 'Y' 确认清理: {RESET}").strip()
                 if confirm.upper() == 'Y':
@@ -376,7 +411,7 @@ def main_menu():
             print(f"\n{BLUE}👋 感谢使用 Local OJ 启动控制台，祝您编码愉快！{RESET}\n")
             sys.exit(0)
         else:
-            print(f"\n{RED}❌ 输入错误，请输入 0 到 6 之间的数字！{RESET}")
+            print(f"\n{RED}❌ 输入错误，请输入 0 到 7 之间的数字！{RESET}")
             time.sleep(1.5)
 
 if __name__ == "__main__":
