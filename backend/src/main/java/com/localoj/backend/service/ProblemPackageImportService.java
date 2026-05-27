@@ -26,8 +26,8 @@ import java.util.zip.ZipInputStream;
 
 @Service
 public class ProblemPackageImportService {
-    private static final long MAX_UNCOMPRESSED_BYTES = 128L * 1024L * 1024L;
-    private static final long MAX_ENTRY_BYTES = 64L * 1024L * 1024L;
+    private static final long MAX_UNCOMPRESSED_BYTES = 512L * 1024L * 1024L;
+    private static final long MAX_ENTRY_BYTES = 256L * 1024L * 1024L;
     private static final DateTimeFormatter SLUG_TIME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final ProblemService problemService;
@@ -173,7 +173,7 @@ public class ProblemPackageImportService {
                 byte[] bytes = readEntry(zip);
                 totalBytes += bytes.length;
                 if (totalBytes > MAX_UNCOMPRESSED_BYTES) {
-                    throw new IllegalArgumentException("题目包解压后超过 128MB");
+                    throw new IllegalArgumentException("题目包解压后超过 512MB");
                 }
                 entries.add(new PackageEntry(path, simpleName, bytes));
             }
@@ -194,7 +194,7 @@ public class ProblemPackageImportService {
         while ((read = inputStream.read(buffer)) >= 0) {
             size += read;
             if (size > MAX_ENTRY_BYTES) {
-                throw new IllegalArgumentException("单个题目包文件超过 64MB");
+                throw new IllegalArgumentException("单个题目包文件超过 256MB");
             }
             output.write(buffer, 0, read);
         }
