@@ -8,6 +8,7 @@ import com.localoj.common.mapper.TrainingSetMapper;
 import com.localoj.common.model.Problem;
 import com.localoj.common.model.TrainingProblemRelation;
 import com.localoj.common.model.TrainingSet;
+import com.localoj.common.enums.Role;
 import com.localoj.common.mapper.UserMapper;
 import com.localoj.common.model.User;
 import org.springframework.stereotype.Service;
@@ -143,7 +144,12 @@ public class TrainingService {
         if (creatorUserId != null) {
             User creator = userMapper.selectById(creatorUserId);
             if (creator != null) {
-                set.setCreatorNickname(creator.getDisplayName());
+                String name = creator.getDisplayName();
+                if (name == null || name.trim().isEmpty()) {
+                    name = creator.getUsername();
+                }
+                String roleName = creator.getRole() == Role.SUPER_ADMIN ? "超级管理员" : "管理员";
+                set.setCreatorNickname(name + " (" + roleName + ")");
             } else {
                 set.setCreatorNickname("管理员");
             }
