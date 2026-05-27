@@ -51,6 +51,9 @@
             <el-form-item label="密码">
               <el-input v-model="registerForm.password" type="password" autocomplete="new-password" show-password />
             </el-form-item>
+            <el-form-item label="确认密码">
+              <el-input v-model="registerForm.confirmPassword" type="password" autocomplete="new-password" show-password />
+            </el-form-item>
             <el-alert v-if="registerError" :title="registerError" type="error" show-icon :closable="false" />
             <el-button class="full-button" type="primary" :loading="registerLoading" @click="submitRegister">
               注册
@@ -91,7 +94,8 @@ const registerForm = reactive({
   code: '',
   username: '',
   displayName: '',
-  password: ''
+  password: '',
+  confirmPassword: ''
 })
 
 onBeforeUnmount(() => {
@@ -129,6 +133,10 @@ async function sendCode() {
 }
 
 async function submitRegister() {
+  if (registerForm.password !== registerForm.confirmPassword) {
+    registerError.value = '两次输入的密码不一致'
+    return
+  }
   registerLoading.value = true
   registerError.value = ''
   try {
