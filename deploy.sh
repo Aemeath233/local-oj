@@ -325,8 +325,11 @@ show_report() {
     echo -e "     - 动态追踪业务系统日志:       ${BOLD}docker compose logs -f backend${NC}"
     echo -e "     - 动态追踪判题队列及沙箱日志:   ${BOLD}docker compose logs -f judge-worker go-judge${NC}"
     echo -e "     - 完整关停所有核心组件服务:     ${BOLD}docker compose down${NC}"
-    echo -e "     - 再次后台无感启动系统:       ${BOLD}docker compose up -d${NC}"
-    echo -e ""
+    echo -e "     - 快速后台拉起当前服务:       ${BOLD}docker compose up -d${NC}"
+    echo -e "     - 拉取最新代码并重构部署:       ${BOLD}sudo ./deploy.sh${NC} (进入菜单后选择 5 进行安全平滑编译升级)"
+    echo -e "       *(注: 代码或数据库结构更新后，单纯 restart/up -d 不会重新编译，必须通过脚本 5 或加上 --build 参数重构)*"
+    echo -e "     - 强制手动重新编译所有容器:     ${BOLD}docker compose up -d --build${NC}"
+    echo -e "     "
     echo -e "  ${BOLD}4. 备份与灾难防范${NC}"
     echo -e "     - 数据备份及详细的高级排错指引，请随时查阅项目下的："
     echo -e "       ${BLUE}docx/LINUX_DEPLOYMENT.md${NC}"
@@ -391,10 +394,16 @@ menu() {
             log_info "1. 暂停判题消费者..."
             docker compose stop judge-worker || true
             log_info "2. 拉取 Git 仓库最新变更..."
-            git pull || true
-            log_info "3. 执行多阶段编译升级..."
+            if git pull; then
+                log_success "Git 代码同步成功！"
+            else
+                log_warn "Git 代码拉取失败（可能是本地有修改冲突、网络中断或未配置远端）。"
+                log_info "系统将直接基于当前本地代码进行重新编译与部署！"
+            fi
+            log_info "3. 执行多阶段编译升级与容器重建..."
+            log_info "这会自动检测代码变动并重新打包后端与前端镜像，请稍候..."
             docker compose up -d --build
-            log_success "系统平滑升级完成！"
+            log_success "系统平滑升级与重建完成！"
             ;;
         6|*)
             log_info "感谢使用，退出脚本。"
