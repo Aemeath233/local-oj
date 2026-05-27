@@ -28,7 +28,7 @@ import AdminTrainingView from '../views/AdminTrainingView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', component: HomeView },
+    { path: '/', component: HomeView, meta: { requiresAuth: true } },
     { path: '/login', component: LoginView },
     { path: '/problems', component: ProblemListView },
     { path: '/leaderboard', component: LeaderboardView },
