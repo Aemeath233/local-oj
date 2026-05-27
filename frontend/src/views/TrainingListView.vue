@@ -102,7 +102,7 @@ async function load() {
   loading.value = true
   try {
     const res = await http.get('/training')
-    if (res.data && res.data.code === 200) {
+    if (res.data && res.data.data) {
       sets.value = res.data.data
     }
   } catch (err) {

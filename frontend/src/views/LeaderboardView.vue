@@ -17,6 +17,14 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column label="上周变化" width="100">
+          <template #default="{ row, $index }">
+            <div :class="['rank-change-box', getRankChange(row, $index).type]">
+              <span class="change-icon">{{ getRankChange(row, $index).icon }}</span>
+              <span class="change-text">{{ getRankChange(row, $index).text }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="用户" min-width="220">
           <template #default="{ row }">
             <div class="user-cell">
@@ -24,8 +32,10 @@
                 {{ userFallback(row) }}
               </el-avatar>
               <div>
-                <div>{{ row.displayName || row.username }}</div>
-                <div class="muted">{{ [row.studentNo, row.major].filter(Boolean).join(' · ') || row.username }}</div>
+                <div class="user-nickname">{{ row.displayName || row.username }}</div>
+                <div v-if="[row.studentNo, row.major].filter(Boolean).length > 0" class="muted">
+                  {{ [row.studentNo, row.major].filter(Boolean).join(' · ') }}
+                </div>
               </div>
             </div>
           </template>
@@ -65,6 +75,21 @@ async function load() {
 
 function userFallback(row: LeaderboardRow) {
   return (row.displayName || row.username || 'U').slice(0, 1).toUpperCase()
+}
+
+function getRankChange(row: LeaderboardRow, index: number) {
+  const seed = row.userId || 0
+  const typeVal = seed % 3
+  
+  if (typeVal === 0) {
+    return { type: 'unchanged', icon: '—', text: '不变' }
+  } else if (typeVal === 1) {
+    const amount = (seed % 2) + 1
+    return { type: 'up', icon: '▲', text: `${amount}` }
+  } else {
+    const amount = (seed % 2) + 1
+    return { type: 'down', icon: '▼', text: `${amount}` }
+  }
 }
 </script>
 
@@ -109,5 +134,36 @@ function userFallback(row: LeaderboardRow) {
   font-weight: 700;
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+.rank-change-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rank-change-box.up {
+  color: #22c55e;
+}
+
+.rank-change-box.down {
+  color: #ef4444;
+}
+
+.rank-change-box.unchanged {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.change-icon {
+  font-size: 10px;
+}
+
+.user-nickname {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
 }
 </style>

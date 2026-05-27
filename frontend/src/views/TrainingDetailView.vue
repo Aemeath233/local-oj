@@ -117,10 +117,10 @@ async function load() {
     const resSet = await http.get(`/training/${props.id}`)
     const resProblems = await http.get(`/training/${props.id}/problems`)
     
-    if (resSet.data && resSet.data.code === 200) {
+    if (resSet.data && resSet.data.data) {
       set.value = resSet.data.data
     }
-    if (resProblems.data && resProblems.data.code === 200) {
+    if (resProblems.data && resProblems.data.data) {
       problems.value = resProblems.data.data
       
       // Update solved count in set based on return data

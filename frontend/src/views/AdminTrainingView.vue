@@ -232,7 +232,7 @@ async function load() {
     const resSet = await http.get(`/admin/training/${props.id}`)
     const resProblems = await http.get(`/admin/training/${props.id}/problems`)
     
-    if (resSet.data && resSet.data.code === 200) {
+    if (resSet.data && resSet.data.data) {
       set.value = resSet.data.data
       metadataForm.value = {
         title: set.value.title,
@@ -240,7 +240,7 @@ async function load() {
         visible: set.value.visible
       }
     }
-    if (resProblems.data && resProblems.data.code === 200) {
+    if (resProblems.data && resProblems.data.data) {
       problems.value = resProblems.data.data
     }
   } catch (err: any) {
