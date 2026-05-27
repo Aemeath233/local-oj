@@ -44,7 +44,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="180" align="right">
+        <el-table-column label="操作" width="260" align="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="editSetMetadata(row)">编辑属性</el-button>
             <el-button link type="success" @click="editSetProblems(row.id)">管理题目</el-button>

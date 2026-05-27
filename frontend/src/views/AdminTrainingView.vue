@@ -55,6 +55,7 @@
         <h2>题单包含的题目 (共 {{ problems.length }} 道)</h2>
         <div class="toolbar-actions">
           <el-button type="warning" :icon="Link" @click="openLinkDialog">关联已有题目</el-button>
+          <el-button type="info" :icon="Upload" @click="openImportDialog">导入并加入本题单</el-button>
           <el-button type="primary" :icon="Plus" @click="createNewProblemInSet">
             创建并加入本题单
           </el-button>
@@ -178,6 +179,102 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- Import Problems Dialog -->
+    <el-dialog
+      v-model="importDialogVisible"
+      title="导入题目并加入本题单"
+      width="860px"
+      destroy-on-close
+      @close="resetImportState"
+    >
+      <div class="zip-import-dialog-body">
+        <el-upload
+          class="zip-drop"
+          drag
+          action=""
+          :auto-upload="false"
+          multiple
+          accept=".zip"
+          :show-file-list="false"
+          :on-change="onFileSelected"
+        >
+          <el-icon class="zip-drop-icon"><UploadFilled /></el-icon>
+          <div class="zip-drop-title">
+            拖入多个标准题目 ZIP 包，或点击选择多个文件
+          </div>
+          <div class="zip-drop-subtitle">可同时选择多道题目的 ZIP 包进行批量静默导入。</div>
+          <template #tip>
+            <div class="zip-upload-tip">
+              单个题目包大小限制 128 MB。每个包内需包含 <code>config.yml</code>、<code>statement.md</code> 以及 <code>cases/</code> 测试用例文件夹。
+            </div>
+          </template>
+        </el-upload>
+
+        <!-- Selected Files List -->
+        <div v-if="importFilesList.length > 0" class="zip-selected-files-list">
+          <div class="list-header">
+            <h3>待导入列表 ({{ importFilesList.length }})</h3>
+            <el-button link type="danger" :disabled="importingPackage" @click="clearFileList">清空列表</el-button>
+          </div>
+          <div class="selected-files-container">
+            <div v-for="(file, index) in importFilesList" :key="index" class="batch-file-row">
+              <div class="file-meta">
+                <span class="file-name" :title="file.name">{{ file.name }}</span>
+                <span class="file-size">{{ formatSize(file.size) }}</span>
+              </div>
+              <div class="file-status-group">
+                <el-tag v-if="file.status === 'pending'" type="info" size="small">待导入</el-tag>
+                <el-tag v-else-if="file.status === 'uploading'" type="primary" size="small">正在解析...</el-tag>
+                <el-tag v-else-if="file.status === 'success'" type="success" size="small">导入成功</el-tag>
+                <el-tag v-else-if="file.status === 'failed'" type="danger" size="small" :title="file.errorMsg">导入失败</el-tag>
+                
+                <span v-if="file.status === 'failed'" class="error-msg-detail">{{ file.errorMsg }}</span>
+                
+                <el-button
+                  v-if="file.status !== 'uploading' && file.status !== 'success'"
+                  link
+                  type="danger"
+                  :disabled="importingPackage"
+                  :icon="Delete"
+                  class="remove-file-btn"
+                  @click="removeFileFromList(index)"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section v-if="importFilesList.length === 0" class="zip-format-hint">
+          <div class="zip-format-copy">
+            <h3>标准题目包结构</h3>
+            <p>每个 ZIP 只创建一道题。题面统一写在 Markdown 文件中，测试点由同名输入输出文件自动配对。</p>
+          </div>
+          <pre class="zip-tree">problem-package.zip
+├── config.yml
+├── statement.md
+└── cases/
+    ├── 1.in
+    ├── 1.out
+    ├── 2.in
+    └── 2.out</pre>
+        </section>
+      </div>
+      <template #footer>
+        <div class="dialog-footer zip-dialog-footer">
+          <el-button :icon="Download" @click="downloadExamplePackage">下载示例包</el-button>
+          <el-button @click="importDialogVisible = false">取消</el-button>
+          <el-button
+            type="primary"
+            :loading="importingPackage"
+            :disabled="importFilesList.length === 0 || !hasPendingOrFailedFiles"
+            @click="startBatchImport"
+          >
+            开始批量导入并加入
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -192,12 +289,16 @@ import {
   Check,
   Search,
   CaretTop,
-  CaretBottom
+  CaretBottom,
+  Upload,
+  UploadFilled,
+  Delete,
+  Download
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
 import MarkdownView from '../components/MarkdownView.vue'
-import { http, fetchAdminProblems } from '../api/http'
+import { http, fetchAdminProblems, importProblemPackage } from '../api/http'
 import { getTagColor } from '../utils/tag'
 
 const props = defineProps<{
@@ -246,6 +347,135 @@ function splitTags(tags?: string) {
     .split(/[,，]/)
     .map((tag) => tag.trim())
     .filter(Boolean)
+}
+
+// Import Dialog states
+const importDialogVisible = ref(false)
+const importingPackage = ref(false)
+const importFilesList = ref<any[]>([])
+
+const hasPendingOrFailedFiles = computed(() => {
+  return importFilesList.value.some(f => f.status === 'pending' || f.status === 'failed')
+})
+
+function openImportDialog() {
+  resetImportState()
+  importDialogVisible.value = true
+}
+
+function onFileSelected(uploadFile: any) {
+  if (uploadFile && uploadFile.raw) {
+    const file = uploadFile.raw as File
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      ElMessage.warning(`文件「${file.name}」非 .zip 格式，已忽略`)
+      return
+    }
+    
+    // Prevent duplicate selection by name
+    if (importFilesList.value.some(f => f.name === file.name)) {
+      return
+    }
+
+    importFilesList.value.push({
+      name: file.name,
+      size: file.size,
+      raw: file,
+      status: 'pending',
+      errorMsg: ''
+    })
+  }
+}
+
+function removeFileFromList(index: number) {
+  importFilesList.value.splice(index, 1)
+}
+
+function clearFileList() {
+  importFilesList.value = []
+}
+
+function resetImportState() {
+  importFilesList.value = []
+  importingPackage.value = false
+}
+
+async function startBatchImport() {
+  if (importFilesList.value.length === 0) return
+  
+  importingPackage.value = true
+  let successCount = 0
+  let failCount = 0
+  const newlyImportedIds: number[] = []
+
+  for (const file of importFilesList.value) {
+    if (file.status === 'success') continue
+    
+    file.status = 'uploading'
+    file.errorMsg = ''
+    
+    try {
+      const res = await importProblemPackage(file.raw)
+      file.status = 'success'
+      successCount++
+      if (res && res.problem && res.problem.id) {
+        newlyImportedIds.push(res.problem.id)
+      }
+    } catch (error: any) {
+      file.status = 'failed'
+      file.errorMsg = error.response?.data?.message || '导入失败，请检查包结构'
+      failCount++
+    }
+  }
+
+  // Auto-link newly imported problems
+  if (newlyImportedIds.length > 0) {
+    try {
+      await http.post(`/admin/training/${props.id}/link`, {
+        problemIds: newlyImportedIds
+      })
+      ElMessage.success(`成功将 ${newlyImportedIds.length} 道导入的题目加入本题单！`)
+    } catch (linkErr) {
+      console.error('Failed to auto-link imported problems', linkErr)
+      ElMessage.warning('题目导入成功，但自动关联至题单失败，请手动在“关联已有题目”中添加。')
+    }
+  }
+
+  importingPackage.value = false
+  
+  if (successCount > 0) {
+    ElMessage.success(`批量导入并关联完成！成功 ${successCount} 个，失败 ${failCount} 个`)
+    importDialogVisible.value = false
+    await load()
+  } else if (failCount > 0) {
+    ElMessage.error(`批量导入失败，共 ${failCount} 个题目包导入出错，请检查原因`)
+  }
+}
+
+function formatSize(bytes?: number) {
+  const size = bytes || 0
+  if (size >= 1024 * 1024) {
+    return `${(size / 1024 / 1024).toFixed(1)} MB`
+  }
+  if (size >= 1024) {
+    return `${(size / 1024).toFixed(1)} KB`
+  }
+  return `${size} B`
+}
+
+async function downloadExamplePackage() {
+  try {
+    const response = await http.get('/admin/problems/example-package', {
+      responseType: 'blob'
+    })
+    const blob = new Blob([response.data], { type: 'application/zip' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = 'example-problem-package.zip'
+    link.click()
+    URL.revokeObjectURL(link.href)
+  } catch (err) {
+    ElMessage.error('下载示例包失败')
+  }
 }
 
 onMounted(() => {
@@ -504,5 +734,138 @@ async function moveProblem(index: number, direction: number) {
   font-size: 13px;
   color: #64748b;
   margin-top: 8px;
+}
+
+/* ZIP Import Dialog Styles */
+.zip-import-dialog-body {
+  display: grid;
+  gap: 16px;
+}
+.zip-drop :deep(.el-upload-dragger) {
+  padding: 30px 18px;
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+.zip-drop-icon {
+  margin-bottom: 10px;
+  color: #0f766e;
+  font-size: 42px;
+}
+.zip-drop-title {
+  color: #1f2937;
+  font-weight: 650;
+}
+.zip-drop-subtitle,
+.zip-upload-tip {
+  margin-top: 6px;
+  color: #667085;
+  font-size: 13px;
+}
+.zip-selected-files-list {
+  border: 1px solid #d8dee6;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.zip-selected-files-list .list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.zip-selected-files-list h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: #1e293b;
+}
+.selected-files-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.batch-file-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+.file-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.batch-file-row .file-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+.batch-file-row .file-size {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.file-status-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.error-msg-detail {
+  font-size: 0.8rem;
+  color: #ef4444;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remove-file-btn {
+  padding: 0;
+  margin-left: 4px !important;
+}
+.zip-preview,
+.zip-format-hint {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #d8dee6;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.zip-preview-heading h3,
+.zip-format-copy h3 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+.zip-preview-heading p,
+.zip-format-copy p {
+  margin: 5px 0 0;
+  color: #667085;
+}
+.zip-tree {
+  min-height: auto;
+  margin: 0;
+}
+.zip-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+@media (max-width: 720px) {
+  .zip-dialog-footer {
+    flex-wrap: wrap;
+  }
 }
 </style>
