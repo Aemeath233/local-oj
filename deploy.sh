@@ -394,6 +394,8 @@ menu() {
             log_info "1. 暂停判题消费者..."
             docker compose stop judge-worker || true
             log_info "2. 拉取 Git 仓库最新变更..."
+            # 自动添加当前目录到 Git 安全目录白名单，防止 sudo 执行时触发 safe.directory 阻断
+            git config --global --add safe.directory "$(pwd)" 2>/dev/null || true
             if git pull; then
                 log_success "Git 代码同步成功！"
             else
