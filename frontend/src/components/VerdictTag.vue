@@ -40,55 +40,65 @@ const customClass = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 0.78rem;
+  padding: 6px 14px;
+  border-radius: 99px; /* Capsule shape */
+  font-size: 0.8rem;
   font-weight: 700;
   border: 1px solid transparent;
-  min-height: 24px;
+  backdrop-filter: blur(8px);
+  min-height: 28px;
   line-height: 1;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: status-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .status-pending {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #64748b;
+  background-color: rgba(241, 245, 249, 0.6);
+  border-color: rgba(203, 213, 225, 0.8);
+  color: #475569;
+  box-shadow: 0 0 12px rgba(100, 116, 139, 0.08);
 }
 
 .status-running {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
-  color: #2563eb;
-  animation: breathing 2s infinite ease-in-out;
+  background-color: rgba(239, 246, 255, 0.7);
+  border-color: rgba(147, 197, 253, 0.85);
+  color: #1d4ed8;
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.15);
+  animation: breathing 1.8s infinite ease-in-out, status-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .verdict-ac {
-  background-color: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #059669;
+  background-color: rgba(236, 253, 245, 0.75);
+  border-color: rgba(167, 243, 208, 0.9);
+  color: #047857;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
 }
 
 .verdict-wa {
-  background-color: #fef2f2;
-  border-color: #fecaca;
-  color: #dc2626;
+  background-color: rgba(254, 242, 242, 0.75);
+  border-color: rgba(254, 202, 202, 0.9);
+  color: #b91c1c;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.15);
 }
 
 .verdict-ce {
-  background-color: #fffbeb;
-  border-color: #fde68a;
-  color: #d97706;
+  background-color: rgba(255, 251, 235, 0.75);
+  border-color: rgba(253, 230, 138, 0.9);
+  color: #b45309;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.15);
 }
 
 .verdict-other {
-  background-color: #fff1f2;
-  border-color: #ffe4e6;
-  color: #e11d48;
+  background-color: rgba(255, 241, 242, 0.75);
+  border-color: rgba(255, 228, 230, 0.9);
+  color: #be123c;
+  box-shadow: 0 0 16px rgba(225, 29, 72, 0.15);
 }
 
 .spin-icon {
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes spin {
@@ -97,7 +107,24 @@ const customClass = computed(() => {
 }
 
 @keyframes breathing {
-  0%, 100% { opacity: 0.8; transform: scale(0.97); }
-  50% { opacity: 1; transform: scale(1); }
+  0%, 100% { 
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.1); 
+    transform: scale(0.98); 
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.3); 
+    transform: scale(1.02); 
+  }
+}
+
+@keyframes status-pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>

@@ -307,23 +307,25 @@
             暂无提交记录
           </div>
           <div v-else class="mini-submissions-list">
-            <div
-              v-for="sub in submissions"
-              :key="sub.id"
-              class="mini-submission-item"
-              @click="openSubmissionDetail(sub)"
-            >
-              <div class="mini-sub-left">
-                <span class="mini-sub-id">#{{ sub.id }}</span>
-                <VerdictTag :status="sub.status" :verdict="sub.verdict" />
+            <transition-group name="list">
+              <div
+                v-for="sub in submissions"
+                :key="sub.id"
+                class="mini-submission-item"
+                @click="openSubmissionDetail(sub)"
+              >
+                <div class="mini-sub-left">
+                  <span class="mini-sub-id">#{{ sub.id }}</span>
+                  <VerdictTag :status="sub.status" :verdict="sub.verdict" />
+                </div>
+                <div class="mini-sub-right">
+                  <span class="mini-sub-meta" v-if="sub.status === 'FINISHED'">
+                    {{ sub.timeMs ?? 0 }}ms / {{ sub.memoryKb ?? 0 }}KB
+                  </span>
+                  <span class="mini-sub-time">{{ formatRelativeTime(sub.createdAt) }}</span>
+                </div>
               </div>
-              <div class="mini-sub-right">
-                <span class="mini-sub-meta" v-if="sub.status === 'FINISHED'">
-                  {{ sub.timeMs ?? 0 }}ms / {{ sub.memoryKb ?? 0 }}KB
-                </span>
-                <span class="mini-sub-time">{{ formatRelativeTime(sub.createdAt) }}</span>
-              </div>
-            </div>
+            </transition-group>
           </div>
         </div>
 
