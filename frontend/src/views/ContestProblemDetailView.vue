@@ -426,7 +426,7 @@ async function loadSubmissions(isSilent = false) {
   try {
     const list = await fetchContestSubmissions(contestId.value)
     // Filter specifically for this problem
-    submissions.value = list.filter(s => s.problemId === problemId.value)
+    submissions.value = list.filter(s => s.problemId === problemId.value).slice(0, 10)
 
     // Auto-update drawer if it's currently showing one of our submissions
     if (drawerVisible.value && selectedSubmission.value) {

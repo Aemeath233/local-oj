@@ -653,7 +653,7 @@ async function loadSubmissions(isSilent = false) {
     const currentUserId = authStore.user?.id
     submissions.value = allSubmissions.filter(
       (sub) => Number(sub.problemId) === Number(problemId.value) && Number(sub.userId) === Number(currentUserId)
-    )
+    ).slice(0, 10)
 
     // Auto-update drawer if it's currently showing one of our submissions
     if (drawerVisible.value && selectedSubmission.value) {
