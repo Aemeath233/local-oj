@@ -170,8 +170,30 @@
               </div>
               <div v-for="(testCase, index) in form.testCases" :key="index" class="case-row">
                 <span class="case-name" style="font-family: monospace; font-weight: 600;">{{ testCase.name || testCase.caseName || `case-${index + 1}` }}</span>
-                <span>{{ testCase.inputFile }} · {{ formatSize(testCase.inputSize) }}</span>
-                <span>{{ testCase.outputFile }} · {{ formatSize(testCase.outputSize) }}</span>
+                <span>
+                  <a
+                    v-if="isEdit && !testCase.uploadToken"
+                    href="#"
+                    class="case-file-link"
+                    @click.prevent="previewFile(testCase.inputFile)"
+                  >
+                    {{ testCase.inputFile }}
+                  </a>
+                  <span v-else>{{ testCase.inputFile }}</span>
+                  · {{ formatSize(testCase.inputSize) }}
+                </span>
+                <span>
+                  <a
+                    v-if="isEdit && !testCase.uploadToken"
+                    href="#"
+                    class="case-file-link"
+                    @click.prevent="previewFile(testCase.outputFile)"
+                  >
+                    {{ testCase.outputFile }}
+                  </a>
+                  <span v-else>{{ testCase.outputFile }}</span>
+                  · {{ formatSize(testCase.outputSize) }}
+                </span>
                 <el-input-number v-model="testCase.score" :min="0" :max="100" />
                 <el-switch v-model="testCase.sample" active-text="样例" />
                 <el-button :icon="Delete" circle type="danger" plain @click="removeCase(index)" />
@@ -193,13 +215,36 @@
         </el-form>
       </div>
     </div>
+
+    <!-- Test Case File Content Preview Dialog -->
+    <el-dialog
+      v-model="previewDialogVisible"
+      :title="`测试数据预览 - ${previewFilename}`"
+      width="720px"
+      destroy-on-close
+    >
+      <div v-loading="previewLoading" class="preview-dialog-content">
+        <div v-if="previewError" class="preview-error">
+          <el-alert :title="previewError" type="error" show-icon :closable="false" />
+        </div>
+        <div v-else class="preview-code-container">
+          <div class="preview-actions">
+            <span class="muted" style="font-size: 0.82rem;">文件大小: {{ formatSize(previewFilesize) }}</span>
+            <el-button size="small" type="primary" plain :icon="DocumentCopy" @click="copyPreviewContent">
+              复制内容
+            </el-button>
+          </div>
+          <pre class="preview-pre"><code>{{ previewContent || '(文件内容为空)' }}</code></pre>
+        </div>
+      </div>
+    </el-dialog>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Check, Delete, Upload, InfoFilled, Document, Files } from '@element-plus/icons-vue'
+import { Check, Delete, Upload, InfoFilled, Document, Files, DocumentCopy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
 import MarkdownView from '../components/MarkdownView.vue'
@@ -207,7 +252,8 @@ import {
   createProblem,
   fetchAdminProblem,
   importTestCaseFiles,
-  updateProblem
+  updateProblem,
+  fetchTestCaseFileContent
 } from '../api/http'
 import { getTagColor } from '../utils/tag'
 import type { CreateProblemPayload } from '../api/http'
@@ -244,6 +290,49 @@ const statementTab = ref('edit')
 const caseFileInput = ref<HTMLInputElement | null>(null)
 const selectedTags = ref<string[]>([])
 const tagInput = ref('')
+
+// Reactive state for test case preview
+const previewDialogVisible = ref(false)
+const previewFilename = ref('')
+const previewLoading = ref(false)
+const previewContent = ref('')
+const previewError = ref('')
+const previewFilesize = ref(0)
+
+async function previewFile(filename: string) {
+  if (!problemId.value) return
+  previewFilename.value = filename
+  previewDialogVisible.value = true
+  previewLoading.value = true
+  previewContent.value = ''
+  previewError.value = ''
+
+  // Find filesize from form.testCases
+  const matchedCase = form.testCases.find(tc => tc.inputFile === filename || tc.outputFile === filename)
+  if (matchedCase) {
+    previewFilesize.value = matchedCase.inputFile === filename ? matchedCase.inputSize : matchedCase.outputSize
+  } else {
+    previewFilesize.value = 0
+  }
+
+  try {
+    const content = await fetchTestCaseFileContent(problemId.value, filename)
+    previewContent.value = content
+  } catch (err: any) {
+    previewError.value = err.response?.data?.message || '读取文件内容失败，请检查文件是否存在'
+  } finally {
+    previewLoading.value = false
+  }
+}
+
+function copyPreviewContent() {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(previewContent.value || '')
+    ElMessage.success('已成功复制到剪贴板！')
+  } else {
+    ElMessage.error('当前浏览器不支持复制功能')
+  }
+}
 
 const problemId = computed(() => {
   const idStr = route.params.id
@@ -599,5 +688,50 @@ function removeTag(tag: string) {
   font-size: 0.8rem;
   padding: 0.15rem 0.5rem;
   background-color: transparent !important;
+}
+
+/* Case File Preview Dialog Styles */
+.preview-dialog-content {
+  min-height: 180px;
+}
+
+.preview-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.preview-code-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-pre {
+  margin: 0;
+  background: var(--bg-app, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  padding: 14px;
+  font-family: var(--font-mono, monospace), monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-primary, #0f172a);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.case-file-link {
+  color: var(--el-color-primary, #0f766e);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.case-file-link:hover {
+  color: var(--el-color-primary-light-3, #0d9488);
+  text-decoration: underline;
 }
 </style>

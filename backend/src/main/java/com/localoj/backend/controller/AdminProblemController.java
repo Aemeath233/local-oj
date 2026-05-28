@@ -288,6 +288,28 @@ public class AdminProblemController {
         return ApiResponse.ok(null);
     }
 
+    @GetMapping("/{id}/cases/{filename}")
+    public ResponseEntity<byte[]> getTestCaseFile(
+            @PathVariable("id") Long id,
+            @PathVariable("filename") String filename
+    ) {
+        if (filename == null || !filename.matches("^[a-zA-Z0-9_\\-]+\\.(in|out|ans)$")) {
+            throw new IllegalArgumentException("Invalid filename");
+        }
+        Path filePath = testCaseFileStorage.getCaseFilePath(id, filename);
+        if (!Files.exists(filePath)) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            byte[] content = Files.readAllBytes(filePath);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(content);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     private void exportProblemToZip(Problem problem, ZipOutputStream zip) throws IOException {
         // 1. Write config.yml
         StringBuilder config = new StringBuilder();

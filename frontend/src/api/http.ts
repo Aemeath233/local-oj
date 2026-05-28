@@ -263,6 +263,13 @@ export async function fetchAdminProblem(id: number) {
   return response.data.data
 }
 
+export async function fetchTestCaseFileContent(problemId: number, filename: string): Promise<string> {
+  const response = await http.get<string>(`/admin/problems/${problemId}/cases/${filename}`, {
+    responseType: 'text' as any
+  })
+  return response.data
+}
+
 export async function updateProblem(id: number, payload: CreateProblemPayload) {
   const response = await http.put<ApiEnvelope<AdminProblemDetail>>(`/admin/problems/${id}`, payload)
   return response.data.data
