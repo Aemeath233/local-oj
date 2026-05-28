@@ -21,6 +21,18 @@ export interface User {
   enabled?: boolean
   createdAt?: string
   updatedAt?: string
+  usernameChangeCountCurrentMonth?: number
+  lastUsernameChangedAt?: string
+}
+
+export interface PublicProfile {
+  id: number
+  username: string
+  displayName?: string
+  avatarUrl?: string
+  major?: string
+  role: Role
+  stats: UserStats
 }
 
 export interface LoginResult {

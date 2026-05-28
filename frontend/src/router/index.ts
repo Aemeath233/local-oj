@@ -7,6 +7,7 @@ import ProblemDetailView from '../views/ProblemDetailView.vue'
 import SubmissionListView from '../views/SubmissionListView.vue'
 import LeaderboardView from '../views/LeaderboardView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import UserPublicProfileView from '../views/UserPublicProfileView.vue'
 import AdminDashboardView from '../views/AdminDashboardView.vue'
 import AdminProblemListView from '../views/AdminProblemListView.vue'
 import AdminProblemView from '../views/AdminProblemView.vue'
@@ -38,6 +39,7 @@ const router = createRouter({
     { path: '/problems/:id', component: ProblemDetailView, props: true, meta: { requiresAuth: true } },
     { path: '/submissions', component: SubmissionListView, meta: { requiresAuth: true } },
     { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
+    { path: '/user/:id', component: UserPublicProfileView, meta: { requiresAuth: true } },
     { path: '/admin', component: AdminDashboardView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/problems', component: AdminProblemListView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/problems/new', component: AdminProblemView, meta: { requiresAuth: true, requiresAdmin: true } },

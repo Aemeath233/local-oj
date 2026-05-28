@@ -52,6 +52,21 @@ public class AdminUserController {
             throw new IllegalArgumentException("用户不存在");
         }
 
+        // Username validation
+        String username = request.username().trim();
+        if (username.isBlank()) {
+            throw new IllegalArgumentException("用户名不能为空");
+        }
+        if (!username.matches("[A-Za-z0-9_]{3,32}")) {
+            throw new IllegalArgumentException("用户名只能包含字母、数字、下划线，长度 3-32 位");
+        }
+        Long duplicateUsername = userMapper.selectCount(new QueryWrapper<User>()
+                .eq("username", username)
+                .ne("id", id));
+        if (duplicateUsername > 0) {
+            throw new IllegalArgumentException("用户名已被使用");
+        }
+
         // Email uniqueness validation
         String email = request.email().trim();
         if (email.isBlank()) {
@@ -93,6 +108,7 @@ public class AdminUserController {
         }
 
         // Update fields
+        user.setUsername(username);
         user.setDisplayName(request.displayName().trim());
         user.setEmail(email);
         user.setStudentNo(studentNo);
@@ -107,6 +123,7 @@ public class AdminUserController {
     }
 
     public record UpdateUserRequest(
+            @NotBlank(message = "用户名不能为空") String username,
             @NotBlank(message = "昵称不能为空") String displayName,
             @NotBlank(message = "邮箱不能为空") String email,
             String studentNo,

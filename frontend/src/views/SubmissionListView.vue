@@ -57,14 +57,16 @@
         <el-table-column prop="id" label="#" width="90" />
         <el-table-column label="提交者" min-width="150">
           <template #default="{ row }">
-            <div class="user-cell">
-              <el-avatar :size="26" :src="row.avatarUrl">
-                {{ userFallback(row) }}
-              </el-avatar>
-              <div>
-                <div style="font-weight: 600;">{{ row.displayName || row.username || `用户 #${row.userId}` }}</div>
+            <router-link :to="`/user/${row.userId}`" class="user-link-cell" @click.stop>
+              <div class="user-cell">
+                <el-avatar :size="26" :src="row.avatarUrl">
+                  {{ userFallback(row) }}
+                </el-avatar>
+                <div>
+                  <div style="font-weight: 600;" class="user-nickname">{{ row.displayName || row.username || `用户 #${row.userId}` }}</div>
+                </div>
               </div>
-            </div>
+            </router-link>
           </template>
         </el-table-column>
         <el-table-column label="题目" min-width="180">
@@ -244,5 +246,15 @@ function formatMemory(kb: number) {
   font-weight: 650;
   color: var(--text-primary);
   transition: color 0.15s ease;
+}
+
+.user-link-cell {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+}
+.user-link-cell:hover .user-nickname {
+  color: var(--primary);
+  text-decoration: underline;
 }
 </style>

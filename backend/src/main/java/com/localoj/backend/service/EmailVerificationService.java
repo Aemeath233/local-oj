@@ -22,6 +22,7 @@ import java.util.Properties;
 public class EmailVerificationService {
     private static final String REGISTER_PURPOSE = "REGISTER";
     private static final String PASSWORD_CHANGE_PURPOSE = "PASSWORD_CHANGE";
+    private static final String EMAIL_CHANGE_PURPOSE = "EMAIL_CHANGE";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final EmailVerificationCodeMapper codeMapper;
@@ -83,6 +84,17 @@ public class EmailVerificationService {
     @Transactional
     public void consumePasswordChangeCode(String email, String code) {
         consumeCode(email, code, PASSWORD_CHANGE_PURPOSE);
+    }
+
+    @Transactional
+    public void sendEmailChangeCode(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        sendCode(normalizedEmail, EMAIL_CHANGE_PURPOSE, "Local Judge 换绑邮箱验证码", "你的 Local Judge 换绑邮箱验证码是：");
+    }
+
+    @Transactional
+    public void consumeEmailChangeCode(String email, String code) {
+        consumeCode(email, code, EMAIL_CHANGE_PURPOSE);
     }
 
     private void consumeCode(String email, String code, String purpose) {

@@ -112,8 +112,8 @@
         class="admin-form"
       >
         <div class="form-row-2">
-          <el-form-item label="用户名" class="disabled-item">
-            <el-input v-model="editForm.username" disabled />
+          <el-form-item label="用户名" prop="username">
+            <el-input v-model="editForm.username" placeholder="用户名" />
           </el-form-item>
           <el-form-item label="昵称" prop="displayName">
             <el-input v-model="editForm.displayName" placeholder="昵称" />
@@ -217,6 +217,10 @@ const isSelfEdit = computed(() => {
 
 // Validation rules
 const formRules = {
+  username: [
+    { required: true, message: '用户名不能为空', trigger: 'blur' },
+    { pattern: /^[A-Za-z0-9_]{3,32}$/, message: '用户名只能包含字母、数字、下划线，长度 3-32 位', trigger: 'blur' }
+  ],
   displayName: [{ required: true, message: '昵称不能为空', trigger: 'blur' }],
   email: [
     { required: true, message: '邮箱不能为空', trigger: 'blur' },
@@ -292,6 +296,7 @@ async function saveUser() {
     saving.value = true
     try {
       const payload: any = {
+        username: editForm.username.trim(),
         displayName: editForm.displayName,
         email: editForm.email,
         studentNo: editForm.studentNo || null,

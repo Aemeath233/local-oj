@@ -69,17 +69,19 @@
         </el-table-column>
         <el-table-column label="用户" min-width="220">
           <template #default="{ row }">
-            <div class="user-cell">
-              <el-avatar :size="32" :src="row.avatarUrl">
-                {{ userFallback(row) }}
-              </el-avatar>
-              <div>
-                <div class="user-nickname">{{ row.displayName || row.username }}</div>
-                <div v-if="[row.studentNo, row.major].filter(Boolean).length > 0" class="muted">
-                  {{ [row.studentNo, row.major].filter(Boolean).join(' · ') }}
+            <router-link :to="`/user/${row.userId}`" class="user-profile-link">
+              <div class="user-cell">
+                <el-avatar :size="32" :src="row.avatarUrl">
+                  {{ userFallback(row) }}
+                </el-avatar>
+                <div>
+                  <div class="user-nickname">{{ row.displayName || row.username }}</div>
+                  <div v-if="[row.studentNo, row.major].filter(Boolean).length > 0" class="muted">
+                    {{ [row.studentNo, row.major].filter(Boolean).join(' · ') }}
+                  </div>
                 </div>
               </div>
-            </div>
+            </router-link>
           </template>
         </el-table-column>
         <el-table-column prop="acceptedCount" label="AC 题数" width="120" />
@@ -426,5 +428,15 @@ html.dark .rank-pos-other {
   background: var(--bg-muted) !important;
   color: var(--text-secondary) !important;
   border-color: var(--border-color) !important;
+}
+
+.user-profile-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+}
+.user-profile-link:hover .user-nickname {
+  color: var(--primary);
+  text-decoration: underline;
 }
 </style>

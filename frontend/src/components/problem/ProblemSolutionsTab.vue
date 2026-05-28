@@ -36,9 +36,9 @@
             <el-tag v-if="sol.userId === authStore.user?.id" type="success" size="small" effect="plain">我的</el-tag>
           </div>
           <div class="sol-card-bottom">
-            <div class="sol-card-author">
+            <div class="sol-card-author" @click.stop="navigateToUser(sol.userId)">
               <el-avatar :size="18" :src="sol.avatarUrl">{{ (sol.displayName || sol.username || 'U').slice(0, 1) }}</el-avatar>
-              <span>{{ sol.displayName || sol.username }}</span>
+              <span class="author-name-link">{{ sol.displayName || sol.username }}</span>
             </div>
             <span class="sol-card-time">{{ formatRelativeTime(sol.updatedAt) }}</span>
           </div>
@@ -71,11 +71,13 @@
       </template>
       <div v-if="selectedSolutionDetail" class="drawer-solution-body">
         <div class="drawer-sol-meta">
-          <el-avatar :size="28" :src="selectedSolutionDetail.avatarUrl">
+          <el-avatar :size="28" :src="selectedSolutionDetail.avatarUrl" style="cursor: pointer;" @click="navigateToUser(selectedSolutionDetail.userId)">
             {{ (selectedSolutionDetail.displayName || selectedSolutionDetail.username || 'U').slice(0, 1) }}
           </el-avatar>
           <div>
-            <strong>{{ selectedSolutionDetail.displayName || selectedSolutionDetail.username }}</strong>
+            <strong style="cursor: pointer;" class="author-name-link" @click="navigateToUser(selectedSolutionDetail.userId)">
+              {{ selectedSolutionDetail.displayName || selectedSolutionDetail.username }}
+            </strong>
             <div class="muted" style="font-size: 12px;">发表于 {{ formatDateTime(selectedSolutionDetail.createdAt) }}</div>
           </div>
         </div>
@@ -131,6 +133,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Lock, Notebook } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
@@ -149,6 +152,11 @@ const props = defineProps<{
 }>()
 
 const authStore = useAuthStore()
+const router = useRouter()
+
+function navigateToUser(userId: number) {
+  router.push(`/user/${userId}`)
+}
 
 const loading = ref(false)
 const solutionsList = ref<ProblemSolutionSummary[]>([])
@@ -451,5 +459,13 @@ async function deleteSolutionPrompt(id: number) {
   background: var(--bg-app);
   box-sizing: border-box;
   text-align: left;
+}
+
+.author-name-link {
+  transition: color 0.15s ease;
+}
+.author-name-link:hover {
+  color: var(--primary) !important;
+  text-decoration: underline;
 }
 </style>

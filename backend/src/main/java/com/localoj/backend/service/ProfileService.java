@@ -73,16 +73,59 @@ public class ProfileService {
     public ProfileView updateProfile(CurrentUser currentUser, UpdateProfileCommand command) {
         User user = requireUser(currentUser.id());
         String studentNo = normalizeOptional(command.studentNo(), 64, "班级");
-
         String displayName = normalizeRequired(command.displayName(), 128, "昵称");
         String major = normalizeOptional(command.major(), 128, "专业");
+
+        String newUsername = command.username() == null ? "" : command.username().trim();
+        boolean usernameChanged = false;
+
+        if (!newUsername.isBlank() && !newUsername.equals(user.getUsername())) {
+            if (!newUsername.matches("[A-Za-z0-9_]{3,32}")) {
+                throw new IllegalArgumentException("用户名只能包含字母、数字、下划线，长度 3-32 位");
+            }
+
+            Long duplicateCount = userMapper.selectCount(new QueryWrapper<User>()
+                    .eq("username", newUsername)
+                    .ne("id", user.getId()));
+            if (duplicateCount > 0) {
+                throw new IllegalArgumentException("用户名已被使用");
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+            int currentMonthCount = user.getUsernameChangeCountCurrentMonth() == null ? 0 : user.getUsernameChangeCountCurrentMonth();
+            if (user.getLastUsernameChangedAt() != null) {
+                LocalDateTime lastChanged = user.getLastUsernameChangedAt();
+                if (lastChanged.getYear() != now.getYear() || lastChanged.getMonthValue() != now.getMonthValue()) {
+                    currentMonthCount = 0;
+                }
+            }
+
+            if (currentMonthCount >= 3) {
+                throw new IllegalArgumentException("每个月最多只能修改 3 次用户名！");
+            }
+
+            user.setUsername(newUsername);
+            user.setUsernameChangeCountCurrentMonth(currentMonthCount + 1);
+            user.setLastUsernameChangedAt(now);
+            usernameChanged = true;
+        }
+
         LocalDateTime now = LocalDateTime.now();
-        userMapper.update(null, new UpdateWrapper<User>()
+        UpdateWrapper<User> updateWrapper = new UpdateWrapper<User>()
                 .eq("id", user.getId())
                 .set("display_name", displayName)
                 .set("student_no", studentNo)
                 .set("major", major)
-                .set("updated_at", now));
+                .set("updated_at", now);
+
+        if (usernameChanged) {
+            updateWrapper.set("username", user.getUsername())
+                    .set("username_change_count_current_month", user.getUsernameChangeCountCurrentMonth())
+                    .set("last_username_changed_at", user.getLastUsernameChangedAt());
+        }
+
+        userMapper.update(null, updateWrapper);
+
         user.setDisplayName(displayName);
         user.setStudentNo(studentNo);
         user.setMajor(major);
@@ -237,7 +280,7 @@ public class ProfileService {
         }
     }
 
-    public record UpdateProfileCommand(String displayName, String studentNo, String major) {
+    public record UpdateProfileCommand(String username, String displayName, String studentNo, String major) {
     }
 
     public record ChangePasswordCommand(String code, String newPassword) {
@@ -251,7 +294,9 @@ public class ProfileService {
             String avatarUrl,
             String studentNo,
             String major,
-            String role
+            String role,
+            Integer usernameChangeCountCurrentMonth,
+            LocalDateTime lastUsernameChangedAt
     ) {
         static ProfileView from(User user) {
             return new ProfileView(
@@ -262,9 +307,69 @@ public class ProfileService {
                     user.getAvatarUrl(),
                     user.getStudentNo(),
                     user.getMajor(),
-                    user.getRole().name()
+                    user.getRole().name(),
+                    user.getUsernameChangeCountCurrentMonth(),
+                    user.getLastUsernameChangedAt()
             );
         }
+    }
+
+    public record PublicProfileView(
+            Long id,
+            String username,
+            String displayName,
+            String avatarUrl,
+            String major,
+            String role,
+            UserStatsView stats
+    ) {}
+
+    public PublicProfileView getPublicProfile(Long userId) {
+        User user = requireUser(userId);
+        UserStatsView stats = getUserStatsById(userId);
+        return new PublicProfileView(
+                user.getId(),
+                user.getUsername(),
+                user.getDisplayName(),
+                user.getAvatarUrl(),
+                user.getMajor(),
+                user.getRole().name(),
+                stats
+        );
+    }
+
+    public void sendEmailChangeCode(CurrentUser currentUser) {
+        User user = requireUser(currentUser.id());
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new IllegalArgumentException("当前账号未绑定邮箱，无法发送换绑验证码");
+        }
+        emailVerificationService.sendEmailChangeCode(user.getEmail());
+    }
+
+    @Transactional
+    public ProfileView changeEmail(CurrentUser currentUser, String newEmail, String code) {
+        User user = requireUser(currentUser.id());
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new IllegalArgumentException("当前账号没有邮箱，无法换绑");
+        }
+        String normalizedNewEmail = emailVerificationService.normalizeEmail(newEmail);
+        if (normalizedNewEmail.equals(user.getEmail())) {
+            throw new IllegalArgumentException("新邮箱不能与旧邮箱相同");
+        }
+        emailVerificationService.consumeEmailChangeCode(user.getEmail(), code);
+
+        Long count = userMapper.selectCount(new QueryWrapper<User>()
+                .eq("email", normalizedNewEmail)
+                .ne("id", user.getId()));
+        if (count > 0) {
+            throw new IllegalArgumentException("新邮箱已被其他账号绑定");
+        }
+
+        user.setEmail(normalizedNewEmail);
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+
+        return ProfileView.from(user);
     }
 
     public record AvatarFile(byte[] bytes, String contentType) {
@@ -290,8 +395,10 @@ public class ProfileService {
     ) {}
 
     public UserStatsView getUserStats(CurrentUser currentUser) {
-        Long userId = currentUser.id();
+        return getUserStatsById(currentUser.id());
+    }
 
+    public UserStatsView getUserStatsById(Long userId) {
         // 1. Get all visible problems to count totals by difficulty
         List<Problem> visibleProblems = problemMapper.selectList(new QueryWrapper<Problem>().eq("visible", true));
         int easyTotal = 0;

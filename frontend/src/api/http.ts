@@ -31,7 +31,8 @@ import type {
   SystemLog,
   SystemLogLevel,
   ProblemPackagePreview,
-  UserStats
+  UserStats,
+  PublicProfile
 } from '../types'
 
 
@@ -99,11 +100,26 @@ export async function fetchUserStats() {
 }
 
 export async function updateProfile(payload: {
+  username?: string
   displayName: string
   studentNo?: string
   major?: string
 }) {
   const response = await http.put<ApiEnvelope<User>>('/profile', payload)
+  return response.data.data
+}
+
+export async function fetchPublicProfile(userId: number) {
+  const response = await http.get<ApiEnvelope<PublicProfile>>(`/profile/${userId}/public`)
+  return response.data.data
+}
+
+export async function requestEmailChangeCode() {
+  await http.post<ApiEnvelope<null>>('/profile/email-change-code')
+}
+
+export async function changeEmail(payload: { newEmail: string; code: string }) {
+  const response = await http.put<ApiEnvelope<User>>('/profile/email', payload)
   return response.data.data
 }
 

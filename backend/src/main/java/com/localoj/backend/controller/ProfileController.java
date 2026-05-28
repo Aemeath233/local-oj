@@ -73,9 +73,25 @@ public class ProfileController {
         return ApiResponse.ok(null);
     }
 
-    public record UpdateProfileRequest(@NotBlank String displayName, String studentNo, String major) {
+    @GetMapping("/{userId}/public")
+    public ApiResponse<ProfileService.PublicProfileView> publicProfile(@PathVariable("userId") Long userId) {
+        return ApiResponse.ok(profileService.getPublicProfile(userId));
+    }
+
+    @PostMapping("/email-change-code")
+    public ApiResponse<Object> sendEmailChangeCode() {
+        profileService.sendEmailChangeCode(SecurityUtils.currentUser());
+        return ApiResponse.ok(null);
+    }
+
+    @PutMapping("/email")
+    public ApiResponse<ProfileService.ProfileView> changeEmail(@Valid @RequestBody ChangeEmailRequest request) {
+        return ApiResponse.ok(profileService.changeEmail(SecurityUtils.currentUser(), request.newEmail(), request.code()));
+    }
+
+    public record UpdateProfileRequest(String username, @NotBlank String displayName, String studentNo, String major) {
         ProfileService.UpdateProfileCommand toCommand() {
-            return new ProfileService.UpdateProfileCommand(displayName, studentNo, major);
+            return new ProfileService.UpdateProfileCommand(username, displayName, studentNo, major);
         }
     }
 
@@ -84,4 +100,6 @@ public class ProfileController {
             return new ProfileService.ChangePasswordCommand(code, newPassword);
         }
     }
+
+    public record ChangeEmailRequest(@NotBlank String newEmail, @NotBlank String code) {}
 }

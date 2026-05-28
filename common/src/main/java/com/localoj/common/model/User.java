@@ -22,6 +22,8 @@ public class User {
     private Boolean enabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Integer usernameChangeCountCurrentMonth;
+    private LocalDateTime lastUsernameChangedAt;
 
     public Long getId() {
         return id;
@@ -132,5 +134,21 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Integer getUsernameChangeCountCurrentMonth() {
+        return usernameChangeCountCurrentMonth;
+    }
+
+    public void setUsernameChangeCountCurrentMonth(Integer usernameChangeCountCurrentMonth) {
+        this.usernameChangeCountCurrentMonth = usernameChangeCountCurrentMonth;
+    }
+
+    public LocalDateTime getLastUsernameChangedAt() {
+        return lastUsernameChangedAt;
+    }
+
+    public void setLastUsernameChangedAt(LocalDateTime lastUsernameChangedAt) {
+        this.lastUsernameChangedAt = lastUsernameChangedAt;
     }
 }
