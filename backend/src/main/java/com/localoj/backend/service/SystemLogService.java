@@ -21,6 +21,12 @@ public class SystemLogService {
         try {
             ch.qos.logback.classic.LoggerContext loggerContext = 
                 (ch.qos.logback.classic.LoggerContext) LoggerFactory.getILoggerFactory();
+            
+            ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+            if (rootLogger != null) {
+                rootLogger.setLevel(ch.qos.logback.classic.Level.OFF);
+            }
+            
             ch.qos.logback.classic.Logger logger = loggerContext.getLogger("com.localoj");
             if (logger != null) {
                 logger.setLevel(ch.qos.logback.classic.Level.OFF);
@@ -37,10 +43,17 @@ public class SystemLogService {
         try {
             ch.qos.logback.classic.LoggerContext loggerContext = 
                 (ch.qos.logback.classic.LoggerContext) LoggerFactory.getILoggerFactory();
+            
+            ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+            if (rootLogger != null) {
+                rootLogger.setLevel(enabled ? ch.qos.logback.classic.Level.INFO : ch.qos.logback.classic.Level.OFF);
+            }
+            
             ch.qos.logback.classic.Logger logger = loggerContext.getLogger("com.localoj");
             if (logger != null) {
                 logger.setLevel(enabled ? ch.qos.logback.classic.Level.INFO : ch.qos.logback.classic.Level.OFF);
             }
+            
             log.info("System logging state changed dynamically: {}", enabled ? "ENABLED (INFO)" : "DISABLED (OFF)");
         } catch (Throwable t) {
             log.warn("Failed to dynamically set Logback log level: {}", t.getMessage());
