@@ -64,6 +64,17 @@ public class User {
     }
 
     public String getAvatarUrl() {
+        if (avatarUrl == null || avatarUrl.isBlank()) {
+            if (email != null && !email.isBlank()) {
+                String trimmedEmail = email.trim().toLowerCase();
+                if (trimmedEmail.endsWith("@qq.com")) {
+                    String qq = trimmedEmail.substring(0, trimmedEmail.indexOf("@qq.com"));
+                    if (qq.matches("\\d+")) {
+                        return "https://q1.qlogo.cn/g?b=qq&nk=" + qq + "&s=640";
+                    }
+                }
+            }
+        }
         return avatarUrl;
     }
 
