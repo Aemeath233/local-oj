@@ -131,7 +131,7 @@ public class AdminDataService {
             } else if (val.contains("昵称") || val.contains("display_name") || val.contains("displayname") || val.contains("姓名") || val.contains("name")) {
                 colMap.put("displayName", i);
                 hasHeader = true;
-            } else if (val.contains("学号") || val.contains("student_no") || val.contains("studentno") || val.contains("student_number")) {
+            } else if (val.contains("学号") || val.contains("班级") || val.contains("class") || val.contains("student_no") || val.contains("studentno") || val.contains("student_number")) {
                 colMap.put("studentNo", i);
                 hasHeader = true;
             } else if (val.contains("专业") || val.contains("major")) {
@@ -160,10 +160,8 @@ public class AdminDataService {
             colMap.put("role", 6);
         }
 
-        // Set to prevent local import duplicate keys in memory
         Set<String> localUsernames = new HashSet<>();
         Set<String> localEmails = new HashSet<>();
-        Set<String> localStudentNos = new HashSet<>();
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -218,11 +216,6 @@ public class AdminDataService {
             // 3. Validation: Student No (Optional, must be saved as null if blank)
             if (studentNo != null && !studentNo.isBlank()) {
                 studentNo = studentNo.trim();
-                if (localStudentNos.contains(studentNo) || userMapper.selectCount(new QueryWrapper<User>().eq("student_no", studentNo)) > 0) {
-                    result.errors.add(new ImportErrorDetail(displayRowNo, username, "学号已被使用"));
-                    result.failedCount++;
-                    continue;
-                }
             } else {
                 studentNo = null;
             }
@@ -256,7 +249,6 @@ public class AdminDataService {
             // Save to memory lists to prevent local file duplicates
             localUsernames.add(username);
             if (email != null) localEmails.add(email);
-            if (studentNo != null) localStudentNos.add(studentNo);
 
             // 6. Insertion
             User user = new User();

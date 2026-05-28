@@ -15,7 +15,7 @@
       <div class="search-box">
         <el-input
           v-model="search"
-          placeholder="搜索用户名、邮箱、昵称、学号..."
+          placeholder="搜索用户名、邮箱、昵称、班级..."
           clearable
           :prefix-icon="Search"
           @input="handleSearchInput"
@@ -46,7 +46,7 @@
         <el-table-column prop="displayName" label="昵称" min-width="150" />
 
         <!-- Academic Details -->
-        <el-table-column label="学籍信息" min-width="180">
+        <el-table-column label="班级专业" min-width="180">
           <template #default="{ row }">
             <div v-if="row.studentNo || row.major">
               <div class="student-no-text">{{ row.studentNo || '-' }}</div>
@@ -125,8 +125,8 @@
         </el-form-item>
 
         <div class="form-row-2">
-          <el-form-item label="学号" prop="studentNo">
-            <el-input v-model="editForm.studentNo" placeholder="学号 (选填)" />
+          <el-form-item label="班级" prop="studentNo">
+            <el-input v-model="editForm.studentNo" placeholder="班级 (选填)" />
           </el-form-item>
           <el-form-item label="专业" prop="major">
             <el-input v-model="editForm.major" placeholder="专业 (选填)" />

@@ -64,16 +64,10 @@ public class AdminUserController {
             throw new IllegalArgumentException("邮箱已被其他用户使用");
         }
 
-        // Student No uniqueness validation
+        // Parse Class (studentNo)
         String studentNo = request.studentNo();
         if (studentNo != null && !studentNo.isBlank()) {
             studentNo = studentNo.trim();
-            Long duplicateNo = userMapper.selectCount(new QueryWrapper<User>()
-                    .eq("student_no", studentNo)
-                    .ne("id", id));
-            if (duplicateNo > 0) {
-                throw new IllegalArgumentException("学号已被使用");
-            }
         } else {
             studentNo = null;
         }

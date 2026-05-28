@@ -10,7 +10,7 @@
       <el-form-item label="昵称">
         <el-input v-model="localForm.displayName" maxlength="128" show-word-limit />
       </el-form-item>
-      <el-form-item label="学号">
+      <el-form-item label="班级">
         <el-input v-model="localForm.studentNo" maxlength="64" show-word-limit />
       </el-form-item>
       <el-form-item label="专业">

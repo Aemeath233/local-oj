@@ -23,7 +23,7 @@
         </div>
         <template #tip>
           <div class="el-upload__tip">
-            只能上传 .csv 格式的文件。请保证用户名和学号/邮箱的唯一性。
+            只能上传 .csv 格式的文件。请保证用户名和邮箱的唯一性。
           </div>
         </template>
       </el-upload>
@@ -73,7 +73,7 @@
           <el-table-column prop="username" label="用户名" width="150" />
           <el-table-column prop="displayName" label="昵称" width="150" />
           <el-table-column prop="email" label="邮箱" width="200" show-overflow-tooltip />
-          <el-table-column prop="studentNo" label="学号" width="120" />
+          <el-table-column prop="studentNo" label="班级" width="120" />
           <el-table-column prop="role" label="分配角色" width="110" align="center">
             <template #default="scope">
               <el-tag :type="scope.row.role === 'SUPER_ADMIN' ? 'danger' : scope.row.role === 'ADMIN' ? 'warning' : 'info'" size="small">
@@ -127,9 +127,9 @@ async function handleFileChange(uploadFile: any) {
 }
 
 function downloadCsvTemplate() {
-  const content = '\uFEFF' + '用户名,邮箱,昵称,学号,专业,密码,角色\n' +
-    'student_test1,test1@localoj.com,李雷,202601001,计算机科学与技术,Pass@123,STUDENT\n' +
-    'student_test2,,韩梅梅,202601002,人工智能,,STUDENT\n' +
+  const content = '\uFEFF' + '用户名,邮箱,昵称,班级,专业,密码,角色\n' +
+    'student_test1,test1@localoj.com,李雷,计科2201班,计算机科学与技术,Pass@123,STUDENT\n' +
+    'student_test2,,韩梅梅,计科2202班,人工智能,,STUDENT\n' +
     'admin_import_test,admin_imp@localoj.com,王老师,,控制工程,AdminPass123,ADMIN\n'
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)

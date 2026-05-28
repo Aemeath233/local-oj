@@ -72,15 +72,7 @@ public class ProfileService {
     @Transactional
     public ProfileView updateProfile(CurrentUser currentUser, UpdateProfileCommand command) {
         User user = requireUser(currentUser.id());
-        String studentNo = normalizeOptional(command.studentNo(), 64, "学号");
-        if (studentNo != null) {
-            Long duplicateCount = userMapper.selectCount(new QueryWrapper<User>()
-                    .eq("student_no", studentNo)
-                    .ne("id", user.getId()));
-            if (duplicateCount > 0) {
-                throw new IllegalArgumentException("学号已被使用");
-            }
-        }
+        String studentNo = normalizeOptional(command.studentNo(), 64, "班级");
 
         String displayName = normalizeRequired(command.displayName(), 128, "昵称");
         String major = normalizeOptional(command.major(), 128, "专业");
