@@ -40,6 +40,18 @@ public class AuthController {
         return ApiResponse.ok(authService.register(request.toCommand()));
     }
 
+    @PostMapping("/reset-password-code")
+    public ApiResponse<Object> sendResetPasswordCode(@Valid @RequestBody ResetPasswordCodeRequest request) {
+        authService.sendResetPasswordCode(request.email());
+        return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Object> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.email(), request.code(), request.newPassword());
+        return ApiResponse.ok(null);
+    }
+
     @GetMapping("/me")
     public ApiResponse<Object> me() {
         return ApiResponse.ok(SecurityUtils.currentUser());
@@ -61,5 +73,15 @@ public class AuthController {
         AuthService.RegisterCommand toCommand() {
             return new AuthService.RegisterCommand(username, email, displayName, password, code);
         }
+    }
+
+    public record ResetPasswordCodeRequest(@NotBlank @Email String email) {
+    }
+
+    public record ResetPasswordRequest(
+            @NotBlank @Email String email,
+            @NotBlank String code,
+            @NotBlank String newPassword
+    ) {
     }
 }

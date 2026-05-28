@@ -43,7 +43,13 @@ export const http = axios.create({
 
 export const SESSION_EXPIRED_EVENT = 'localoj:session-expired'
 
-const publicAuthPaths = ['/auth/login', '/auth/register', '/auth/register-code']
+const publicAuthPaths = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/register-code',
+  '/auth/reset-password-code',
+  '/auth/reset-password'
+]
 
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem('localoj.token')
@@ -58,7 +64,7 @@ http.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const url = error.config?.url || ''
-    if (status === 401 && !publicAuthPaths.includes(url) && localStorage.getItem('localoj.token')) {
+    if (status === 401 && !publicAuthPaths.includes(url)) {
       localStorage.removeItem('localoj.token')
       localStorage.removeItem('localoj.user')
       window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, {
@@ -87,6 +93,18 @@ export async function register(payload: {
 }) {
   const response = await http.post<ApiEnvelope<LoginResult>>('/auth/register', payload)
   return response.data.data
+}
+
+export async function requestResetPasswordCode(email: string) {
+  await http.post<ApiEnvelope<null>>('/auth/reset-password-code', { email })
+}
+
+export async function resetPassword(payload: {
+  email: string
+  code: string
+  newPassword: string
+}) {
+  await http.post<ApiEnvelope<null>>('/auth/reset-password', payload)
 }
 
 export async function fetchProfile() {

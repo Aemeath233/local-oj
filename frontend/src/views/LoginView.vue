@@ -60,6 +60,32 @@
             </el-button>
           </el-form>
         </el-tab-pane>
+
+        <el-tab-pane label="找回密码" name="reset">
+          <el-form :model="resetForm" label-position="top" @submit.prevent="submitReset">
+            <el-form-item label="密保邮箱">
+              <div class="inline-field">
+                <el-input v-model="resetForm.email" autocomplete="email" placeholder="请输入绑定的邮箱" />
+                <el-button :loading="resetCodeLoading" :disabled="resetCodeCountdown > 0" @click="sendResetCode">
+                  {{ resetCodeCountdown > 0 ? `${resetCodeCountdown}s` : '验证码' }}
+                </el-button>
+              </div>
+            </el-form-item>
+            <el-form-item label="验证码">
+              <el-input v-model="resetForm.code" placeholder="输入邮箱验证码" />
+            </el-form-item>
+            <el-form-item label="新密码">
+              <el-input v-model="resetForm.newPassword" type="password" placeholder="至少 6 位新密码" autocomplete="new-password" show-password />
+            </el-form-item>
+            <el-form-item label="确认新密码">
+              <el-input v-model="resetForm.confirmPassword" type="password" placeholder="再次输入新密码" autocomplete="new-password" show-password />
+            </el-form-item>
+            <el-alert v-if="resetError" :title="resetError" type="error" show-icon :closable="false" />
+            <el-button class="full-button" type="primary" :loading="resetLoading" @click="submitReset">
+              重置密码并登录
+            </el-button>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
     </div>
   </section>
@@ -69,7 +95,7 @@
 import { onBeforeUnmount, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { requestRegisterCode } from '../api/http'
+import { requestRegisterCode, requestResetPasswordCode, resetPassword } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
@@ -83,6 +109,12 @@ const loginError = ref('')
 const registerError = ref('')
 const codeCountdown = ref(0)
 let countdownTimer: number | null = null
+
+const resetLoading = ref(false)
+const resetCodeLoading = ref(false)
+const resetError = ref('')
+const resetCodeCountdown = ref(0)
+let resetCountdownTimer: number | null = null
 
 const loginForm = reactive({
   username: '',
@@ -98,9 +130,19 @@ const registerForm = reactive({
   confirmPassword: ''
 })
 
+const resetForm = reactive({
+  email: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
 onBeforeUnmount(() => {
   if (countdownTimer !== null) {
     window.clearInterval(countdownTimer)
+  }
+  if (resetCountdownTimer !== null) {
+    window.clearInterval(resetCountdownTimer)
   }
 })
 
@@ -167,6 +209,80 @@ function startCountdown() {
       countdownTimer = null
     }
   }, 1000)
+}
+
+async function sendResetCode() {
+  if (!resetForm.email) {
+    resetError.value = '请输入密保邮箱'
+    return
+  }
+  resetCodeLoading.value = true
+  resetError.value = ''
+  try {
+    await requestResetPasswordCode(resetForm.email)
+    ElMessage.success('重置密码验证码已发送')
+    startResetCountdown()
+  } catch (error: any) {
+    resetError.value = error.response?.data?.message || '验证码发送失败'
+  } finally {
+    resetCodeLoading.value = false
+  }
+}
+
+function startResetCountdown() {
+  resetCodeCountdown.value = 60
+  if (resetCountdownTimer !== null) {
+    window.clearInterval(resetCountdownTimer)
+  }
+  resetCountdownTimer = window.setInterval(() => {
+    resetCodeCountdown.value -= 1
+    if (resetCodeCountdown.value <= 0 && resetCountdownTimer !== null) {
+      window.clearInterval(resetCountdownTimer)
+      resetCountdownTimer = null
+    }
+  }, 1000)
+}
+
+async function submitReset() {
+  if (!resetForm.email) {
+    resetError.value = '请输入邮箱'
+    return
+  }
+  if (!resetForm.code) {
+    resetError.value = '请输入验证码'
+    return
+  }
+  if (!resetForm.newPassword) {
+    resetError.value = '请输入新密码'
+    return
+  }
+  if (resetForm.newPassword.length < 6) {
+    resetError.value = '新密码长度至少为 6 位'
+    return
+  }
+  if (resetForm.newPassword !== resetForm.confirmPassword) {
+    resetError.value = '两次输入的密码不一致'
+    return
+  }
+  
+  resetLoading.value = true
+  resetError.value = ''
+  try {
+    await resetPassword({
+      email: resetForm.email,
+      code: resetForm.code,
+      newPassword: resetForm.newPassword
+    })
+    ElMessage.success('密码重置成功，正在自动登录...')
+    
+    // Log in automatically
+    await auth.login(resetForm.email, resetForm.newPassword)
+    router.push(redirectTarget())
+  } catch (error: any) {
+    resetError.value = error.response?.data?.message || '密码重置失败'
+  } finally {
+    resetLoading.value = false
+  }
 }
 
 function redirectTarget() {

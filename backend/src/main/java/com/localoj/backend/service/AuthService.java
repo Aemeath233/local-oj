@@ -105,6 +105,32 @@ public class AuthService {
         return displayName == null || displayName.isBlank() ? username : displayName.trim();
     }
 
+    @Transactional
+    public void sendResetPasswordCode(String email) {
+        String normalizedEmail = emailVerificationService.normalizeEmail(email);
+        User user = userMapper.selectOne(new QueryWrapper<User>().eq("email", normalizedEmail));
+        if (user == null) {
+            throw new IllegalArgumentException("该邮箱尚未注册账号！");
+        }
+        emailVerificationService.sendPasswordChangeCode(normalizedEmail);
+    }
+
+    @Transactional
+    public void resetPassword(String email, String code, String newPassword) {
+        String normalizedEmail = emailVerificationService.normalizeEmail(email);
+        User user = userMapper.selectOne(new QueryWrapper<User>().eq("email", normalizedEmail));
+        if (user == null) {
+            throw new IllegalArgumentException("该邮箱尚未注册账号！");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new IllegalArgumentException("密码至少 6 位");
+        }
+        emailVerificationService.consumePasswordChangeCode(normalizedEmail, code);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+    }
+
     public record RegisterCommand(String username, String email, String displayName, String password, String code) {
     }
 
