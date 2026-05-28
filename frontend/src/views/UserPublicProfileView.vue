@@ -20,7 +20,6 @@
                 学生
               </el-tag>
             </div>
-            <div class="username-sub">@{{ profile.username }}</div>
             <div class="major-info">
               <el-icon class="major-icon"><Notebook /></el-icon>
               <span>专业：{{ profile.major || '未填写专业' }}</span>
