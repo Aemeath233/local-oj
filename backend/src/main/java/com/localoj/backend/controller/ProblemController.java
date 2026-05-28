@@ -63,6 +63,8 @@ public class ProblemController {
             mutableFiltered.sort((a, b) -> Integer.compare(difficultyValue(b.difficulty()), difficultyValue(a.difficulty())));
         } else if ("AC_RATE_DESC".equalsIgnoreCase(sortBy)) {
             mutableFiltered.sort((a, b) -> Double.compare(acRate(b), acRate(a)));
+        } else if ("AC_RATE_ASC".equalsIgnoreCase(sortBy)) {
+            mutableFiltered.sort((a, b) -> Double.compare(acRate(a), acRate(b)));
         } else {
             mutableFiltered.sort((a, b) -> a.id().compareTo(b.id()));
         }

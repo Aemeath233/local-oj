@@ -22,12 +22,22 @@
           style="max-width: 260px"
         />
 
-        <el-select v-model="sortBy" style="width: 160px" @change="handleFilterChange">
-          <el-option label="创建时间 (从旧到新)" value="ID_ASC" />
-          <el-option label="创建时间 (从新到旧)" value="ID_DESC" />
-          <el-option label="难度 (从低到高)" value="DIFFICULTY_ASC" />
-          <el-option label="难度 (从高到低)" value="DIFFICULTY_DESC" />
-          <el-option label="通过率 (从高到低)" value="AC_RATE_DESC" />
+        <el-select v-model="sortBy" style="width: 140px">
+          <el-option
+            :label="sortField === 'ID' ? `创建时间 ${sortOrder === 'ASC' ? '↑' : '↓'}` : '创建时间'"
+            :value="sortField === 'ID' ? `ID_${sortOrder}` : 'ID_ASC'"
+            @click="handleOptionClick('ID')"
+          />
+          <el-option
+            :label="sortField === 'DIFFICULTY' ? `难度 ${sortOrder === 'ASC' ? '↑' : '↓'}` : '难度'"
+            :value="sortField === 'DIFFICULTY' ? `DIFFICULTY_${sortOrder}` : 'DIFFICULTY_ASC'"
+            @click="handleOptionClick('DIFFICULTY')"
+          />
+          <el-option
+            :label="sortField === 'AC_RATE' ? `通过率 ${sortOrder === 'ASC' ? '↑' : '↓'}` : '通过率'"
+            :value="sortField === 'AC_RATE' ? `AC_RATE_${sortOrder}` : 'AC_RATE_DESC'"
+            @click="handleOptionClick('AC_RATE')"
+          />
         </el-select>
 
         <el-segmented v-model="statusFilter" :options="statusOptions" @change="handleFilterChange" style="margin-left: auto;" />
@@ -152,6 +162,19 @@ const loading = ref(false)
 const keyword = ref('')
 const statusFilter = ref<ProblemStatus | ''>('')
 const sortBy = ref('ID_ASC')
+const sortField = ref('ID')
+const sortOrder = ref('ASC')
+
+function handleOptionClick(field: string) {
+  if (sortField.value === field) {
+    sortOrder.value = sortOrder.value === 'ASC' ? 'DESC' : 'ASC'
+  } else {
+    sortField.value = field
+    sortOrder.value = field === 'AC_RATE' ? 'DESC' : 'ASC'
+  }
+  sortBy.value = `${sortField.value}_${sortOrder.value}`
+  handleFilterChange()
+}
 const allTags = ref<ProblemTag[]>([])
 const statusOptions = [
   { label: '全部', value: '' },
