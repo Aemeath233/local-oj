@@ -88,11 +88,25 @@
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="totalProblems"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, sizes, prev, pager, next"
           background
           @size-change="load"
           @current-change="load"
         />
+        <div class="custom-jumper" v-if="totalProblems > 0">
+          <span class="jumper-label">前往</span>
+          <el-input-number
+            v-model="jumpPage"
+            :min="1"
+            :max="Math.ceil(totalProblems / pageSize)"
+            :controls="false"
+            size="small"
+            class="jumper-input"
+            @keyup.enter="handleJump"
+          />
+          <span class="jumper-label">页</span>
+          <el-button size="small" type="primary" class="jumper-btn" @click="handleJump">跳转</el-button>
+        </div>
       </div>
     </div>
   </section>
@@ -113,6 +127,19 @@ const problems = ref<ProblemSummary[]>([])
 const totalProblems = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
+const jumpPage = ref(1)
+
+watch(currentPage, (val) => {
+  jumpPage.value = val
+})
+
+function handleJump() {
+  const maxPage = Math.ceil(totalProblems.value / pageSize.value)
+  if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= maxPage) {
+    currentPage.value = jumpPage.value
+    load()
+  }
+}
 const loading = ref(false)
 const keyword = ref('')
 const statusFilter = ref<ProblemStatus | ''>('')
@@ -220,5 +247,29 @@ function splitTags(tags?: string) {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--el-border-color-lighter);
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.custom-jumper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.jumper-input {
+  width: 50px !important;
+}
+
+.jumper-input :deep(.el-input__inner) {
+  text-align: center;
+  padding: 0 4px;
+}
+
+.jumper-btn {
+  margin-left: 2px;
 }
 </style>

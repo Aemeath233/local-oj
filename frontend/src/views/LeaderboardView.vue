@@ -100,13 +100,27 @@
           layout="total, prev, pager, next"
           background
         />
+        <div class="custom-jumper">
+          <span class="jumper-label">前往</span>
+          <el-input-number
+            v-model="jumpPage"
+            :min="1"
+            :max="Math.ceil(rows.length / pageSize)"
+            :controls="false"
+            size="small"
+            class="jumper-input"
+            @keyup.enter="handleJump"
+          />
+          <span class="jumper-label">页</span>
+          <el-button size="small" type="primary" class="jumper-btn" @click="handleJump">跳转</el-button>
+        </div>
       </div>
     </section>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { fetchLeaderboard, fetchMyRank } from '../api/http'
 import { formatDateTime } from '../utils/time'
@@ -118,6 +132,18 @@ const myRankRow = ref<LeaderboardRow | null>(null)
 
 const currentPage = ref(1)
 const pageSize = ref(20)
+const jumpPage = ref(1)
+
+watch(currentPage, (val) => {
+  jumpPage.value = val
+})
+
+function handleJump() {
+  const maxPage = Math.ceil(rows.value.length / pageSize.value)
+  if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= maxPage) {
+    currentPage.value = jumpPage.value
+  }
+}
 
 const pagedRows = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
@@ -352,6 +378,30 @@ function getRankChange(row: LeaderboardRow, index: number) {
   justify-content: center;
   margin-top: 20px;
   padding-top: 10px;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.custom-jumper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.jumper-input {
+  width: 50px !important;
+}
+
+.jumper-input :deep(.el-input__inner) {
+  text-align: center;
+  padding: 0 4px;
+}
+
+.jumper-btn {
+  margin-left: 2px;
 }
 
 /* Dark mode overrides */
