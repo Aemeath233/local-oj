@@ -36,10 +36,10 @@
             <el-option label="Java 21" value="JAVA" />
           </el-select>
           <el-button :icon="Brush" :loading="formatting" @click="handleFormat">格式化</el-button>
-          <el-button :icon="VideoPlay" :loading="selfTesting" :disabled="cooldownSeconds > 0" @click="runCustomTest">
+          <el-button class="cooldown-btn" :icon="VideoPlay" :loading="selfTesting" :disabled="cooldownSeconds > 0" @click="runCustomTest">
             {{ cooldownSeconds > 0 ? `自测 (${cooldownSeconds}s)` : '自测' }}
           </el-button>
-          <el-button :icon="Upload" type="primary" :loading="submitting" :disabled="cooldownSeconds > 0" @click="submit">
+          <el-button class="cooldown-btn" :icon="Upload" type="primary" :loading="submitting" :disabled="cooldownSeconds > 0" @click="submit">
             {{ cooldownSeconds > 0 ? `提交 (${cooldownSeconds}s)` : '提交' }}
           </el-button>
         </div>
@@ -571,6 +571,10 @@ int main() {
 
 .language-select {
   width: 150px;
+}
+
+.cooldown-btn {
+  min-width: 105px;
 }
 
 @media (max-width: 1040px) {

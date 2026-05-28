@@ -97,10 +97,10 @@
           </div>
           <div class="bar-right">
             <el-button :icon="Brush" :loading="formatting" size="small" @click="handleFormat">格式化</el-button>
-            <el-button :loading="selfTesting" :icon="Cpu" :disabled="cooldownSeconds > 0" size="small" @click="runCustomTest">
+            <el-button class="cooldown-btn" :loading="selfTesting" :icon="Cpu" :disabled="cooldownSeconds > 0" size="small" @click="runCustomTest">
               {{ cooldownSeconds > 0 ? `自测 (${cooldownSeconds}s)` : '自测' }}
             </el-button>
-            <el-button :loading="submitting" type="primary" :icon="Upload" :disabled="cooldownSeconds > 0" size="small" @click="submit">
+            <el-button class="cooldown-btn" :loading="submitting" type="primary" :icon="Upload" :disabled="cooldownSeconds > 0" size="small" @click="submit">
               {{ cooldownSeconds > 0 ? `提交 (${cooldownSeconds}s)` : '提交' }}
             </el-button>
           </div>
@@ -724,6 +724,9 @@ int main() {
 .editor-title {
   font-weight: 650;
   font-size: 0.95rem;
+}
+.cooldown-btn {
+  min-width: 95px;
 }
 .editor-container {
   flex-grow: 1;
