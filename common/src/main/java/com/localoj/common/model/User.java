@@ -24,6 +24,7 @@ public class User {
     private LocalDateTime updatedAt;
     private Integer usernameChangeCountCurrentMonth;
     private LocalDateTime lastUsernameChangedAt;
+    private LocalDateTime lastActiveAt;
 
     public Long getId() {
         return id;
@@ -150,5 +151,13 @@ public class User {
 
     public void setLastUsernameChangedAt(LocalDateTime lastUsernameChangedAt) {
         this.lastUsernameChangedAt = lastUsernameChangedAt;
+    }
+
+    public LocalDateTime getLastActiveAt() {
+        return lastActiveAt;
+    }
+
+    public void setLastActiveAt(LocalDateTime lastActiveAt) {
+        this.lastActiveAt = lastActiveAt;
     }
 }

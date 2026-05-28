@@ -65,8 +65,15 @@ public class ProfileService {
         this.avatarRoot = Paths.get(dataRoot).toAbsolutePath().normalize().resolve("avatars").normalize();
     }
 
+    @Transactional
     public ProfileView profile(CurrentUser currentUser) {
-        return ProfileView.from(requireUser(currentUser.id()));
+        User user = requireUser(currentUser.id());
+        LocalDateTime now = LocalDateTime.now();
+        userMapper.update(null, new UpdateWrapper<User>()
+                .eq("id", user.getId())
+                .set("last_active_at", now));
+        user.setLastActiveAt(now);
+        return ProfileView.from(user);
     }
 
     @Transactional
@@ -321,12 +328,45 @@ public class ProfileService {
             String avatarUrl,
             String major,
             String role,
-            UserStatsView stats
+            LocalDateTime createdAt,
+            LocalDateTime lastActiveAt,
+            UserStatsView stats,
+            List<SubmissionService.SubmissionSummary> recentSubmissions
     ) {}
+
+    private SubmissionService.SubmissionSummary toSubmissionSummary(Submission submission) {
+        User submitter = userMapper.selectById(submission.getUserId());
+        Problem problem = problemMapper.selectById(submission.getProblemId());
+        return new SubmissionService.SubmissionSummary(
+                submission.getId(),
+                submission.getUserId(),
+                submitter == null ? null : submitter.getUsername(),
+                submitter == null ? null : submitter.getDisplayName(),
+                submitter == null ? null : submitter.getAvatarUrl(),
+                submission.getProblemId(),
+                problem == null ? null : problem.getTitle(),
+                submission.getLanguage().name(),
+                submission.getStatus().name(),
+                submission.getVerdict() == null ? null : submission.getVerdict().name(),
+                submission.getScore(),
+                submission.getTimeMs(),
+                submission.getMemoryKb(),
+                submission.getCreatedAt(),
+                submission.getJudgedAt()
+        );
+    }
 
     public PublicProfileView getPublicProfile(Long userId) {
         User user = requireUser(userId);
         UserStatsView stats = getUserStatsById(userId);
+        List<Submission> recentSubmissionsList = submissionMapper.selectList(new QueryWrapper<Submission>()
+                .eq("user_id", userId)
+                .isNull("contest_id")
+                .orderByDesc("id")
+                .last("LIMIT 10"));
+        List<SubmissionService.SubmissionSummary> recentSubmissions = recentSubmissionsList.stream()
+                .map(this::toSubmissionSummary)
+                .toList();
         return new PublicProfileView(
                 user.getId(),
                 user.getUsername(),
@@ -334,7 +374,10 @@ public class ProfileService {
                 user.getAvatarUrl(),
                 user.getMajor(),
                 user.getRole().name(),
-                stats
+                user.getCreatedAt(),
+                user.getLastActiveAt(),
+                stats,
+                recentSubmissions
         );
     }
 

@@ -32,7 +32,10 @@ export interface PublicProfile {
   avatarUrl?: string
   major?: string
   role: Role
+  createdAt: string
+  lastActiveAt?: string
   stats: UserStats
+  recentSubmissions?: SubmissionSummary[]
 }
 
 export interface LoginResult {

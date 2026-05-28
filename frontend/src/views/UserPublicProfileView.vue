@@ -23,6 +23,12 @@
             <div class="major-info">
               <el-icon class="major-icon"><Notebook /></el-icon>
               <span>专业：{{ profile.major || '未填写专业' }}</span>
+              <el-divider direction="vertical" />
+              <el-icon class="major-icon"><Calendar /></el-icon>
+              <span>注册时间：{{ formatDateTime(profile.createdAt) }}</span>
+              <el-divider direction="vertical" v-if="profile.lastActiveAt" />
+              <el-icon class="major-icon" v-if="profile.lastActiveAt"><Clock /></el-icon>
+              <span v-if="profile.lastActiveAt">最近在线：{{ formatRelativeTime(profile.lastActiveAt) }}</span>
             </div>
           </div>
         </div>
@@ -205,20 +211,85 @@
           </div>
         </div>
       </section>
+      <!-- Recent Submissions Panel -->
+      <div class="panel recent-submissions-card" style="margin-top: 24px;">
+        <h3 class="panel-title" style="margin-bottom: 16px;">最近提交记录</h3>
+        <el-table :data="profile.recentSubmissions" row-key="id" empty-text="暂无提交记录" @row-click="openDetail" style="width: 100%;">
+          <el-table-column prop="id" label="#" width="90" />
+          <el-table-column label="题目" min-width="200">
+            <template #default="{ row }">
+              <div class="problem-link-cell" @click.stop="goToProblem(row.problemId)">
+                <span class="problem-title-text">{{ row.problemTitle || `题目 #${row.problemId}` }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="language" label="语言" width="120" />
+          <el-table-column label="结果" width="140">
+            <template #default="{ row }">
+              <VerdictTag :status="row.status" :verdict="row.verdict" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="score" label="分数" width="90" />
+          <el-table-column label="耗时" width="110" align="right">
+            <template #default="{ row }">
+              <span style="font-variant-numeric: tabular-nums;">{{ row.timeMs != null ? row.timeMs + ' ms' : '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="内存" width="120" align="right">
+            <template #default="{ row }">
+              <span style="font-variant-numeric: tabular-nums;">{{ row.memoryKb != null ? formatMemory(row.memoryKb) : '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="提交时间" min-width="160">
+            <template #default="{ row }">
+              <div>{{ formatDateTime(row.createdAt) }}</div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <SubmissionDetailDrawer v-model="drawerVisible" :detail="selectedSubmission" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { Notebook } from '@element-plus/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Notebook, Calendar, Clock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { fetchPublicProfile } from '../api/http'
+import { fetchPublicProfile, fetchSubmission } from '../api/http'
 import type { PublicProfile } from '../types'
+import { formatDateTime, formatRelativeTime } from '../utils/time'
+import VerdictTag from '../components/VerdictTag.vue'
+import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
 
 const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
+
+const drawerVisible = ref(false)
+const selectedSubmission = ref<any>(null)
+
+function goToProblem(problemId: number) {
+  router.push(`/problems/${problemId}`)
+}
+
+async function openDetail(row: any) {
+  try {
+    selectedSubmission.value = await fetchSubmission(row.id)
+    drawerVisible.value = true
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '获取提交详情失败')
+  }
+}
+
+function formatMemory(kb: number) {
+  if (kb >= 1024) {
+    return (kb / 1024).toFixed(1) + ' MB'
+  }
+  return kb + ' KB'
+}
 const profile = ref<PublicProfile | null>(null)
 
 // Virtual Tooltip handlers to prevent SVG hover flickering
@@ -529,10 +600,11 @@ onUnmounted(() => {
 .major-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   color: var(--el-text-color-regular);
-  margin-top: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
 }
 
 .major-icon {
@@ -843,5 +915,21 @@ onUnmounted(() => {
 .fade-fast-enter-from,
 .fade-fast-leave-to {
   opacity: 0;
+}
+.recent-submissions-card {
+  padding: 18px;
+}
+.problem-link-cell {
+  cursor: pointer;
+  display: inline-flex;
+}
+.problem-link-cell:hover .problem-title-text {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.problem-title-text {
+  font-weight: 650;
+  color: var(--text-primary);
+  transition: color 0.15s ease;
 }
 </style>
