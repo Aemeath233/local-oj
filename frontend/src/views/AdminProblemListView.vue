@@ -5,7 +5,7 @@
     <div class="page-heading">
       <div>
         <h1>题目管理</h1>
-        <p>{{ problems.length }} 道题目</p>
+        <p>{{ filteredProblems.length === problems.length ? `${problems.length} 道题目` : `已筛选出 ${filteredProblems.length} / ${problems.length} 道题目` }}</p>
       </div>
       <div class="toolbar-actions">
         <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
@@ -28,7 +28,32 @@
     </div>
 
     <section class="panel table-panel">
-      <el-table v-loading="loading" :data="problems" row-key="id" @selection-change="handleSelectionChange">
+      <div class="panel-toolbar problem-filters">
+        <el-input
+          v-model="keyword"
+          :prefix-icon="Search"
+          clearable
+          placeholder="搜索ID、标题、Slug或标签..."
+          style="max-width: 240px"
+        />
+
+        <el-select v-model="difficultyFilter" placeholder="难度" clearable style="width: 130px">
+          <el-option label="简单 (Easy)" value="Easy" />
+          <el-option label="中等 (Medium)" value="Medium" />
+          <el-option label="困难 (Hard)" value="Hard" />
+        </el-select>
+
+        <el-select v-model="visibilityFilter" placeholder="可见性" clearable style="width: 130px">
+          <el-option label="仅公开" value="visible" />
+          <el-option label="仅隐藏" value="hidden" />
+        </el-select>
+
+        <div style="margin-left: auto; display: flex; gap: 8px;">
+          <span class="muted" style="align-self: center; font-size: 0.85rem;">已过滤出 {{ filteredProblems.length }} 道</span>
+        </div>
+      </div>
+
+      <el-table v-loading="loading" :data="paginatedProblems" row-key="id" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="50" />
         <el-table-column prop="id" label="#" width="76" />
         <el-table-column label="题目" min-width="240">
@@ -88,6 +113,33 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-container" v-if="filteredProblems.length > 0">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="filteredProblems.length"
+          layout="total, sizes, prev, pager, next"
+          background
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+        <div class="custom-jumper">
+          <span class="jumper-label">前往</span>
+          <el-input-number
+            v-model="jumpPage"
+            :min="1"
+            :max="Math.ceil(filteredProblems.length / pageSize)"
+            :controls="false"
+            size="small"
+            class="jumper-input"
+            @keyup.enter="handleJump"
+          />
+          <span class="jumper-label">页</span>
+          <el-button size="small" type="primary" class="jumper-btn" @click="handleJump">跳转</el-button>
+        </div>
+      </div>
     </section>
 
     <el-dialog
@@ -188,10 +240,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Download, Edit, Plus, Refresh, Upload, UploadFilled, View, Hide } from '@element-plus/icons-vue'
+import { Delete, Download, Edit, Plus, Refresh, Upload, UploadFilled, View, Hide, Search } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
 import { deleteProblem, fetchAdminProblems, http, importProblemPackage, setProblemVisibility } from '../api/http'
 import { getTagColor } from '../utils/tag'
@@ -202,6 +254,72 @@ const loading = ref(false)
 const importingPackage = ref(false)
 const visibilityUpdating = ref<number | null>(null)
 const problems = ref<AdminProblemSummary[]>([])
+
+// Reactive search, filter & pagination state
+const keyword = ref('')
+const difficultyFilter = ref('')
+const visibilityFilter = ref('')
+const currentPage = ref(1)
+const pageSize = ref(20)
+const jumpPage = ref(1)
+
+watch(currentPage, (val) => {
+  jumpPage.value = val
+})
+
+function handleJump() {
+  const maxPage = Math.ceil(filteredProblems.value.length / pageSize.value)
+  if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= maxPage) {
+    currentPage.value = jumpPage.value
+  }
+}
+
+function handleSizeChange() {
+  currentPage.value = 1
+}
+
+function handleCurrentChange() {
+  // pagination component handles this automatically
+}
+
+// Reset page to 1 when filters or page size change
+watch([keyword, difficultyFilter, visibilityFilter, pageSize], () => {
+  currentPage.value = 1
+})
+
+const filteredProblems = computed(() => {
+  let result = [...problems.value]
+
+  // 1. Keyword search (ID, Title, Slug, Tags)
+  const q = keyword.value.trim().toLowerCase()
+  if (q) {
+    result = result.filter(p => 
+      p.id.toString().includes(q) ||
+      (p.title && p.title.toLowerCase().includes(q)) ||
+      (p.slug && p.slug.toLowerCase().includes(q)) ||
+      (p.tags && p.tags.toLowerCase().includes(q))
+    )
+  }
+
+  // 2. Difficulty filter
+  if (difficultyFilter.value) {
+    result = result.filter(p => p.difficulty === difficultyFilter.value)
+  }
+
+  // 3. Visibility filter
+  if (visibilityFilter.value !== '') {
+    const isVisible = visibilityFilter.value === 'visible'
+    result = result.filter(p => p.visible === isVisible)
+  }
+
+  return result
+})
+
+const paginatedProblems = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredProblems.value.slice(start, end)
+})
 
 const importDialogVisible = ref(false)
 const importFilesList = ref<any[]>([])
@@ -739,5 +857,42 @@ html.dark .batch-toolbar {
 }
 html.dark .selected-text {
   color: #4ade80 !important;
+}
+
+/* Pagination and Filter Styling */
+.problem-filters {
+  flex-wrap: wrap;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.custom-jumper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.jumper-input {
+  width: 50px !important;
+}
+
+.jumper-input :deep(.el-input__inner) {
+  text-align: center;
+  padding: 0 4px;
+}
+
+.jumper-btn {
+  margin-left: 2px;
 }
 </style>
