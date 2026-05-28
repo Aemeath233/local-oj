@@ -3,11 +3,6 @@
     <el-container class="app-shell">
       <el-header class="topbar">
         <div class="topbar-content">
-          <RouterLink class="brand" to="/">
-            <span class="brand-mark">OJ</span>
-            <span>Local Judge</span>
-          </RouterLink>
-  
           <nav class="nav">
             <RouterLink to="/">首页</RouterLink>
             <RouterLink to="/problems">题库</RouterLink>
