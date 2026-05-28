@@ -3,7 +3,7 @@
     <div class="page-heading">
       <div>
         <h1>题库</h1>
-        <p>{{ problems.length }} 道题目</p>
+        <p>{{ totalProblems }} 道题目</p>
       </div>
       <RouterLink v-if="auth.isAdmin" to="/admin/problems">
         <el-button :icon="ArrowRight" type="primary">管理题目</el-button>
@@ -22,7 +22,7 @@
           style="max-width: 280px"
         />
 
-        <el-segmented v-model="statusFilter" :options="statusOptions" @change="load" />
+        <el-segmented v-model="statusFilter" :options="statusOptions" @change="handleFilterChange" />
         <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
       </div>
       <el-table v-loading="loading" :data="problems" row-key="id" @row-click="openProblem">
@@ -82,6 +82,18 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="totalProblems"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @size-change="load"
+          @current-change="load"
+        />
+      </div>
     </div>
   </section>
 </template>
@@ -98,6 +110,9 @@ import type { ProblemStatus, ProblemSummary, ProblemTag } from '../types'
 const router = useRouter()
 const auth = useAuthStore()
 const problems = ref<ProblemSummary[]>([])
+const totalProblems = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(20)
 const loading = ref(false)
 const keyword = ref('')
 const statusFilter = ref<ProblemStatus | ''>('')
@@ -116,11 +131,17 @@ onMounted(async () => {
 })
 
 watch(keyword, () => {
+  currentPage.value = 1
   if (searchTimer) {
     window.clearTimeout(searchTimer)
   }
   searchTimer = window.setTimeout(load, 350)
 })
+
+function handleFilterChange() {
+  currentPage.value = 1
+  load()
+}
 
 async function loadTags() {
   try {
@@ -140,11 +161,15 @@ async function load() {
           .filter(t => t.name.toLowerCase().includes(q.toLowerCase()))
           .map(t => t.name)
       : []
-    problems.value = await fetchProblems({
+    const result = await fetchProblems({
       q: q || undefined,
       status: statusFilter.value,
-      tags: matchingTags.length > 0 ? matchingTags.join(',') : undefined
+      tags: matchingTags.length > 0 ? matchingTags.join(',') : undefined,
+      page: currentPage.value,
+      pageSize: pageSize.value
     })
+    problems.value = result.list
+    totalProblems.value = result.total
   } finally {
     loading.value = false
   }
@@ -189,5 +214,11 @@ function splitTags(tags?: string) {
   gap: 6px;
 }
 
-
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
 </style>

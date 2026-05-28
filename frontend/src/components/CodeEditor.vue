@@ -90,6 +90,22 @@ onBeforeUnmount(() => {
   editor?.dispose()
 })
 
+function setValuePreservingHistory(value: string) {
+  if (!editor) return
+  const model = editor.getModel()
+  if (model) {
+    editor.executeEdits('format', [{
+      range: model.getFullModelRange(),
+      text: value,
+      forceMoveMarkers: true
+    }])
+  }
+}
+
+defineExpose({
+  setValuePreservingHistory
+})
+
 function toMonacoLanguage(language: Language) {
   return {
     C: 'c',

@@ -29,10 +29,12 @@ public class ProblemController {
     }
 
     @GetMapping
-    public ApiResponse<List<ProblemSummary>> list(
+    public ApiResponse<?> list(
             @RequestParam(value = "q", required = false) String keyword,
             @RequestParam(value = "status", required = false) String status,
-            @RequestParam(value = "tags", required = false) List<String> tags
+            @RequestParam(value = "tags", required = false) List<String> tags,
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize
     ) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         List<Problem> problems = problemService.visibleProblems(keyword, tags);
@@ -40,14 +42,30 @@ public class ProblemController {
         Map<Long, String> statuses = problemService.solveStatuses(user, problemIds);
         Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(problemIds);
         String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
-        return ApiResponse.ok(problems.stream()
+        
+        List<ProblemSummary> filtered = problems.stream()
                 .map(problem -> ProblemSummary.from(
                         problem,
                         statuses.getOrDefault(problem.getId(), "UNATTEMPTED"),
                         stats.getOrDefault(problem.getId(), new ProblemService.SubmissionStats(0, 0))
                 ))
                 .filter(summary -> normalizedStatus.isBlank() || normalizedStatus.equals(summary.solveStatus()))
-                .toList());
+                .toList();
+
+        if (page != null) {
+            int total = filtered.size();
+            int fromIndex = (page - 1) * pageSize;
+            int toIndex = Math.min(fromIndex + pageSize, total);
+            List<ProblemSummary> pageList;
+            if (fromIndex >= total || fromIndex < 0) {
+                pageList = List.of();
+            } else {
+                pageList = filtered.subList(fromIndex, toIndex);
+            }
+            return ApiResponse.ok(new ProblemListResult(pageList, total));
+        }
+
+        return ApiResponse.ok(filtered);
     }
 
     @GetMapping("/daily")
@@ -152,4 +170,6 @@ public class ProblemController {
             return new SampleCase(testCaseFileStorage.readInput(testCase), testCaseFileStorage.readExpectedOutput(testCase));
         }
     }
+
+    public record ProblemListResult(List<ProblemSummary> list, long total) {}
 }

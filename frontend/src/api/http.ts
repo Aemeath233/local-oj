@@ -126,8 +126,14 @@ export async function changePassword(payload: { code: string; newPassword: strin
   await http.put<ApiEnvelope<null>>('/profile/password', payload)
 }
 
-export async function fetchProblems(params?: { q?: string; status?: ProblemStatus | ''; tags?: string }) {
-  const response = await http.get<ApiEnvelope<ProblemSummary[]>>('/problems', { params })
+export async function fetchProblems(params?: {
+  q?: string
+  status?: ProblemStatus | ''
+  tags?: string
+  page?: number
+  pageSize?: number
+}) {
+  const response = await http.get<ApiEnvelope<any>>('/problems', { params })
   return response.data.data
 }
 
@@ -546,3 +552,9 @@ export async function requeueAdminDlq() {
   const response = await http.post<ApiEnvelope<{ requeued: number }>>('/admin/dlq/requeue')
   return response.data.data
 }
+
+export async function formatCode(language: Language, sourceCode: string) {
+  const response = await http.post<ApiEnvelope<string>>('/code/format', { language, sourceCode })
+  return response.data.data
+}
+

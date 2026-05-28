@@ -96,10 +96,11 @@
             </el-select>
           </div>
           <div class="bar-right">
-            <el-button :loading="selfTesting" :icon="Cpu" :disabled="cooldownSeconds > 0" @click="runCustomTest">
+            <el-button :icon="Brush" :loading="formatting" size="small" @click="handleFormat">格式化</el-button>
+            <el-button :loading="selfTesting" :icon="Cpu" :disabled="cooldownSeconds > 0" size="small" @click="runCustomTest">
               {{ cooldownSeconds > 0 ? `自测 (${cooldownSeconds}s)` : '自测' }}
             </el-button>
-            <el-button :loading="submitting" type="primary" :icon="Upload" :disabled="cooldownSeconds > 0" @click="submit">
+            <el-button :loading="submitting" type="primary" :icon="Upload" :disabled="cooldownSeconds > 0" size="small" @click="submit">
               {{ cooldownSeconds > 0 ? `提交 (${cooldownSeconds}s)` : '提交' }}
             </el-button>
           </div>
@@ -107,7 +108,7 @@
 
         <!-- Monaco Editor Integration Container -->
         <div class="editor-container panel">
-          <CodeEditor v-model="sourceCode" :language="language" />
+          <CodeEditor ref="codeEditorRef" v-model="sourceCode" :language="language" />
         </div>
 
         <!-- Collapsible Console Area -->
@@ -203,7 +204,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Upload, VideoPlay, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading } from '@element-plus/icons-vue'
+import { Upload, VideoPlay, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading, Brush } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CodeEditor from '../components/CodeEditor.vue'
 import MarkdownView from '../components/MarkdownView.vue'
@@ -217,7 +218,8 @@ import {
   submitContestSolution,
   fetchSubmission,
   fetchContestSubmissions,
-  fetchContestRegistration
+  fetchContestRegistration,
+  formatCode
 } from '../api/http'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import { useAuthStore } from '../stores/auth'
@@ -301,6 +303,30 @@ const selfTesting = ref(false)
 const message = ref('')
 const cooldownSeconds = ref(0)
 let cooldownTimer: any = null
+
+const codeEditorRef = ref<any>(null)
+const formatting = ref(false)
+
+async function handleFormat() {
+  if (!sourceCode.value || sourceCode.value.trim() === '') {
+    ElMessage.warning('代码不能为空')
+    return
+  }
+  formatting.value = true
+  try {
+    const formatted = await formatCode(language.value, sourceCode.value)
+    if (codeEditorRef.value?.setValuePreservingHistory) {
+      codeEditorRef.value.setValuePreservingHistory(formatted)
+    } else {
+      sourceCode.value = formatted
+    }
+    ElMessage.success('代码格式化成功')
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '格式化失败')
+  } finally {
+    formatting.value = false
+  }
+}
 
 function startCooldown() {
   if (cooldownTimer) {
@@ -530,15 +556,88 @@ function templateFor(value: Language) {
     return custom
   }
   if (value === 'PYTHON' || value === 'PYPY3') {
-    return 'a, b = map(int, input().split())\nprint(a + b)\n'
+    return `import sys
+
+# Fast I/O
+input = lambda: sys.stdin.readline().rstrip("\\r\\n")
+
+def solve():
+    # Write your code here
+    pass
+
+def main():
+    solve()
+    
+    # Multi test cases
+    # t = int(input())
+    # for _ in range(t):
+    #     solve()
+
+if __name__ == "__main__":
+    main()
+`
   }
   if (value === 'JAVA') {
-    return 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        int a = scanner.nextInt();\n        int b = scanner.nextInt();\n        System.out.println(a + b);\n    }\n}\n'
+    return `import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        // Fast I/O
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter out = new PrintWriter(new BufferedOutputStream(System.out));
+        
+        solve(br, out);
+        
+        out.flush();
+    }
+    
+    private static void solve(BufferedReader br, PrintWriter out) throws IOException {
+        // Write your code here
+    }
+}
+`
   }
   if (value === 'C') {
-    return '#include <stdio.h>\n\nint main(void) {\n    int a, b;\n    scanf("%d %d", &a, &b);\n    printf("%d\\n", a + b);\n    return 0;\n}\n'
+    return `#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+void solve(void) {
+    // Write your code here
+}
+
+int main(void) {
+    int t = 1;
+    // if (scanf("%d", &t) != EOF)
+    while (t--) {
+        solve();
+    }
+    return 0;
+}
+`
   }
-  return '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int a, b;\n    cin >> a >> b;\n    cout << a + b << "\\n";\n    return 0;\n}\n'
+  return `#include <bits/stdc++.h>
+using namespace std;
+
+void solve() {
+    // Write your code here
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    int t = 1;
+    // cin >> t; // Uncomment if there are multiple test cases
+    while (t--) {
+        solve();
+    }
+
+    return 0;
+}
+`
 }
 </script>
 
