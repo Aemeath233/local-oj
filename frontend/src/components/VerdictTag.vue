@@ -13,6 +13,7 @@ import type { SubmissionStatus, Verdict } from '../types'
 const props = defineProps<{
   status?: SubmissionStatus
   verdict?: Verdict
+  selfTest?: boolean
 }>()
 
 const isPendingOrRunning = computed(() => {
@@ -22,6 +23,7 @@ const isPendingOrRunning = computed(() => {
 const label = computed(() => {
   if (props.status === 'PENDING') return '排队中...'
   if (props.status === 'RUNNING') return '评测中...'
+  if (props.selfTest && props.verdict === 'AC') return '运行成功'
   return props.verdict ?? 'WAITING'
 })
 

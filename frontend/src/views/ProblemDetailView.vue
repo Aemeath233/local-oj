@@ -36,11 +36,19 @@
             <el-option label="Java 21" value="JAVA" />
           </el-select>
           <el-button :icon="Brush" :loading="formatting" @click="handleFormat">格式化</el-button>
-          <el-button class="cooldown-btn" :icon="VideoPlay" :loading="selfTesting" :disabled="cooldownSeconds > 0" @click="runCustomTest">
-            {{ cooldownSeconds > 0 ? `自测 (${cooldownSeconds}s)` : '自测' }}
+          <el-button :loading="selfTesting" :disabled="cooldownSeconds > 0" @click="runCustomTest">
+            <template #icon>
+              <span v-if="cooldownSeconds > 0" class="cooldown-num-icon">{{ cooldownSeconds }}</span>
+              <el-icon v-else><VideoPlay /></el-icon>
+            </template>
+            自测
           </el-button>
-          <el-button class="cooldown-btn" :icon="Upload" type="primary" :loading="submitting" :disabled="cooldownSeconds > 0" @click="submit">
-            {{ cooldownSeconds > 0 ? `提交 (${cooldownSeconds}s)` : '提交' }}
+          <el-button type="primary" :loading="submitting" :disabled="cooldownSeconds > 0" @click="submit">
+            <template #icon>
+              <span v-if="cooldownSeconds > 0" class="cooldown-num-icon white-num">{{ cooldownSeconds }}</span>
+              <el-icon v-else><Upload /></el-icon>
+            </template>
+            提交
           </el-button>
         </div>
         <CodeEditor ref="codeEditorRef" v-model="sourceCode" :language="language" />
@@ -217,6 +225,13 @@ async function initProblem() {
     problem.value = await fetchProblem(problemId.value)
     await loadSubmissions()
     clearSelfTest()
+    
+    // Auto populate the first sample case input if available
+    if (problem.value?.samples && problem.value.samples.length > 0) {
+      selfTestInput.value = problem.value.samples[0].inputText
+    } else {
+      selfTestInput.value = ''
+    }
   } catch (error) {
     console.error('Failed to initialize problem details', error)
   } finally {
@@ -573,8 +588,23 @@ int main() {
   width: 150px;
 }
 
-.cooldown-btn {
-  min-width: 105px;
+.cooldown-num-icon {
+  font-family: var(--font-mono), monospace;
+  font-weight: bold;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--el-text-color-regular);
+}
+
+.white-num {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
 }
 
 @media (max-width: 1040px) {

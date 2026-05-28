@@ -28,7 +28,7 @@
           </div>
           <div v-else-if="selfTestResult" class="self-test-result">
             <div class="self-test-head">
-              <VerdictTag status="FINISHED" :verdict="selfTestResult.verdict" />
+              <VerdictTag status="FINISHED" :verdict="selfTestResult.verdict" self-test />
               <span class="self-test-meta">{{ selfTestResult.timeMs }} ms / {{ selfTestResult.memoryKb }} KB</span>
             </div>
             <div class="case-output-grid">

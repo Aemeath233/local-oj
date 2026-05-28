@@ -97,11 +97,19 @@
           </div>
           <div class="bar-right">
             <el-button :icon="Brush" :loading="formatting" size="small" @click="handleFormat">格式化</el-button>
-            <el-button class="cooldown-btn" :loading="selfTesting" :icon="Cpu" :disabled="cooldownSeconds > 0" size="small" @click="runCustomTest">
-              {{ cooldownSeconds > 0 ? `自测 (${cooldownSeconds}s)` : '自测' }}
+            <el-button :loading="selfTesting" :disabled="cooldownSeconds > 0" size="small" @click="runCustomTest">
+              <template #icon>
+                <span v-if="cooldownSeconds > 0" class="cooldown-num-icon">{{ cooldownSeconds }}</span>
+                <el-icon v-else><Cpu /></el-icon>
+              </template>
+              自测
             </el-button>
-            <el-button class="cooldown-btn" :loading="submitting" type="primary" :icon="Upload" :disabled="cooldownSeconds > 0" size="small" @click="submit">
-              {{ cooldownSeconds > 0 ? `提交 (${cooldownSeconds}s)` : '提交' }}
+            <el-button type="primary" :loading="submitting" :disabled="cooldownSeconds > 0" size="small" @click="submit">
+              <template #icon>
+                <span v-if="cooldownSeconds > 0" class="cooldown-num-icon white-num">{{ cooldownSeconds }}</span>
+                <el-icon v-else><Upload /></el-icon>
+              </template>
+              提交
             </el-button>
           </div>
         </div>
@@ -139,7 +147,7 @@
                 </div>
                 <div v-else-if="selfTestResult" class="self-test-result">
                   <div class="self-test-head">
-                    <VerdictTag status="FINISHED" :verdict="selfTestResult.verdict" />
+                    <VerdictTag status="FINISHED" :verdict="selfTestResult.verdict" self-test />
                     <span class="self-test-meta">{{ selfTestResult.timeMs }} ms / {{ selfTestResult.memoryKb }} KB</span>
                   </div>
                   <div class="case-output-grid">
@@ -405,6 +413,13 @@ async function initProblem() {
 
     await loadSubmissions()
     clearSelfTest()
+
+    // Auto populate the first sample case input if available
+    if (problem.value?.samples && problem.value.samples.length > 0) {
+      selfTestInput.value = problem.value.samples[0].inputText
+    } else {
+      selfTestInput.value = ''
+    }
   } catch (error: any) {
     console.error('Failed to initialize problem details', error)
     const errorMsg = error.response?.data?.message || error.message || ''
@@ -725,8 +740,23 @@ int main() {
   font-weight: 650;
   font-size: 0.95rem;
 }
-.cooldown-btn {
-  min-width: 95px;
+.cooldown-num-icon {
+  font-family: var(--font-mono), monospace;
+  font-weight: bold;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--el-text-color-regular);
+}
+
+.white-num {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
 }
 .editor-container {
   flex-grow: 1;

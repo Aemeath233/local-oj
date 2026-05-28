@@ -58,6 +58,13 @@ onMounted(() => {
       emit('update:modelValue', editor?.getValue() ?? '')
     })
   }
+  
+  if (document.fonts) {
+    document.fonts.ready.then(() => {
+      (monaco.editor as any).remeasureTemplates()
+      editor?.layout()
+    })
+  }
 })
 
 watch(
