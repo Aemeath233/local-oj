@@ -64,33 +64,6 @@ int main() {
       </div>
     </div>
 
-    <!-- Custom Code Templates Section -->
-    <div style="margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
-      <h3 style="margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; color: var(--el-text-color-primary);">🛠️ 自定义各语言默认代码模板</h3>
-      <p style="margin: 0 0 14px 0; font-size: 0.85rem; color: var(--el-text-color-secondary);">
-        您可以为不同语言编写个性化的默认初始化代码，当您打开新题目时系统将自动为您填充这些代码，省去手动编写初始结构的繁琐步骤。
-      </p>
-
-      <div style="display: flex; gap: 16px; align-items: flex-start; flex-direction: column;">
-        <div style="display: flex; gap: 12px; align-items: center; width: 100%; flex-wrap: wrap;">
-          <span style="font-size: 0.9rem; font-weight: 500;">选择编辑语言：</span>
-          <el-select v-model="templateLang" style="width: 180px;" @change="loadTemplateForLang">
-            <el-option label="C++20 (O2)" value="CPP" />
-            <el-option label="C++20 (O3)" value="CPP_O3" />
-            <el-option label="C17 (O2)" value="C" />
-            <el-option label="Python 3.12" value="PYTHON" />
-            <el-option label="PyPy 3" value="PYPY3" />
-            <el-option label="Java 21" value="JAVA" />
-          </el-select>
-          <el-button type="info" plain size="small" style="margin-left: auto;" @click="resetTemplateToDefault">恢复当前语言默认</el-button>
-        </div>
-
-        <div style="width: 100%; border: 1px solid #dcdfe6; border-radius: 8px; overflow: hidden; background: #fff;">
-          <CodeEditor v-model="currentTemplateText" :language="templateLang" style="height: 240px; min-height: 240px;" />
-        </div>
-      </div>
-    </div>
-
     <div class="form-actions" style="margin-top: 18px;">
       <el-button type="primary" :icon="Check" @click="savePreferences">保存偏好设置</el-button>
     </div>
@@ -98,11 +71,9 @@ int main() {
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import CodeEditor from '../CodeEditor.vue'
-import type { Language } from '../../types'
 
 // Editor Preferences Configurations
 const fontSizes = [14, 15, 16, 18, 20]
@@ -131,123 +102,12 @@ const prefFontFamily = ref(localStorage.getItem('localoj.editor.fontFamily') || 
 const prefReaderFontSize = ref(Number(localStorage.getItem('localoj.reader.fontSize')) || 15)
 const prefReaderFontFamily = ref(localStorage.getItem('localoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif")
 
-const templateLang = ref<Language>('CPP')
-const currentTemplateText = ref('')
-
-onMounted(() => {
-  loadTemplateForLang()
-})
-
-function loadTemplateForLang() {
-  const custom = localStorage.getItem(`localoj.template.${templateLang.value}`)
-  if (custom !== null) {
-    currentTemplateText.value = custom
-  } else {
-    currentTemplateText.value = defaultTemplateFor(templateLang.value)
-  }
-}
-
-function defaultTemplateFor(value: Language) {
-  if (value === 'PYTHON' || value === 'PYPY3') {
-    return `import sys
-
-# Fast I/O
-input = lambda: sys.stdin.readline().rstrip("\\r\\n")
-
-def solve():
-    # Write your code here
-    pass
-
-def main():
-    solve()
-    
-    # Multi test cases
-    # t = int(input())
-    # for _ in range(t):
-    #     solve()
-
-if __name__ == "__main__":
-    main()
-`
-  }
-  if (value === 'JAVA') {
-    return `import java.io.*;
-import java.util.*;
-
-public class Main {
-    public static void main(String[] args) throws IOException {
-        // Fast I/O
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        PrintWriter out = new PrintWriter(new BufferedOutputStream(System.out));
-        
-        solve(br, out);
-        
-        out.flush();
-    }
-    
-    private static void solve(BufferedReader br, PrintWriter out) throws IOException {
-        // Write your code here
-    }
-}
-`
-  }
-  if (value === 'C') {
-    return `#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-
-void solve(void) {
-    // Write your code here
-}
-
-int main(void) {
-    int t = 1;
-    // if (scanf("%d", &t) != EOF)
-    while (t--) {
-        solve();
-    }
-    return 0;
-}
-`
-  }
-  return `#include <bits/stdc++.h>
-using namespace std;
-
-void solve() {
-    // Write your code here
-}
-
-int main() {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-
-    int t = 1;
-    // cin >> t; // Uncomment if there are multiple test cases
-    while (t--) {
-        solve();
-    }
-
-    return 0;
-}
-`
-}
-
-function resetTemplateToDefault() {
-  currentTemplateText.value = defaultTemplateFor(templateLang.value)
-  localStorage.removeItem(`localoj.template.${templateLang.value}`)
-  ElMessage.success('已恢复为当前语言默认算法模板')
-}
-
 function savePreferences() {
   localStorage.setItem('localoj.editor.defaultLanguage', prefLanguage.value)
   localStorage.setItem('localoj.editor.fontSize', String(prefFontSize.value))
   localStorage.setItem('localoj.editor.fontFamily', prefFontFamily.value)
   localStorage.setItem('localoj.reader.fontSize', String(prefReaderFontSize.value))
   localStorage.setItem('localoj.reader.fontFamily', prefReaderFontFamily.value)
-
-  // Save current active language's template
-  localStorage.setItem(`localoj.template.${templateLang.value}`, currentTemplateText.value)
 
   ElMessage.success('编辑器与偏好设置已成功保存！')
   

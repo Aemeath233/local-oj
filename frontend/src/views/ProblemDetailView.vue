@@ -198,14 +198,13 @@ const selfTestInput = ref('')
 const selfTestError = ref('')
 const selfTestResult = ref<SelfTestResult | null>(null)
 const problem = ref<ProblemDetail | null>(null)
+const problemId = computed(() => Number(route.params.id))
 const language = ref<Language>((localStorage.getItem('localoj.editor.defaultLanguage') as Language) || 'CPP')
 const sourceCode = ref(templateFor(language.value))
 
 // Reader Typography Configuration States
 const readerFontSize = ref(Number(localStorage.getItem('localoj.reader.fontSize')) || 15)
 const readerFontFamily = ref(localStorage.getItem('localoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif")
-
-const problemId = computed(() => Number(route.params.id))
 
 // UX & Layout reactive variables
 const activeLeftTab = ref('statement')
@@ -215,8 +214,22 @@ const drawerVisible = ref(false)
 const selectedSubmission = ref<SubmissionDetail | null>(null)
 const timer = ref<number | undefined>(undefined)
 
-watch(language, (value) => {
-  sourceCode.value = templateFor(value)
+const isSwitchingLanguage = ref(false)
+
+watch(language, (newLang, oldLang) => {
+  if (oldLang && problemId.value) {
+    localStorage.setItem(`localoj.draft.${problemId.value}.${oldLang}`, sourceCode.value)
+  }
+  isSwitchingLanguage.value = true
+  sourceCode.value = templateFor(newLang)
+  isSwitchingLanguage.value = false
+})
+
+watch(sourceCode, (newCode) => {
+  if (isSwitchingLanguage.value) return
+  if (problemId.value) {
+    localStorage.setItem(`localoj.draft.${problemId.value}.${language.value}`, newCode)
+  }
 })
 
 async function initProblem() {
@@ -248,6 +261,7 @@ onMounted(async () => {
 
 watch(problemId, async () => {
   await initProblem()
+  sourceCode.value = templateFor(language.value)
 })
 
 onUnmounted(() => {
@@ -397,93 +411,11 @@ function fillSelfTest(text: string) {
 }
 
 function templateFor(value: Language) {
-  const custom = localStorage.getItem(`localoj.template.${value}`)
-  if (custom !== null) {
-    return custom
+  const draft = localStorage.getItem(`localoj.draft.${problemId.value}.${value}`)
+  if (draft !== null) {
+    return draft
   }
-  if (value === 'PYTHON' || value === 'PYPY3') {
-    return `import sys
-
-# Fast I/O
-input = lambda: sys.stdin.readline().rstrip("\\r\\n")
-
-def solve():
-    # Write your code here
-    pass
-
-def main():
-    solve()
-    
-    # Multi test cases
-    # t = int(input())
-    # for _ in range(t):
-    #     solve()
-
-if __name__ == "__main__":
-    main()
-`
-  }
-  if (value === 'JAVA') {
-    return `import java.io.*;
-import java.util.*;
-
-public class Main {
-    public static void main(String[] args) throws IOException {
-        // Fast I/O
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        PrintWriter out = new PrintWriter(new BufferedOutputStream(System.out));
-        
-        solve(br, out);
-        
-        out.flush();
-    }
-    
-    private static void solve(BufferedReader br, PrintWriter out) throws IOException {
-        // Write your code here
-    }
-}
-`
-  }
-  if (value === 'C') {
-    return `#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-
-void solve(void) {
-    // Write your code here
-}
-
-int main(void) {
-    int t = 1;
-    // if (scanf("%d", &t) != EOF)
-    while (t--) {
-        solve();
-    }
-    return 0;
-}
-`
-  }
-  return `#include <bits/stdc++.h>
-using namespace std;
-
-void solve() {
-    // Write your code here
-}
-
-int main() {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-
-    int t = 1;
-    // cin >> t; // Uncomment if there are multiple test cases
-    while (t--) {
-        solve();
-    }
-
-    return 0;
-}
-`
+  return ''
 }
 </script>
 
