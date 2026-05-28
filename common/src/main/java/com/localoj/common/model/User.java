@@ -63,7 +63,7 @@ public class User {
         this.displayName = displayName;
     }
 
-    public String getAvatarUrl() {
+    public static String getEffectiveAvatarUrl(String avatarUrl, String email) {
         if (avatarUrl == null || avatarUrl.isBlank()) {
             if (email != null && !email.isBlank()) {
                 String trimmedEmail = email.trim().toLowerCase();
@@ -76,6 +76,10 @@ public class User {
             }
         }
         return avatarUrl;
+    }
+
+    public String getAvatarUrl() {
+        return getEffectiveAvatarUrl(this.avatarUrl, this.email);
     }
 
     public void setAvatarUrl(String avatarUrl) {

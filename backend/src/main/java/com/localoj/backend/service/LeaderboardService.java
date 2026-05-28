@@ -1,5 +1,6 @@
 package com.localoj.backend.service;
 
+import com.localoj.common.model.User;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -88,6 +89,7 @@ public class LeaderboardService {
                 SELECT
                     u.id AS user_id,
                     u.username,
+                    u.email,
                     u.display_name,
                     u.avatar_url,
                     u.student_no,
@@ -98,7 +100,7 @@ public class LeaderboardService {
                 FROM users u
                 LEFT JOIN submissions s ON s.user_id = u.id
                 WHERE u.enabled = 1
-                GROUP BY u.id, u.username, u.display_name, u.avatar_url, u.student_no, u.major
+                GROUP BY u.id, u.username, u.email, u.display_name, u.avatar_url, u.student_no, u.major
                 ORDER BY accepted_count DESC,
                          submission_count ASC,
                          CASE WHEN last_accepted_at IS NULL THEN 1 ELSE 0 END ASC,
@@ -106,18 +108,23 @@ public class LeaderboardService {
                          u.id ASC
                 LIMIT ?
                 """;
-        return jdbcTemplate.query(sql, (rs, rowNum) -> new LeaderboardRow(
-                rowNum + 1,
-                rs.getLong("user_id"),
-                rs.getString("username"),
-                rs.getString("display_name"),
-                rs.getString("avatar_url"),
-                rs.getString("student_no"),
-                rs.getString("major"),
-                rs.getLong("accepted_count"),
-                rs.getLong("submission_count"),
-                toLocalDateTime(rs.getTimestamp("last_accepted_at"))
-        ), limit);
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            String avatarUrl = rs.getString("avatar_url");
+            String email = rs.getString("email");
+            String effectiveAvatar = User.getEffectiveAvatarUrl(avatarUrl, email);
+            return new LeaderboardRow(
+                    rowNum + 1,
+                    rs.getLong("user_id"),
+                    rs.getString("username"),
+                    rs.getString("display_name"),
+                    effectiveAvatar,
+                    rs.getString("student_no"),
+                    rs.getString("major"),
+                    rs.getLong("accepted_count"),
+                    rs.getLong("submission_count"),
+                    toLocalDateTime(rs.getTimestamp("last_accepted_at"))
+            );
+        }, limit);
     }
 
     private LocalDateTime toLocalDateTime(Timestamp timestamp) {
