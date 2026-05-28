@@ -34,7 +34,8 @@ public class ProblemController {
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "tags", required = false) List<String> tags,
             @RequestParam(value = "page", required = false) Integer page,
-            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = "ID_ASC") String sortBy
     ) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         List<Problem> problems = problemService.visibleProblems(keyword, tags);
@@ -52,20 +53,51 @@ public class ProblemController {
                 .filter(summary -> normalizedStatus.isBlank() || normalizedStatus.equals(summary.solveStatus()))
                 .toList();
 
+        List<ProblemSummary> mutableFiltered = new java.util.ArrayList<>(filtered);
+        
+        if ("ID_DESC".equalsIgnoreCase(sortBy)) {
+            mutableFiltered.sort((a, b) -> b.id().compareTo(a.id()));
+        } else if ("DIFFICULTY_ASC".equalsIgnoreCase(sortBy)) {
+            mutableFiltered.sort((a, b) -> Integer.compare(difficultyValue(a.difficulty()), difficultyValue(b.difficulty())));
+        } else if ("DIFFICULTY_DESC".equalsIgnoreCase(sortBy)) {
+            mutableFiltered.sort((a, b) -> Integer.compare(difficultyValue(b.difficulty()), difficultyValue(a.difficulty())));
+        } else if ("AC_RATE_DESC".equalsIgnoreCase(sortBy)) {
+            mutableFiltered.sort((a, b) -> Double.compare(acRate(b), acRate(a)));
+        } else {
+            mutableFiltered.sort((a, b) -> a.id().compareTo(b.id()));
+        }
+
         if (page != null) {
-            int total = filtered.size();
+            int total = mutableFiltered.size();
             int fromIndex = (page - 1) * pageSize;
             int toIndex = Math.min(fromIndex + pageSize, total);
             List<ProblemSummary> pageList;
             if (fromIndex >= total || fromIndex < 0) {
                 pageList = List.of();
             } else {
-                pageList = filtered.subList(fromIndex, toIndex);
+                pageList = mutableFiltered.subList(fromIndex, toIndex);
             }
             return ApiResponse.ok(new ProblemListResult(pageList, total));
         }
 
-        return ApiResponse.ok(filtered);
+        return ApiResponse.ok(mutableFiltered);
+    }
+
+    private int difficultyValue(String difficulty) {
+        if (difficulty == null) return 0;
+        return switch (difficulty.toUpperCase()) {
+            case "EASY", "简单" -> 1;
+            case "MEDIUM", "中等" -> 2;
+            case "HARD", "困难" -> 3;
+            default -> 0;
+        };
+    }
+
+    private double acRate(ProblemSummary summary) {
+        if (summary.submitCount() == null || summary.submitCount() == 0) {
+            return 0.0;
+        }
+        return (double) summary.acceptedCount() / summary.submitCount();
     }
 
     @GetMapping("/daily")

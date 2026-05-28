@@ -19,10 +19,18 @@
           placeholder="搜索序号、标题、标签或题面内容"
           @keyup.enter="load"
           @clear="load"
-          style="max-width: 280px"
+          style="max-width: 260px"
         />
 
-        <el-segmented v-model="statusFilter" :options="statusOptions" @change="handleFilterChange" />
+        <el-select v-model="sortBy" style="width: 160px" @change="handleFilterChange">
+          <el-option label="创建时间 (从旧到新)" value="ID_ASC" />
+          <el-option label="创建时间 (从新到旧)" value="ID_DESC" />
+          <el-option label="难度 (从低到高)" value="DIFFICULTY_ASC" />
+          <el-option label="难度 (从高到低)" value="DIFFICULTY_DESC" />
+          <el-option label="通过率 (从高到低)" value="AC_RATE_DESC" />
+        </el-select>
+
+        <el-segmented v-model="statusFilter" :options="statusOptions" @change="handleFilterChange" style="margin-left: auto;" />
         <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
       </div>
       <el-table v-loading="loading" :data="problems" row-key="id" @row-click="openProblem">
@@ -143,6 +151,7 @@ function handleJump() {
 const loading = ref(false)
 const keyword = ref('')
 const statusFilter = ref<ProblemStatus | ''>('')
+const sortBy = ref('ID_ASC')
 const allTags = ref<ProblemTag[]>([])
 const statusOptions = [
   { label: '全部', value: '' },
@@ -193,7 +202,8 @@ async function load() {
       status: statusFilter.value,
       tags: matchingTags.length > 0 ? matchingTags.join(',') : undefined,
       page: currentPage.value,
-      pageSize: pageSize.value
+      pageSize: pageSize.value,
+      sortBy: sortBy.value
     })
     problems.value = result.list
     totalProblems.value = result.total

@@ -132,6 +132,7 @@ export async function fetchProblems(params?: {
   tags?: string
   page?: number
   pageSize?: number
+  sortBy?: string
 }) {
   const response = await http.get<ApiEnvelope<any>>('/problems', { params })
   return response.data.data

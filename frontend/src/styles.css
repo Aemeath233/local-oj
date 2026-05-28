@@ -613,9 +613,10 @@ a {
 }
 
 .problem-filters {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) max-content max-content;
+  display: flex;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* Premium Filter & Search Bar */
@@ -1353,7 +1354,6 @@ pre.empty {
     grid-template-columns: 1fr;
   }
 
-  .problem-filters,
   .log-filters,
   .tag-editor {
     grid-template-columns: 1fr;
