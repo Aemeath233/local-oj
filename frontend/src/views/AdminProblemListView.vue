@@ -307,7 +307,7 @@ const filteredProblems = computed(() => {
   }
 
   // 3. Visibility filter
-  if (visibilityFilter.value !== '') {
+  if (visibilityFilter.value === 'visible' || visibilityFilter.value === 'hidden') {
     const isVisible = visibilityFilter.value === 'visible'
     result = result.filter(p => p.visible === isVisible)
   }
