@@ -51,7 +51,14 @@ onMounted(() => {
       scrollBeyondLastLine: false,
       tabSize: 4,
       readOnly: props.readOnly ?? false,
-      domReadOnly: props.readOnly ?? false
+      domReadOnly: props.readOnly ?? false,
+      // Completely disable autocomplete/code suggestions as requested by user
+      quickSuggestions: false,
+      suggestOnTriggerCharacters: false,
+      acceptSuggestionOnEnter: 'off',
+      tabCompletion: 'off',
+      wordBasedSuggestions: 'off',
+      parameterHints: { enabled: false }
     })
     editor = createdEditor
 
