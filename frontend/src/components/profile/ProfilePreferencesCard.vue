@@ -1,6 +1,12 @@
 <template>
-  <el-form class="profile-form" label-position="top" style="margin-top: 10px;">
-    <div class="form-grid">
+  <el-form class="profile-form" label-position="top">
+    <!-- Editor Preferences Section -->
+    <div class="pref-section-title">
+      <span class="icon">💻</span>
+      <span>编辑器与代码首选项</span>
+    </div>
+
+    <div class="form-grid-3">
       <el-form-item label="默认编程语言">
         <el-select v-model="prefLanguage" style="width: 100%;">
           <el-option label="C++20 (O2)" value="CPP" />
@@ -12,59 +18,69 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="编辑器默认字号">
-        <el-select v-model="prefFontSize" style="width: 100%;">
-          <el-option v-for="size in fontSizes" :key="size" :label="size + 'px'" :value="size" />
-        </el-select>
-      </el-form-item>
-
       <el-form-item label="编辑器默认字体">
         <el-select v-model="prefFontFamily" style="width: 100%;">
           <el-option v-for="font in fontFamilies" :key="font.value" :label="font.label" :value="font.value" />
         </el-select>
       </el-form-item>
-    </div>
 
-    <!-- Double Column for Reader Typography Settings -->
-    <div class="form-grid" style="margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
-      <el-form-item label="题面默认字号">
-        <el-select v-model="prefReaderFontSize" style="width: 100%;">
-          <el-option v-for="size in readerFontSizes" :key="size" :label="size + 'px'" :value="size" />
+      <el-form-item label="编辑器默认字号">
+        <el-select v-model="prefFontSize" style="width: 100%;">
+          <el-option v-for="size in fontSizes" :key="size" :label="size + 'px'" :value="size" />
         </el-select>
       </el-form-item>
+    </div>
 
+    <!-- Reader Typography Section -->
+    <div class="pref-section-title" style="margin-top: 24px;">
+      <span class="icon">📖</span>
+      <span>题面排版与阅读首选项</span>
+    </div>
+
+    <div class="form-grid-2">
       <el-form-item label="题面默认字体">
         <el-select v-model="prefReaderFontFamily" style="width: 100%;">
           <el-option v-for="font in readerFontFamilies" :key="font.value" :label="font.label" :value="font.value" />
         </el-select>
       </el-form-item>
+
+      <el-form-item label="题面默认字号">
+        <el-select v-model="prefReaderFontSize" style="width: 100%;">
+          <el-option v-for="size in readerFontSizes" :key="size" :label="size + 'px'" :value="size" />
+        </el-select>
+      </el-form-item>
     </div>
 
     <!-- Real-time Previews Grid (Editor & Reader side-by-side) -->
-    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px;">
+    <div class="preview-section-title">
+      <span class="icon">✨</span>
+      <span>排版实时预览</span>
+    </div>
+
+    <div class="previews-grid">
       <!-- Quick Font Preview Box -->
-      <div style="padding: 16px; border: 1px solid #d8dee6; border-radius: 8px; background: #fafbfc; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.025);">
-        <span style="font-size: 13px; color: #64748b; font-weight: 600; display: block; margin-bottom: 8px; font-family: sans-serif;">💻 编辑器代码实时预览：</span>
-        <pre :style="{ fontFamily: prefFontFamily, fontSize: prefFontSize + 'px', margin: 0, lineHeight: 1.5, color: '#0f766e', overflowX: 'auto', background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }">#include &lt;iostream&gt;
+      <div class="preview-box">
+        <span class="preview-header">💻 编辑器代码预览</span>
+        <pre :style="{ fontFamily: prefFontFamily, fontSize: prefFontSize + 'px', margin: 0, lineHeight: 1.5, color: 'var(--primary)', overflowX: 'auto', background: 'var(--bg-muted)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', minHeight: '120px' }">#include &lt;iostream&gt;
 
 int main() {
-    std::cout &lt;&lt; "Hello Local OJ!" &lt;&lt; std::endl;
+    std::cout &lt;&lt; "Hello CodeRush!" &lt;&lt; std::endl;
     return 0;
 }</pre>
       </div>
 
       <!-- Quick Reader Preview Box -->
-      <div style="padding: 16px; border: 1px solid #d8dee6; border-radius: 8px; background: #fafbfc; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.025);">
-        <span style="font-size: 13px; color: #64748b; font-weight: 600; display: block; margin-bottom: 8px; font-family: sans-serif;">📖 题面排版实时预览：</span>
-        <div :style="{ fontFamily: prefReaderFontFamily, fontSize: prefReaderFontSize + 'px', margin: 0, lineHeight: 1.6, color: '#334155', overflowX: 'auto', background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', minHeight: '120px' }">
-          <h3 style="margin: 0 0 6px; font-size: 1.2em;">A + B 问题</h3>
+      <div class="preview-box">
+        <span class="preview-header">📖 题面排版预览</span>
+        <div :style="{ fontFamily: prefReaderFontFamily, fontSize: prefReaderFontSize + 'px', margin: 0, lineHeight: 1.6, color: 'var(--text-primary)', overflowX: 'auto', background: 'var(--bg-muted)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', minHeight: '120px', boxSizing: 'border-box' }">
+          <h3 style="margin: 0 0 6px; font-size: 1.15em; font-weight: 700;">A + B 问题</h3>
           <p style="margin: 0 0 6px;">输入两个整数 $A$ 和 $B$，计算它们的和并输出。</p>
-          <strong style="color: #0f766e;">[输入格式]</strong> 一行输入两个整数，以空格分隔。
+          <strong style="color: var(--primary); font-weight: 600;">[输入格式]</strong> 一行输入两个整数，以空格分隔。
         </div>
       </div>
     </div>
 
-    <div class="form-actions" style="margin-top: 18px;">
+    <div class="form-actions">
       <el-button type="primary" :icon="Check" @click="savePreferences">保存偏好设置</el-button>
     </div>
   </el-form>
@@ -109,8 +125,8 @@ function savePreferences() {
   localStorage.setItem('localoj.reader.fontSize', String(prefReaderFontSize.value))
   localStorage.setItem('localoj.reader.fontFamily', prefReaderFontFamily.value)
 
-  ElMessage.success('编辑器与偏好设置已成功保存！')
-  
+  ElMessage.success('偏好设置已成功保存！')
+
   // Dispatch active event to notify reader fonts updates locally in current app views
   window.dispatchEvent(new Event('localoj-preferences-saved'))
 }
@@ -121,17 +137,89 @@ function savePreferences() {
   padding-top: 10px;
 }
 
-.form-grid {
+.pref-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.pref-section-title .icon {
+  font-size: 16px;
+}
+
+.preview-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 24px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.preview-section-title .icon {
+  font-size: 16px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
+.previews-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.preview-box {
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-header {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-family: sans-serif;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
-  border-top: 1px solid var(--el-border-color-light);
+  margin-top: 24px;
+  border-top: 1px solid var(--border-color);
   padding-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .form-grid-3,
+  .form-grid-2,
+  .previews-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 </style>
