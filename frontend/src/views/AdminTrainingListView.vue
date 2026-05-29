@@ -233,12 +233,11 @@ function formatDate(dateStr: string) {
 <style scoped>
 .set-title-link {
   font-weight: 600;
-  color: #4f46e5;
+  color: var(--text-primary);
   cursor: pointer;
   transition: color 0.15s ease;
 }
 .set-title-link:hover {
-  color: #6366f1;
-  text-decoration: underline;
+  color: var(--el-color-primary-light-3);
 }
 </style>

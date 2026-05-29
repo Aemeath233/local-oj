@@ -146,9 +146,12 @@
                   <el-alert :title="selfTestError" type="error" show-icon :closable="false" />
                 </div>
                 <div v-else-if="selfTestResult" class="self-test-result">
-                  <div class="self-test-head">
-                    <VerdictTag status="FINISHED" :verdict="selfTestResult.verdict" self-test />
-                    <span class="self-test-meta">{{ selfTestResult.timeMs }} ms / {{ selfTestResult.memoryKb }} KB</span>
+                  <div class="self-test-head" style="padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--border-light);">
+                    <span class="self-test-meta" style="font-size: 13px; color: var(--text-muted); font-family: var(--font-sans), sans-serif;">
+                      运行时间：<span style="color: var(--text-primary); font-weight: 600; font-family: var(--font-mono), monospace;">{{ selfTestResult.timeMs }} ms</span>
+                      <span style="color: var(--border-color); margin: 0 12px;">|</span>
+                      占用内存：<span style="color: var(--text-primary); font-weight: 600; font-family: var(--font-mono), monospace;">{{ selfTestResult.memoryKb }} KB</span>
+                    </span>
                   </div>
                   <div class="case-output-grid">
                     <div>
@@ -373,7 +376,31 @@ const sampleCases = computed(() => {
   }
   return problem.value.samples
 })
-const selfTestMessage = computed(() => selfTestResult.value?.stderr || selfTestResult.value?.message || '')
+const selfTestMessage = computed(() => {
+  const result = selfTestResult.value
+  if (!result) return ''
+  
+  let msg = result.stderr || result.message || ''
+  
+  // If the program had an execution error, display the error verdict as a clear header
+  if (result.verdict && result.verdict !== 'AC') {
+    const verdictNameMap: Record<string, string> = {
+      CE: '编译错误 (Compile Error)',
+      RE: '运行错误 (Runtime Error)',
+      TLE: '超出时间限制 (Time Limit Exceeded)',
+      MLE: '超出内存限制 (Memory Limit Exceeded)',
+      OLE: '超出输出限制 (Output Limit Exceeded)',
+      IE: '内部错误 (Internal Error)',
+      WA: '答案错误 (Wrong Answer)'
+    }
+    const errorTitle = verdictNameMap[result.verdict] || result.verdict
+    const header = `[错误] ${errorTitle}\n`
+    if (!msg.includes(errorTitle)) {
+      msg = header + (msg ? '\n' + msg : '')
+    }
+  }
+  return msg
+})
 
 // UX & Layout reactive variables
 const consoleExpanded = ref(false)
