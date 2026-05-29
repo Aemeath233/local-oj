@@ -1,7 +1,10 @@
 <template>
   <section class="login-page">
     <div class="login-panel">
-      <h1>Local Judge</h1>
+      <div class="login-brand">
+        <img class="login-logo" src="/coderush_logo.png" alt="CodeRush Logo" />
+        <h2>CodeRush OJ</h2>
+      </div>
 
       <el-tabs v-model="mode" stretch>
         <el-tab-pane label="登录" name="login">

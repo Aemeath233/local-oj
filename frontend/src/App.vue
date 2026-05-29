@@ -3,6 +3,10 @@
     <el-container class="app-shell">
       <el-header class="topbar">
         <div class="topbar-content">
+          <RouterLink class="brand" to="/">
+            <img class="brand-logo" src="/coderush_logo.png" alt="CodeRush Logo" />
+            <span class="brand-name">CodeRush</span>
+          </RouterLink>
           <nav class="nav">
             <RouterLink to="/">首页</RouterLink>
             <RouterLink to="/problems">题库</RouterLink>

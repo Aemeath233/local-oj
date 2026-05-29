@@ -3,11 +3,60 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Local OJ</title>
-
+    <title>CodeRush OJ</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <style>
+        .initial-loader {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background-color: #09090b;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+          color: #f8fafc;
+          z-index: 9999;
+          transition: opacity 0.3s ease-out;
+        }
+        .initial-loader-spinner {
+          width: 48px;
+          height: 48px;
+          border: 3px solid rgba(248, 250, 252, 0.1);
+          border-top-color: #0d9488;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 20px;
+        }
+        .initial-loader-title {
+          font-size: 1.5rem;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          margin-bottom: 8px;
+          background: linear-gradient(135deg, #f8fafc 30%, #94a3b8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        .initial-loader-sub {
+          font-size: 0.875rem;
+          color: #64748b;
+          font-weight: 550;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      </style>
+      <div class="initial-loader">
+        <div class="initial-loader-spinner"></div>
+        <div class="initial-loader-title">CodeRush OJ</div>
+        <div class="initial-loader-sub">正在加载极速编程环境...</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

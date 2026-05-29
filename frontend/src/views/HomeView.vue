@@ -15,12 +15,17 @@
           <span class="hero-stat-divider">|</span>
           <span class="hero-stat-item">当前全站排名：<strong>{{ userRank }}</strong></span>
         </div>
+        <div class="hero-actions" style="margin-top: 20px;">
+          <RouterLink to="/problems">
+            <el-button type="primary" size="large" class="hero-btn" :icon="ArrowRight">
+              进入题库
+            </el-button>
+          </RouterLink>
+        </div>
       </div>
-      <RouterLink to="/problems">
-        <el-button type="primary" size="large" class="hero-btn" :icon="ArrowRight">
-          进入题库
-        </el-button>
-      </RouterLink>
+      <div class="hero-graphic-container">
+        <img class="hero-graphic" src="/coderush_hero.png" alt="CodeRush Illustration" />
+      </div>
     </div>
 
     <!-- Main Grid: Four direct panel panels -->
@@ -118,16 +123,15 @@ function handleRankCalculated(rank: string) {
 <style scoped>
 /* Hero Banner Styling */
 .home-hero {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  background: linear-gradient(135deg, #09090b 0%, #18181b 100%);
   position: relative;
   overflow: hidden;
-  padding: 30px 40px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.3);
   margin-bottom: 20px;
   box-sizing: border-box;
 }
@@ -139,7 +143,7 @@ function handleRankCalculated(rank: string) {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(13, 148, 136, 0.12) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(248, 250, 252, 0.03) 0%, transparent 60%);
   pointer-events: none;
   animation: glowMove 8s infinite alternate ease-in-out;
 }
@@ -159,18 +163,18 @@ function handleRankCalculated(rank: string) {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.15em;
-  color: #0d9488;
-  background: rgba(13, 148, 136, 0.15);
+  color: var(--text-secondary);
+  background: var(--bg-muted);
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(13, 148, 136, 0.25);
+  border: 1px solid var(--border-color);
   text-transform: uppercase;
 }
 
 .home-hero h1 {
   font-size: 2.2rem;
   font-weight: 850;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 14px 0 6px 0;
   letter-spacing: -0.02em;
   display: flex;
@@ -180,7 +184,7 @@ function handleRankCalculated(rank: string) {
 
 .hero-streak-text {
   font-size: 1.05rem;
-  color: #cbd5e1 !important;
+  color: var(--text-secondary) !important;
   margin: 8px 0 14px 0 !important;
   font-weight: 500;
 }
@@ -201,17 +205,17 @@ function handleRankCalculated(rank: string) {
 
 .hero-stat-item {
   font-size: 0.95rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .hero-stat-item strong {
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-mono), monospace;
   font-size: 1.05rem;
 }
 
 .hero-stat-divider {
-  color: rgba(255, 255, 255, 0.15);
+  color: var(--border-color);
   font-size: 0.95rem;
   user-select: none;
 }
@@ -220,16 +224,32 @@ function handleRankCalculated(rank: string) {
   position: relative;
   z-index: 2;
   font-weight: 600;
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-  border: none;
-  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
-  transition: all 0.2s ease;
-  color: #fff;
+  background: var(--primary);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--bg-surface);
 }
 
 .hero-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.6);
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.hero-graphic-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 300px;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-graphic {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
 }
 
 .home-grid {
