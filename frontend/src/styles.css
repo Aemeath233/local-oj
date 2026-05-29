@@ -1597,7 +1597,19 @@ pre.empty {
 }
 
 /* ===== Monaco Editor Autocomplete Suggest Widget Overrides ===== */
-.monaco-editor .suggest-widget {
+/* Force hide suggest widget when not active/visible to prevent empty pill styling */
+.monaco-editor .suggest-widget:not(.visible) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  border: none !important;
+  padding: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  box-shadow: none !important;
+}
+
+.monaco-editor .suggest-widget.visible {
   background-color: var(--bg-surface) !important;
   border: 1px solid var(--border-color) !important;
   box-shadow: var(--shadow-lg) !important;
@@ -1606,7 +1618,7 @@ pre.empty {
 }
 
 /* Individual list rows inside suggest widget */
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row {
   border-radius: var(--radius-sm) !important;
   color: var(--text-primary) !important;
   background-color: transparent !important;
@@ -1615,28 +1627,28 @@ pre.empty {
   transition: background-color 0.15s ease !important;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row:hover {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row:hover {
   background-color: var(--bg-muted) !important;
 }
 
 /* Label text elements in normal state */
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row .monaco-highlighted-label {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .monaco-highlighted-label {
   color: var(--text-primary) !important;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row .details-label,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row .type-label {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .details-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .type-label {
   color: var(--text-muted) !important;
 }
 
 /* Match highlights in normal state */
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row .monaco-highlighted-label .highlight {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .monaco-highlighted-label .highlight {
   color: #3b82f6 !important; /* Premium accent blue for light mode / standard matches */
   font-weight: 600 !important;
   background-color: transparent !important;
 }
 
-html.dark .monaco-editor .suggest-widget .monaco-list .monaco-list-row .monaco-highlighted-label .highlight {
+html.dark .monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .monaco-highlighted-label .highlight {
   color: #60a5fa !important; /* Bright blue match highlighting in dark mode */
 }
 
@@ -1644,23 +1656,23 @@ html.dark .monaco-editor .suggest-widget .monaco-list .monaco-list-row .monaco-h
    FOCUSED / SELECTED suggestion item styling
    Using maximum specificity to override Monaco inline styles
    ======================================================== */
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.selected,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused.selected {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused.selected {
   background-color: var(--primary-light) !important;
 }
 
 /* Text and highlights inside the active item */
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .monaco-highlighted-label,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.selected .monaco-highlighted-label,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .monaco-highlighted-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .monaco-highlighted-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label {
   color: var(--primary) !important;
   font-weight: 550 !important;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .monaco-highlighted-label .highlight,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.selected .monaco-highlighted-label .highlight,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label .highlight {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .monaco-highlighted-label .highlight,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .monaco-highlighted-label .highlight,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label .highlight {
   color: #3b82f6 !important; /* Vibrant highlight color for matches in active list row */
   font-weight: 700 !important;
   background-color: rgba(59, 130, 246, 0.15) !important; /* Subtle backdrop for active match highlights */
@@ -1668,31 +1680,31 @@ html.dark .monaco-editor .suggest-widget .monaco-list .monaco-list-row .monaco-h
   padding: 0 2px !important;
 }
 
-html.dark .monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .monaco-highlighted-label .highlight,
-html.dark .monaco-editor .suggest-widget .monaco-list .monaco-list-row.selected .monaco-highlighted-label .highlight,
-html.dark .monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label .highlight {
+html.dark .monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .monaco-highlighted-label .highlight,
+html.dark .monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .monaco-highlighted-label .highlight,
+html.dark .monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label .highlight {
   color: #60a5fa !important;
   background-color: rgba(96, 165, 250, 0.2) !important;
 }
 
 /* Secondary/type labels inside the active item */
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .details-label,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.selected .details-label,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .type-label,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.selected .type-label {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .details-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .details-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .type-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .type-label {
   color: var(--primary) !important;
   opacity: 0.8 !important;
 }
 
 /* Icons styling inside suggest widget */
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row .symbol-icon,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row .codicon {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .symbol-icon,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .codicon {
   color: var(--text-muted) !important;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .symbol-icon,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .codicon,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.selected .symbol-icon,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.selected .codicon {
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .symbol-icon,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .codicon,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .symbol-icon,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .codicon {
   color: var(--primary) !important;
 }
