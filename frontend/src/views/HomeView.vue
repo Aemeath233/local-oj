@@ -121,14 +121,14 @@ function handleRankCalculated(rank: string) {
 </script>
 
 <style scoped>
-/* Hero Banner Styling */
+/* Hero Banner Styling (Light Mode by default) */
 .home-hero {
-  background: linear-gradient(135deg, #09090b 0%, #18181b 100%);
+  background: linear-gradient(135deg, #f0f9ff 0%, #fdf2f8 100%);
   position: relative;
   overflow: hidden;
   padding: 40px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -143,7 +143,7 @@ function handleRankCalculated(rank: string) {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(248, 250, 252, 0.03) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 60%);
   pointer-events: none;
   animation: glowMove 8s infinite alternate ease-in-out;
 }
@@ -163,18 +163,18 @@ function handleRankCalculated(rank: string) {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.15em;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
+  color: #0284c7;
+  background: rgba(14, 165, 233, 0.08);
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  border: 1px solid rgba(14, 165, 233, 0.18);
   text-transform: uppercase;
 }
 
 .home-hero h1 {
   font-size: 2.2rem;
   font-weight: 850;
-  color: #ffffff;
+  color: #0f172a;
   margin: 14px 0 6px 0;
   letter-spacing: -0.02em;
   display: flex;
@@ -184,13 +184,13 @@ function handleRankCalculated(rank: string) {
 
 .hero-streak-text {
   font-size: 1.05rem;
-  color: #cbd5e1 !important;
+  color: #475569 !important;
   margin: 8px 0 14px 0 !important;
   font-weight: 500;
 }
 
 .hero-streak-text strong {
-  color: #f59e0b;
+  color: #ea580c;
   font-size: 1.25rem;
   font-family: var(--font-mono), monospace;
 }
@@ -205,17 +205,17 @@ function handleRankCalculated(rank: string) {
 
 .hero-stat-item {
   font-size: 0.95rem;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hero-stat-item strong {
-  color: #ffffff;
+  color: #0f172a;
   font-family: var(--font-mono), monospace;
   font-size: 1.05rem;
 }
 
 .hero-stat-divider {
-  color: rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
   font-size: 0.95rem;
   user-select: none;
 }
@@ -227,12 +227,48 @@ function handleRankCalculated(rank: string) {
   background: var(--primary);
   border: 1px solid var(--border-color);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  color: var(--bg-surface);
+  color: #fff !important;
 }
 
-.hero-btn:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
+/* Dark Mode Overrides: Keep the welcome banner as a stunning bright centerpiece card */
+html.dark .home-hero {
+  background: linear-gradient(135deg, #f0f9ff 0%, #fdf2f8 100%) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+html.dark .home-hero::before {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 60%) !important;
+}
+
+html.dark .home-hero h1 {
+  color: #0f172a !important;
+}
+
+html.dark .hero-streak-text {
+  color: #475569 !important;
+}
+
+html.dark .hero-streak-text strong {
+  color: #ea580c !important;
+}
+
+html.dark .hero-stat-item {
+  color: #64748b !important;
+}
+
+html.dark .hero-stat-item strong {
+  color: #0f172a !important;
+}
+
+html.dark .hero-stat-divider {
+  color: #cbd5e1 !important;
+}
+
+html.dark .hero-tag {
+  color: #0284c7 !important;
+  background: rgba(14, 165, 233, 0.08) !important;
+  border-color: rgba(14, 165, 233, 0.18) !important;
 }
 
 .hero-graphic-container {
