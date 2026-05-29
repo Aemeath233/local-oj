@@ -128,7 +128,7 @@ function handleRankCalculated(rank: string) {
   overflow: hidden;
   padding: 40px;
   border-radius: 12px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -163,18 +163,18 @@ function handleRankCalculated(rank: string) {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.15em;
-  color: var(--text-secondary);
-  background: var(--bg-muted);
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(56, 189, 248, 0.2);
   text-transform: uppercase;
 }
 
 .home-hero h1 {
   font-size: 2.2rem;
   font-weight: 850;
-  color: var(--text-primary);
+  color: #ffffff;
   margin: 14px 0 6px 0;
   letter-spacing: -0.02em;
   display: flex;
@@ -184,7 +184,7 @@ function handleRankCalculated(rank: string) {
 
 .hero-streak-text {
   font-size: 1.05rem;
-  color: var(--text-secondary) !important;
+  color: #cbd5e1 !important;
   margin: 8px 0 14px 0 !important;
   font-weight: 500;
 }
@@ -205,17 +205,17 @@ function handleRankCalculated(rank: string) {
 
 .hero-stat-item {
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: #94a3b8;
 }
 
 .hero-stat-item strong {
-  color: var(--text-primary);
+  color: #ffffff;
   font-family: var(--font-mono), monospace;
   font-size: 1.05rem;
 }
 
 .hero-stat-divider {
-  color: var(--border-color);
+  color: rgba(255, 255, 255, 0.15);
   font-size: 0.95rem;
   user-select: none;
 }
