@@ -79,7 +79,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="网站设置 (CORS)" name="system">
-          <el-form class="admin-form settings-form" :model="systemForm" label-position="top">
+          <el-form class="admin-form settings-form" label-position="top">
             <div style="margin-bottom: 16px;">
               <el-alert
                 title="CORS 跨域安全配置说明"
@@ -90,12 +90,28 @@
               />
             </div>
             <el-form-item label="允许访问的主机来源 (CORS Allowed Origins)" required>
-              <el-input
-                v-model="systemForm.allowedOrigins"
-                type="textarea"
-                :rows="4"
-                placeholder="例如：http://localhost:5173,http://your-domain.com,http://192.168.1.100:5173"
-              />
+              <div class="origins-list" style="display: flex; flex-direction: column; gap: 10px; max-width: 650px;">
+                <div v-for="(origin, index) in originsList" :key="index" style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                  <el-input
+                    v-model="originsList[index]"
+                    placeholder="例如：http://your-domain.com 或 http://192.168.1.100:5173"
+                    style="flex: 1;"
+                  />
+                  <el-button
+                    type="danger"
+                    plain
+                    :icon="Delete"
+                    circle
+                    @click="removeOriginRow(index)"
+                    :disabled="originsList.length <= 1 && originsList[0] === ''"
+                  />
+                </div>
+                <div style="margin-top: 4px;">
+                  <el-button type="success" plain size="small" :icon="Plus" @click="addOriginRow">
+                    添加允许来源
+                  </el-button>
+                </div>
+              </div>
             </el-form-item>
             <div class="form-actions">
               <el-button type="primary" :icon="Check" :loading="savingSystem" @click="saveSystem">保存网站设置</el-button>
@@ -109,7 +125,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { Check } from '@element-plus/icons-vue'
+import { Check, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
 import {
@@ -149,9 +165,7 @@ const sandboxForm = reactive({
   maxProcessCount: 128
 })
 
-const systemForm = reactive({
-  allowedOrigins: ''
-})
+const originsList = ref<string[]>([''])
 
 const smtpPasswordPlaceholder = computed(() => (smtpPasswordSet.value ? '已保存，留空不修改' : ''))
 
@@ -182,9 +196,28 @@ async function load() {
     sandboxForm.defaultOutputLimitKb = sandbox.defaultOutputLimitKb
     sandboxForm.maxProcessCount = sandbox.maxProcessCount
 
-    systemForm.allowedOrigins = system.allowedOrigins || ''
+    const originsStr = system.allowedOrigins || ''
+    if (originsStr.trim() === '') {
+      originsList.value = ['']
+    } else {
+      originsList.value = originsStr.split(',').map(s => s.trim()).filter(s => s !== '')
+      if (originsList.value.length === 0) {
+        originsList.value = ['']
+      }
+    }
   } finally {
     loading.value = false
+  }
+}
+
+function addOriginRow() {
+  originsList.value.push('')
+}
+
+function removeOriginRow(index: number) {
+  originsList.value.splice(index, 1)
+  if (originsList.value.length === 0) {
+    originsList.value.push('')
   }
 }
 
@@ -232,12 +265,22 @@ async function saveSandbox() {
 }
 
 async function saveSystem() {
+  const cleanedOrigins = originsList.value
+    .map(s => s.trim())
+    .filter(s => s !== '')
+    .join(',')
+
   savingSystem.value = true
   try {
     await updateSystemSettings({
-      allowedOrigins: systemForm.allowedOrigins
+      allowedOrigins: cleanedOrigins
     })
     ElMessage.success('网站设置已成功保存，跨域访问规则已即时生效！')
+    if (cleanedOrigins === '') {
+      originsList.value = ['']
+    } else {
+      originsList.value = cleanedOrigins.split(',')
+    }
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '保存失败')
   } finally {
