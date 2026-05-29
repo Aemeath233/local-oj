@@ -6,12 +6,10 @@
           <h1>{{ contest.title }}</h1>
           <div class="time-meta">
             <span class="time-meta-item">
-              <img src="/icons/calendar.png" class="meta-icon-img" alt="calendar" />
               {{ formatTime(contest.startTime) }} ~ {{ formatTime(contest.endTime) }}
             </span>
             <span class="divider">|</span>
             <span class="time-meta-item">
-              <img src="/icons/timer.png" class="meta-icon-img" alt="duration" />
               时长: {{ getDurationStr(contest.startTime, contest.endTime) }}
             </span>
           </div>
