@@ -2,7 +2,6 @@
   <el-form class="profile-form" label-position="top">
     <!-- Editor Preferences Section -->
     <div class="pref-section-title">
-      <img src="/icons/laptop.png" class="title-icon-img" alt="laptop" />
       <span>编辑器与代码首选项</span>
     </div>
 
@@ -33,7 +32,6 @@
 
     <!-- Reader Typography Section -->
     <div class="pref-section-title" style="margin-top: 24px;">
-      <img src="/icons/book.png" class="title-icon-img" alt="book" />
       <span>题面排版与阅读首选项</span>
     </div>
 
@@ -53,7 +51,6 @@
 
     <!-- Real-time Previews Grid (Editor & Reader side-by-side) -->
     <div class="preview-section-title">
-      <img src="/icons/sparkles.png" class="title-icon-img" alt="sparkles" />
       <span>排版实时预览</span>
     </div>
 
@@ -61,7 +58,6 @@
       <!-- Quick Font Preview Box -->
       <div class="preview-box">
         <div class="preview-header">
-          <img src="/icons/laptop.png" class="sub-icon-img" alt="laptop" />
           <span>编辑器代码预览</span>
         </div>
         <pre :style="{ fontFamily: prefFontFamily, fontSize: prefFontSize + 'px', margin: 0, lineHeight: 1.5, color: 'var(--primary)', overflowX: 'auto', background: 'var(--bg-muted)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', minHeight: '120px' }">#include &lt;iostream&gt;
@@ -75,7 +71,6 @@ int main() {
       <!-- Quick Reader Preview Box -->
       <div class="preview-box">
         <div class="preview-header">
-          <img src="/icons/book.png" class="sub-icon-img" alt="book" />
           <span>题面排版预览</span>
         </div>
         <div :style="{ fontFamily: prefReaderFontFamily, fontSize: prefReaderFontSize + 'px', margin: 0, lineHeight: 1.6, color: 'var(--text-primary)', overflowX: 'auto', background: 'var(--bg-muted)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', minHeight: '120px', boxSizing: 'border-box' }">

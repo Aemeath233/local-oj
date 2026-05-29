@@ -23,9 +23,7 @@
           </RouterLink>
         </div>
       </div>
-      <div class="hero-graphic-container">
-        <img class="hero-graphic" src="/coderush_hero.png" alt="CodeRush Illustration" />
-      </div>
+
     </div>
 
     <!-- Main Grid: Four direct panel panels -->
@@ -271,22 +269,7 @@ html.dark .hero-tag {
   border-color: rgba(14, 165, 233, 0.18) !important;
 }
 
-.hero-graphic-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 300px;
-  position: relative;
-  z-index: 2;
-}
 
-.hero-graphic {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  opacity: 0.85;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-}
 
 .home-grid {
   display: grid;

@@ -39,13 +39,15 @@
           <!-- Main content -->
           <div class="contest-main">
             <div class="contest-top-line">
-              <h3 class="contest-title">{{ c.title }}</h3>
-              <div class="contest-badges">
-                <span :class="['status-badge', `badge-${getContestStatus(c).toLowerCase()}`]">
-                  <span class="badge-dot" />
-                  {{ statusLabel(c) }}
-                </span>
-                <span class="type-badge">{{ c.type }}</span>
+              <div class="contest-title-wrapper" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <h3 class="contest-title">{{ c.title }}</h3>
+                <div class="contest-badges">
+                  <span :class="['status-badge', `badge-${getContestStatus(c).toLowerCase()}`]">
+                    <span class="badge-dot" />
+                    {{ statusLabel(c) }}
+                  </span>
+                  <span class="type-badge">{{ c.type }}</span>
+                </div>
               </div>
             </div>
 
@@ -270,7 +272,7 @@ function enterLeaderboard(c: Contest) {
 
 <style scoped>
 .page-stack {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
 }
