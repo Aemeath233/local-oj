@@ -201,6 +201,10 @@ export interface SmtpSettings {
   passwordSet: boolean
 }
 
+export interface SystemSettings {
+  allowedOrigins?: string
+}
+
 export interface ProblemTag {
   id: number
   name: string

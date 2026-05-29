@@ -19,6 +19,7 @@ import type {
   TestCase,
   SmtpSettings,
   SandboxSettings,
+  SystemSettings,
   User,
   Contest,
   AdminContestSummary,
@@ -362,6 +363,16 @@ export async function fetchSandboxSettings() {
 
 export async function updateSandboxSettings(payload: Partial<SandboxSettings>) {
   const response = await http.put<ApiEnvelope<SandboxSettings>>('/admin/settings/sandbox', payload)
+  return response.data.data
+}
+
+export async function fetchSystemSettings() {
+  const response = await http.get<ApiEnvelope<SystemSettings>>('/admin/settings/system')
+  return response.data.data
+}
+
+export async function updateSystemSettings(payload: Partial<SystemSettings>) {
+  const response = await http.put<ApiEnvelope<SystemSettings>>('/admin/settings/system', payload)
   return response.data.data
 }
 

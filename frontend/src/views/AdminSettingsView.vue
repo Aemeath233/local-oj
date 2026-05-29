@@ -77,6 +77,31 @@
             </div>
           </el-form>
         </el-tab-pane>
+
+        <el-tab-pane label="网站设置 (CORS)" name="system">
+          <el-form class="admin-form settings-form" :model="systemForm" label-position="top">
+            <div style="margin-bottom: 16px;">
+              <el-alert
+                title="CORS 跨域安全配置说明"
+                type="info"
+                description="配置允许访问本 OJ 系统的域名或 IP。如果配置了独立域名或使用局域网 IP 访问时登录提示 CORS 错误，请在此处添加对应的域名或 IP。多个地址请用英文逗号分隔。支持通配符模式（例：http://*.yourdomain.com）。"
+                show-icon
+                :closable="false"
+              />
+            </div>
+            <el-form-item label="允许访问的主机来源 (CORS Allowed Origins)" required>
+              <el-input
+                v-model="systemForm.allowedOrigins"
+                type="textarea"
+                :rows="4"
+                placeholder="例如：http://localhost:5173,http://your-domain.com,http://192.168.1.100:5173"
+              />
+            </el-form-item>
+            <div class="form-actions">
+              <el-button type="primary" :icon="Check" :loading="savingSystem" @click="saveSystem">保存网站设置</el-button>
+            </div>
+          </el-form>
+        </el-tab-pane>
       </el-tabs>
     </section>
   </section>
@@ -90,13 +115,16 @@ import AdminNav from '../components/AdminNav.vue'
 import {
   fetchSandboxSettings,
   fetchSmtpSettings,
+  fetchSystemSettings,
   updateSandboxSettings,
-  updateSmtpSettings
+  updateSmtpSettings,
+  updateSystemSettings
 } from '../api/http'
 
 const loading = ref(false)
 const savingSmtp = ref(false)
 const savingSandbox = ref(false)
+const savingSystem = ref(false)
 const smtpPasswordSet = ref(false)
 const activeTab = ref('smtp')
 
@@ -121,19 +149,21 @@ const sandboxForm = reactive({
   maxProcessCount: 128
 })
 
-
+const systemForm = reactive({
+  allowedOrigins: ''
+})
 
 const smtpPasswordPlaceholder = computed(() => (smtpPasswordSet.value ? '已保存，留空不修改' : ''))
-
 
 onMounted(load)
 
 async function load() {
   loading.value = true
   try {
-    const [smtp, sandbox] = await Promise.all([
+    const [smtp, sandbox, system] = await Promise.all([
       fetchSmtpSettings(),
-      fetchSandboxSettings()
+      fetchSandboxSettings(),
+      fetchSystemSettings()
     ])
     smtpForm.enabled = smtp.enabled
     smtpForm.host = smtp.host || ''
@@ -152,6 +182,7 @@ async function load() {
     sandboxForm.defaultOutputLimitKb = sandbox.defaultOutputLimitKb
     sandboxForm.maxProcessCount = sandbox.maxProcessCount
 
+    systemForm.allowedOrigins = system.allowedOrigins || ''
   } finally {
     loading.value = false
   }
@@ -200,5 +231,17 @@ async function saveSandbox() {
   }
 }
 
-
+async function saveSystem() {
+  savingSystem.value = true
+  try {
+    await updateSystemSettings({
+      allowedOrigins: systemForm.allowedOrigins
+    })
+    ElMessage.success('网站设置已成功保存，跨域访问规则已即时生效！')
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '保存失败')
+  } finally {
+    savingSystem.value = false
+  }
+}
 </script>

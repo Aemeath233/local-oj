@@ -3,6 +3,7 @@ package com.localoj.backend.controller;
 import com.localoj.backend.api.ApiResponse;
 import com.localoj.backend.service.SandboxSettingsService;
 import com.localoj.backend.service.SmtpSettingsService;
+import com.localoj.backend.service.SystemSettingsService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,10 +17,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminSettingsController {
     private final SmtpSettingsService smtpSettingsService;
     private final SandboxSettingsService sandboxSettingsService;
+    private final SystemSettingsService systemSettingsService;
 
-    public AdminSettingsController(SmtpSettingsService smtpSettingsService, SandboxSettingsService sandboxSettingsService) {
+    public AdminSettingsController(
+            SmtpSettingsService smtpSettingsService,
+            SandboxSettingsService sandboxSettingsService,
+            SystemSettingsService systemSettingsService
+    ) {
         this.smtpSettingsService = smtpSettingsService;
         this.sandboxSettingsService = sandboxSettingsService;
+        this.systemSettingsService = systemSettingsService;
+    }
+
+    @GetMapping("/system")
+    public ApiResponse<SystemSettingsService.SystemSettingsView> system() {
+        return ApiResponse.ok(systemSettingsService.view());
+    }
+
+    @PutMapping("/system")
+    public ApiResponse<SystemSettingsService.SystemSettingsView> updateSystem(@Valid @RequestBody SystemSettingsRequest request) {
+        return ApiResponse.ok(systemSettingsService.update(request.toCommand()));
     }
 
     @GetMapping("/smtp")
@@ -85,6 +102,12 @@ public class AdminSettingsController {
                     defaultOutputLimitKb,
                     maxProcessCount
             );
+        }
+    }
+
+    public record SystemSettingsRequest(String allowedOrigins) {
+        SystemSettingsService.UpdateSystemSettingsCommand toCommand() {
+            return new SystemSettingsService.UpdateSystemSettingsCommand(allowedOrigins);
         }
     }
 }
