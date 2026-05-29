@@ -6,8 +6,8 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import * as monaco from 'monaco-editor'
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import type * as MonacoType from 'monaco-editor'
+import { loadMonaco } from '../utils/monacoLoader'
 import type { Language } from '../types'
 import { useThemeStore } from '../stores/theme'
 
@@ -22,55 +22,64 @@ const emit = defineEmits<{
 }>()
 
 const container = ref<HTMLElement | null>(null)
-let editor: monaco.editor.IStandaloneCodeEditor | null = null
+let editor: MonacoType.editor.IStandaloneCodeEditor | null = null
+let monaco: typeof MonacoType | null = null
 
 const themeStore = useThemeStore()
 
 const fontSize = ref(Number(localStorage.getItem('localoj.editor.fontSize')) || 14)
 const fontFamily = ref(localStorage.getItem('localoj.editor.fontFamily') || "'JetBrains Mono', 'Cascadia Code', Consolas, monospace")
 
-window.MonacoEnvironment = {
-  getWorker() {
-    return new EditorWorker()
-  }
-}
-
 onMounted(() => {
   if (!container.value) {
     return
   }
-  editor = monaco.editor.create(container.value, {
-    value: props.modelValue,
-    language: toMonacoLanguage(props.language),
-    theme: themeStore.isDark ? 'vs-dark' : 'vs',
-    automaticLayout: true,
-    minimap: { enabled: false },
-    fontSize: fontSize.value,
-    fontFamily: fontFamily.value,
-    lineHeight: Math.round(fontSize.value * 1.5),
-    scrollBeyondLastLine: false,
-    tabSize: 4,
-    readOnly: props.readOnly ?? false,
-    domReadOnly: props.readOnly ?? false
+
+  loadMonaco().then((monacoInstance) => {
+    monaco = monacoInstance
+    if (!container.value) return
+
+    const createdEditor = monacoInstance.editor.create(container.value, {
+      value: props.modelValue,
+      language: toMonacoLanguage(props.language),
+      theme: themeStore.isDark ? 'vs-dark' : 'vs',
+      automaticLayout: true,
+      minimap: { enabled: false },
+      fontSize: fontSize.value,
+      fontFamily: fontFamily.value,
+      lineHeight: Math.round(fontSize.value * 1.5),
+      scrollBeyondLastLine: false,
+      tabSize: 4,
+      readOnly: props.readOnly ?? false,
+      domReadOnly: props.readOnly ?? false
+    })
+    editor = createdEditor
+
+    if (!props.readOnly) {
+      createdEditor.onDidChangeModelContent(() => {
+        emit('update:modelValue', createdEditor.getValue())
+      })
+    }
+    
+    if (document.fonts) {
+      document.fonts.ready.then(() => {
+        if (monaco) {
+          (monaco.editor as any).remeasureTemplates()
+        }
+        editor?.layout()
+      })
+    }
+  }).catch((err) => {
+    console.error('Failed to initialize Monaco Editor', err)
   })
-  if (!props.readOnly) {
-    editor.onDidChangeModelContent(() => {
-      emit('update:modelValue', editor?.getValue() ?? '')
-    })
-  }
-  
-  if (document.fonts) {
-    document.fonts.ready.then(() => {
-      (monaco.editor as any).remeasureTemplates()
-      editor?.layout()
-    })
-  }
 })
 
 watch(
   () => themeStore.isDark,
   (isDark) => {
-    monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs')
+    if (monaco) {
+      monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs')
+    }
   }
 )
 
@@ -87,7 +96,7 @@ watch(
   () => props.language,
   (language) => {
     const model = editor?.getModel()
-    if (model) {
+    if (model && monaco) {
       monaco.editor.setModelLanguage(model, toMonacoLanguage(language))
     }
   }

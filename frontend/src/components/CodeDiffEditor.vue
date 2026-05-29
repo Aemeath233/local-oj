@@ -6,8 +6,8 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import * as monaco from 'monaco-editor'
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import type * as MonacoType from 'monaco-editor'
+import { loadMonaco } from '../utils/monacoLoader'
 import type { Language } from '../types'
 import { useThemeStore } from '../stores/theme'
 
@@ -18,35 +18,37 @@ const props = defineProps<{
 }>()
 
 const container = ref<HTMLElement | null>(null)
-let diffEditor: monaco.editor.IStandaloneDiffEditor | null = null
+let diffEditor: MonacoType.editor.IStandaloneDiffEditor | null = null
+let monaco: typeof MonacoType | null = null
 
 const themeStore = useThemeStore()
 
 const fontSize = ref(Number(localStorage.getItem('localoj.editor.fontSize')) || 14)
 const fontFamily = ref(localStorage.getItem('localoj.editor.fontFamily') || "'JetBrains Mono', 'Cascadia Code', Consolas, monospace")
 
-window.MonacoEnvironment = {
-  getWorker() {
-    return new EditorWorker()
-  }
-}
-
 onMounted(() => {
   if (!container.value) return
 
-  diffEditor = monaco.editor.createDiffEditor(container.value, {
-    theme: themeStore.isDark ? 'vs-dark' : 'vs',
-    automaticLayout: true,
-    fontSize: fontSize.value,
-    fontFamily: fontFamily.value,
-    lineHeight: Math.round(fontSize.value * 1.5),
-    scrollBeyondLastLine: false,
-    readOnly: true,
-    renderSideBySide: true,
-    minimap: { enabled: false }
-  })
+  loadMonaco().then((monacoInstance) => {
+    monaco = monacoInstance
+    if (!container.value) return
 
-  updateModels()
+    diffEditor = monacoInstance.editor.createDiffEditor(container.value, {
+      theme: themeStore.isDark ? 'vs-dark' : 'vs',
+      automaticLayout: true,
+      fontSize: fontSize.value,
+      fontFamily: fontFamily.value,
+      lineHeight: Math.round(fontSize.value * 1.5),
+      scrollBeyondLastLine: false,
+      readOnly: true,
+      renderSideBySide: true,
+      minimap: { enabled: false }
+    })
+
+    updateModels()
+  }).catch((err) => {
+    console.error('Failed to initialize Monaco Diff Editor', err)
+  })
 })
 
 function toMonacoLanguage(language: Language) {
@@ -61,7 +63,7 @@ function toMonacoLanguage(language: Language) {
 }
 
 function updateModels() {
-  if (!diffEditor) return
+  if (!diffEditor || !monaco) return
 
   const originalModel = monaco.editor.createModel(
     props.original,
@@ -81,7 +83,9 @@ function updateModels() {
 watch(
   () => themeStore.isDark,
   (isDark) => {
-    monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs')
+    if (monaco) {
+      monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs')
+    }
   }
 )
 

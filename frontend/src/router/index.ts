@@ -2,29 +2,30 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import LoginView from '../views/LoginView.vue'
 import HomeView from '../views/HomeView.vue'
-import ProblemListView from '../views/ProblemListView.vue'
-import ProblemDetailView from '../views/ProblemDetailView.vue'
-import SubmissionListView from '../views/SubmissionListView.vue'
-import LeaderboardView from '../views/LeaderboardView.vue'
-import ProfileView from '../views/ProfileView.vue'
-import UserPublicProfileView from '../views/UserPublicProfileView.vue'
-import AdminDashboardView from '../views/AdminDashboardView.vue'
-import AdminProblemListView from '../views/AdminProblemListView.vue'
-import AdminProblemView from '../views/AdminProblemView.vue'
-import AdminSubmissionView from '../views/AdminSubmissionView.vue'
-import AdminSettingsView from '../views/AdminSettingsView.vue'
-import AdminUserListView from '../views/AdminUserListView.vue'
-import ContestListView from '../views/ContestListView.vue'
-import ContestDetailView from '../views/ContestDetailView.vue'
-import ContestProblemDetailView from '../views/ContestProblemDetailView.vue'
-import AdminContestListView from '../views/AdminContestListView.vue'
-import AdminContestView from '../views/AdminContestView.vue'
-import AdminLogView from '../views/AdminLogView.vue'
-import AdminDataView from '../views/AdminDataView.vue'
-import TrainingListView from '../views/TrainingListView.vue'
-import TrainingDetailView from '../views/TrainingDetailView.vue'
-import AdminTrainingListView from '../views/AdminTrainingListView.vue'
-import AdminTrainingView from '../views/AdminTrainingView.vue'
+
+const ProblemListView = () => import('../views/ProblemListView.vue')
+const ProblemDetailView = () => import('../views/ProblemDetailView.vue')
+const SubmissionListView = () => import('../views/SubmissionListView.vue')
+const LeaderboardView = () => import('../views/LeaderboardView.vue')
+const ProfileView = () => import('../views/ProfileView.vue')
+const UserPublicProfileView = () => import('../views/UserPublicProfileView.vue')
+const AdminDashboardView = () => import('../views/AdminDashboardView.vue')
+const AdminProblemListView = () => import('../views/AdminProblemListView.vue')
+const AdminProblemView = () => import('../views/AdminProblemView.vue')
+const AdminSubmissionView = () => import('../views/AdminSubmissionView.vue')
+const AdminSettingsView = () => import('../views/AdminSettingsView.vue')
+const AdminUserListView = () => import('../views/AdminUserListView.vue')
+const ContestListView = () => import('../views/ContestListView.vue')
+const ContestDetailView = () => import('../views/ContestDetailView.vue')
+const ContestProblemDetailView = () => import('../views/ContestProblemDetailView.vue')
+const AdminContestListView = () => import('../views/AdminContestListView.vue')
+const AdminContestView = () => import('../views/AdminContestView.vue')
+const AdminLogView = () => import('../views/AdminLogView.vue')
+const AdminDataView = () => import('../views/AdminDataView.vue')
+const TrainingListView = () => import('../views/TrainingListView.vue')
+const TrainingDetailView = () => import('../views/TrainingDetailView.vue')
+const AdminTrainingListView = () => import('../views/AdminTrainingListView.vue')
+const AdminTrainingView = () => import('../views/AdminTrainingView.vue')
 
 const router = createRouter({
   history: createWebHistory(),

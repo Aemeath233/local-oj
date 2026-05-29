@@ -17,3 +17,6 @@ data/problems/
 data/submissions/
 
 scratch/
+
+# Frontend public libs (like Monaco Editor copied files)
+frontend/public/libs/
