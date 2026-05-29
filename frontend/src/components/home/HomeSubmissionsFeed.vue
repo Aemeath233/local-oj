@@ -29,9 +29,9 @@
           <span class="sub-user-nick">{{ sub.displayName || sub.username }}</span>
         </div>
         <div class="sub-row-problem">
-          <RouterLink :to="`/problems/${sub.problemId}`" class="sub-prob-link">
+          <span class="sub-prob-text">
             {{ sub.problemTitle || `题目 #${sub.problemId}` }}
-          </RouterLink>
+          </span>
         </div>
         <div class="sub-row-lang">
           <span class="sub-lang-text">{{ sub.language }}</span>
@@ -177,7 +177,7 @@ onMounted(async () => {
   text-align: left;
 }
 
-.sub-prob-link {
+.sub-prob-text {
   font-size: 0.88rem;
   font-weight: 650;
   color: var(--text-primary);
@@ -186,10 +186,6 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
-}
-
-.sub-prob-link:hover {
-  color: var(--el-color-primary);
 }
 
 .sub-row-lang {

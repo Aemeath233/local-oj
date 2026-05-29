@@ -2,10 +2,7 @@
   <el-form class="profile-form" label-position="top">
     <!-- Editor Preferences Section -->
     <div class="pref-section-title">
-      <svg class="pref-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px; color: var(--primary);">
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-      </svg>
+      <img src="/icons/laptop.png" class="title-icon-img" alt="laptop" />
       <span>编辑器与代码首选项</span>
     </div>
 
@@ -36,10 +33,7 @@
 
     <!-- Reader Typography Section -->
     <div class="pref-section-title" style="margin-top: 24px;">
-      <svg class="pref-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px; color: var(--primary);">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-      </svg>
+      <img src="/icons/book.png" class="title-icon-img" alt="book" />
       <span>题面排版与阅读首选项</span>
     </div>
 
@@ -59,10 +53,7 @@
 
     <!-- Real-time Previews Grid (Editor & Reader side-by-side) -->
     <div class="preview-section-title">
-      <svg class="pref-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px; color: var(--primary);">
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
+      <img src="/icons/sparkles.png" class="title-icon-img" alt="sparkles" />
       <span>排版实时预览</span>
     </div>
 
@@ -70,11 +61,7 @@
       <!-- Quick Font Preview Box -->
       <div class="preview-box">
         <div class="preview-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px; margin-right: 4px; vertical-align: -2.5px;">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
+          <img src="/icons/laptop.png" class="sub-icon-img" alt="laptop" />
           <span>编辑器代码预览</span>
         </div>
         <pre :style="{ fontFamily: prefFontFamily, fontSize: prefFontSize + 'px', margin: 0, lineHeight: 1.5, color: 'var(--primary)', overflowX: 'auto', background: 'var(--bg-muted)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', minHeight: '120px' }">#include &lt;iostream&gt;
@@ -88,10 +75,7 @@ int main() {
       <!-- Quick Reader Preview Box -->
       <div class="preview-box">
         <div class="preview-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px; margin-right: 4px; vertical-align: -2.5px;">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-          </svg>
+          <img src="/icons/book.png" class="sub-icon-img" alt="book" />
           <span>题面排版预览</span>
         </div>
         <div :style="{ fontFamily: prefReaderFontFamily, fontSize: prefReaderFontSize + 'px', margin: 0, lineHeight: 1.6, color: 'var(--text-primary)', overflowX: 'auto', background: 'var(--bg-muted)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', minHeight: '120px', boxSizing: 'border-box' }">
@@ -226,6 +210,21 @@ function savePreferences() {
   color: var(--text-secondary);
   font-weight: 600;
   font-family: sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.title-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.sub-icon-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .form-actions {

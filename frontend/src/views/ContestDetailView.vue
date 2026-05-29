@@ -5,9 +5,15 @@
         <div class="title-section">
           <h1>{{ contest.title }}</h1>
           <div class="time-meta">
-            <span>📅 {{ formatTime(contest.startTime) }} ~ {{ formatTime(contest.endTime) }}</span>
+            <span class="time-meta-item">
+              <img src="/icons/calendar.png" class="meta-icon-img" alt="calendar" />
+              {{ formatTime(contest.startTime) }} ~ {{ formatTime(contest.endTime) }}
+            </span>
             <span class="divider">|</span>
-            <span>⏱️ 时长: {{ getDurationStr(contest.startTime, contest.endTime) }}</span>
+            <span class="time-meta-item">
+              <img src="/icons/timer.png" class="meta-icon-img" alt="duration" />
+              时长: {{ getDurationStr(contest.startTime, contest.endTime) }}
+            </span>
           </div>
         </div>
         <div class="countdown-section" :class="timerClass">
@@ -706,6 +712,16 @@ function getDurationStr(startStr: string, endStr: string) {
   gap: 12px;
   font-size: 0.9rem;
   color: var(--el-text-color-secondary);
+}
+.time-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.meta-icon-img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
 }
 .divider {
   color: var(--el-border-color);
