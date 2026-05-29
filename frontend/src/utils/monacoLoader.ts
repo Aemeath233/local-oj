@@ -1,10 +1,7 @@
 let monacoPromise: Promise<any> | null = null
 
 const CDN_URLS = [
-  'https://cdn.staticfile.net/monaco-editor/0.55.0/min/vs',
-  'https://lib.baomitu.com/monaco-editor/0.55.0/min/vs',
-  'https://cdn.bootcdn.net/ajax/libs/monaco-editor/0.55.0/min/vs',
-  '/libs/monaco-editor/vs' // Local fallback
+  '/libs/monaco-editor/vs' // Exclusively local server path
 ]
 
 export function loadMonaco(): Promise<any> {

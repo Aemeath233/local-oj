@@ -1,15 +1,11 @@
 let katexPromise: Promise<any> | null = null
 
 const CDN_URLS = [
-  'https://cdn.staticfile.net/KaTeX/0.16.47/katex.min.js',
-  'https://cdn.bootcdn.net/ajax/libs/KaTeX/0.16.47/katex.min.js',
-  '/libs/katex/katex.min.js' // local fallback
+  '/libs/katex/katex.min.js' // Exclusively local server path
 ]
 
 const CSS_CDN_URLS = [
-  'https://cdn.staticfile.net/KaTeX/0.16.47/katex.min.css',
-  'https://cdn.bootcdn.net/ajax/libs/KaTeX/0.16.47/katex.min.css',
-  '/libs/katex/katex.min.css' // local fallback
+  '/libs/katex/katex.min.css' // Exclusively local server path
 ]
 
 export function loadKaTeX(): Promise<any> {
