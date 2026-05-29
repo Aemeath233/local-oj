@@ -100,7 +100,12 @@
               class="secondary-action-btn"
               @click.stop="enterLeaderboard(c)"
             >
-              <span>榜单 📊</span>
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 13px; height: 13px; margin-right: 4px;">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+              <span>查看榜单</span>
             </button>
             <button class="action-btn">
               {{ getContestStatus(c) === 'UPCOMING' ? '查看' : '进入' }}
