@@ -5,9 +5,6 @@
         <h1>专项练习</h1>
         <p>按专项分类自主学习，掌握核心算法知识</p>
       </div>
-      <RouterLink v-if="auth.isAdmin" to="/admin/training">
-        <el-button type="primary">管理题单</el-button>
-      </RouterLink>
     </div>
 
     <!-- Search filter bar -->

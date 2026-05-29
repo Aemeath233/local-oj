@@ -64,7 +64,12 @@ public class ContestService {
         if (user == null || (user.role() != Role.ADMIN && user.role() != Role.SUPER_ADMIN)) {
             query.eq("visible", true);
         }
-        return contestMapper.selectList(query);
+        List<Contest> list = contestMapper.selectList(query);
+        for (Contest c : list) {
+            c.setParticipantCount(countRegistrations(c.getId()));
+            c.setProblemCount(countContestProblems(c.getId()));
+        }
+        return list;
     }
 
     public List<AdminContestSummary> listAdminContestSummaries() {
@@ -99,6 +104,8 @@ public class ContestService {
                 throw new IllegalArgumentException("Contest not found");
             }
         }
+        contest.setParticipantCount(countRegistrations(contest.getId()));
+        contest.setProblemCount(countContestProblems(contest.getId()));
         return contest;
     }
 

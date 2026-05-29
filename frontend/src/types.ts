@@ -285,6 +285,8 @@ export interface Contest {
   freezeDurationMinutes?: number
   createdAt: string
   updatedAt: string
+  participantCount?: number
+  problemCount?: number
 }
 
 export interface AdminContestSummary extends Contest {

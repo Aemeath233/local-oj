@@ -5,9 +5,6 @@
         <h1>比赛列表</h1>
         <p>参与在线竞赛与算法测试</p>
       </div>
-      <RouterLink v-if="auth.isAdmin" to="/admin/contests">
-        <el-button :icon="ArrowRight" type="primary">管理比赛</el-button>
-      </RouterLink>
     </div>
 
     <!-- Filter tabs -->
@@ -57,25 +54,31 @@
                 <svg class="meta-icon" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
                 </svg>
-                <span class="meta-label">开始</span>
-                <span class="meta-value">{{ formatTime(c.startTime) }}</span>
+                <span class="meta-label">时间</span>
+                <span class="meta-value">{{ formatTime(c.startTime) }} ~ {{ formatTime(c.endTime) }}</span>
               </div>
               <div class="meta-divider" />
               <div class="meta-item">
                 <svg class="meta-icon" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                  <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                 </svg>
-                <span class="meta-label">时长</span>
-                <span class="meta-value">{{ getDurationStr(c.startTime, c.endTime) }}</span>
+                <span class="meta-label">参赛人数</span>
+                <span class="meta-value">{{ c.participantCount ?? 0 }} 人</span>
               </div>
               <div class="meta-divider" />
               <div class="meta-item">
                 <svg class="meta-icon" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                  <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804z" />
                 </svg>
-                <span class="meta-label">结束</span>
-                <span class="meta-value">{{ formatTime(c.endTime) }}</span>
+                <span class="meta-label">题目数</span>
+                <span class="meta-value">{{ c.problemCount ?? 0 }} 道题</span>
               </div>
+            </div>
+
+            <!-- Dynamic Countdown for Upcoming Contests -->
+            <div v-if="getContestStatus(c) === 'UPCOMING'" class="upcoming-countdown">
+              <span class="countdown-label">距比赛开始：</span>
+              <span class="countdown-time">{{ getUpcomingCountdownStr(c.startTime) }}</span>
             </div>
 
             <!-- Running progress bar -->
@@ -92,6 +95,13 @@
 
           <!-- Right action area -->
           <div class="contest-action">
+            <button
+              v-if="getContestStatus(c) !== 'UPCOMING'"
+              class="secondary-action-btn"
+              @click.stop="enterLeaderboard(c)"
+            >
+              <span>榜单 📊</span>
+            </button>
             <button class="action-btn">
               {{ getContestStatus(c) === 'UPCOMING' ? '查看' : '进入' }}
               <svg viewBox="0 0 20 20" fill="currentColor" class="action-arrow">
@@ -142,7 +152,7 @@ onMounted(() => {
   load()
   timerId = window.setInterval(() => {
     nowRef.value = new Date()
-  }, 10000)
+  }, 1000)
 })
 
 onUnmounted(() => {
@@ -234,6 +244,27 @@ function getRemainingStr(endStr: string) {
   const mins = Math.floor((diff % 3600000) / 60000)
   if (hours === 0) return `${mins} 分钟`
   return `${hours} 小时 ${mins} 分钟`
+}
+
+function getUpcomingCountdownStr(startTimeStr: string) {
+  const start = new Date(startTimeStr).getTime()
+  const now = nowRef.value.getTime()
+  const diff = start - now
+  if (diff <= 0) return '即将开始'
+
+  const secs = Math.floor((diff / 1000) % 60)
+  const mins = Math.floor((diff / 60000) % 60)
+  const hours = Math.floor(diff / 3600000)
+
+  const hStr = hours.toString().padStart(2, '0')
+  const mStr = mins.toString().padStart(2, '0')
+  const sStr = secs.toString().padStart(2, '0')
+
+  return `${hStr}:${mStr}:${sStr}`
+}
+
+function enterLeaderboard(c: Contest) {
+  router.push(`/contests/${c.id}?tab=standings`)
 }
 </script>
 
@@ -643,6 +674,68 @@ function getRemainingStr(endStr: string) {
   transform: translateX(-20px);
 }
 
+/* ===== Secondary action btn (Leaderboard entry) ===== */
+.secondary-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 18px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
+.secondary-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+/* ===== Upcoming countdown ===== */
+.upcoming-countdown {
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.countdown-label {
+  color: var(--text-secondary);
+}
+
+.countdown-time {
+  color: var(--primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  background: var(--primary-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(15, 118, 110, 0.15);
+}
+
+html.dark .countdown-time {
+  background: rgba(45, 212, 191, 0.15) !important;
+  color: var(--el-color-primary-light-3) !important;
+  border-color: rgba(45, 212, 191, 0.25) !important;
+}
+
+html.dark .secondary-action-btn:hover {
+  background: rgba(45, 212, 191, 0.15) !important;
+  color: var(--el-color-primary-light-3) !important;
+  border-color: rgba(45, 212, 191, 0.25) !important;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 640px) {
   .contest-row {
@@ -658,11 +751,22 @@ function getRemainingStr(endStr: string) {
     border-left: none;
     border-top: 1px solid #f1f5f9;
     padding: 12px 20px;
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
     justify-content: stretch;
   }
 
+  .secondary-action-btn {
+    flex: 1;
+    margin-right: 0;
+    justify-content: center;
+  }
+
   .action-btn {
-    width: 100%;
+    flex: 1.5;
+    width: auto;
     justify-content: center;
   }
 

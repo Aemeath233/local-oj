@@ -1,6 +1,7 @@
 package com.localoj.common.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
@@ -18,6 +19,12 @@ public class Contest {
     private Integer freezeDurationMinutes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @TableField(exist = false)
+    private Long participantCount;
+
+    @TableField(exist = false)
+    private Long problemCount;
 
     public Long getId() {
         return id;
@@ -97,5 +104,21 @@ public class Contest {
 
     public void setFreezeDurationMinutes(Integer freezeDurationMinutes) {
         this.freezeDurationMinutes = freezeDurationMinutes;
+    }
+
+    public Long getParticipantCount() {
+        return participantCount;
+    }
+
+    public void setParticipantCount(Long participantCount) {
+        this.participantCount = participantCount;
+    }
+
+    public Long getProblemCount() {
+        return problemCount;
+    }
+
+    public void setProblemCount(Long problemCount) {
+        this.problemCount = problemCount;
     }
 }

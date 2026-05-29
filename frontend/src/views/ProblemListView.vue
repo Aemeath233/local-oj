@@ -5,9 +5,6 @@
         <h1>题库</h1>
         <p>{{ totalProblems }} 道题目</p>
       </div>
-      <RouterLink v-if="auth.isAdmin" to="/admin/problems">
-        <el-button :icon="ArrowRight" type="primary">管理题目</el-button>
-      </RouterLink>
     </div>
 
     <div class="panel">

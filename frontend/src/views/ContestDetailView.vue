@@ -500,6 +500,13 @@ async function loadAll() {
       if (isRegisteredOrAdmin.value) {
         problems.value = await fetchContestProblems(contestId.value)
         await loadSubmissions()
+
+        const queryTab = route.query.tab as string
+        if (queryTab && ['info', 'problems', 'submissions', 'standings'].includes(queryTab)) {
+          activeTab.value = queryTab
+        } else {
+          activeTab.value = 'problems'
+        }
       } else {
         activeTab.value = 'info'
       }
