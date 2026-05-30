@@ -611,3 +611,9 @@ export async function formatCode(language: Language, sourceCode: string) {
   return response.data.data
 }
 
+export async function fetchSystemVersions() {
+  const response = await http.get<ApiEnvelope<Record<string, number>>>('/system/versions')
+  return response.data.data
+}
+
+

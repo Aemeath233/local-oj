@@ -128,12 +128,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onActivated, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ArrowRight, Refresh, Search } from '@element-plus/icons-vue'
 import { fetchProblems, fetchProblemTags } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import { getTagColor } from '../utils/tag'
+import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
 import type { ProblemStatus, ProblemSummary, ProblemTag } from '../types'
 
 const router = useRouter()
@@ -184,6 +185,13 @@ let searchTimer: number | undefined
 onMounted(async () => {
   await loadTags()
   await load()
+  forceUpdateSectionVersion('problems')
+})
+
+onActivated(async () => {
+  if (await shouldRefreshSection('problems')) {
+    await load(true)
+  }
 })
 
 watch(keyword, () => {
@@ -207,9 +215,14 @@ async function loadTags() {
   }
 }
 
-async function load() {
-  loading.value = true
+async function load(isSilent: boolean = false) {
+  if (!isSilent) {
+    loading.value = true
+  }
   try {
+    if (!isSilent) {
+      forceUpdateSectionVersion('problems')
+    }
     const q = keyword.value.trim()
     // If keyword matches any tag name, include those tags in the search
     const matchingTags = q

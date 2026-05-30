@@ -1,6 +1,6 @@
-# Local OJ - Development & Deployment Environment
+# CodeRush OJ - Development & Deployment Environment
 
-This document describes the environment specifications, environment variables, configuration parameters, and run commands required for developing and deploying Local OJ.
+This document describes the environment specifications, environment variables, configuration parameters, and run commands required for developing and deploying CodeRush OJ.
 
 ---
 
@@ -24,7 +24,7 @@ To maintain absolute architectural stability, the following software and library
 
 ## ⚙️ Environment Configuration (`.env`)
 
-Local OJ reads environment-specific values from the shared `.env` file in the project root. Before startup, configure these values appropriately.
+CodeRush OJ reads environment-specific values from the shared `.env` file in the project root. Before startup, configure these values appropriately.
 
 ```ini
 # Database configuration

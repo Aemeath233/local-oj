@@ -1,6 +1,6 @@
-# Local OJ - Project Overview
+# CodeRush OJ - Project Overview
 
-Local OJ is a lightweight, self-contained internal Online Judge (OJ) system designed for training, exams, and code practice in secure, isolated internal networks. It focuses on absolute robustness, visual excellence, and complete offline capability.
+CodeRush OJ is a lightweight, self-contained internal Online Judge (OJ) system designed for training, exams, and code practice in secure, isolated internal networks. It focuses on absolute robustness, visual excellence, and complete offline capability.
 
 ---
 

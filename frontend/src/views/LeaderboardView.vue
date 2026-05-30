@@ -122,10 +122,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onActivated, ref, watch } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { fetchLeaderboard, fetchMyRank } from '../api/http'
 import { formatDateTime } from '../utils/time'
+import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
 import type { LeaderboardRow } from '../types'
 
 const loading = ref(false)
@@ -153,11 +154,25 @@ const pagedRows = computed(() => {
   return rows.value.slice(start, end)
 })
 
-onMounted(load)
+onMounted(() => {
+  load()
+  forceUpdateSectionVersion('leaderboard')
+})
 
-async function load() {
-  loading.value = true
+onActivated(async () => {
+  if (await shouldRefreshSection('leaderboard')) {
+    await load(true)
+  }
+})
+
+async function load(isSilent: boolean = false) {
+  if (!isSilent) {
+    loading.value = true
+  }
   try {
+    if (!isSilent) {
+      forceUpdateSectionVersion('leaderboard')
+    }
     rows.value = await fetchLeaderboard()
     myRankRow.value = await fetchMyRank()
   } catch (err) {

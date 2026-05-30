@@ -200,7 +200,7 @@ def print_header():
 ██║   ██║    ██║   ██║ ██║   ██║██║  ██║██║     ╚════██║
 ╚██████╔╝    ╚██████╔╝ ╚██████╔╝██████╔╝╚██████╗███████║
  ╚═════╝      ╚═════╝   ╚═════╝ ╚═════╝  ╚═════╝╚══════╝
-                     {MAGENTA}— Internal Local OJ System{CYAN}{BOLD}
+                     {MAGENTA}— Internal CodeRush OJ System{CYAN}{BOLD}
 {RESET}""")
 
 def run_command(cmd, desc):
@@ -379,7 +379,7 @@ def main_menu():
         
         if choice == "1":
             if check_requirements():
-                run_command(["docker", "compose", "up", "-d"], "启动 Local OJ 系统")
+                run_command(["docker", "compose", "up", "-d"], "启动 CodeRush OJ 系统")
                 show_monitor_view(ports)
         elif choice == "2":
             if check_requirements():
@@ -390,7 +390,7 @@ def main_menu():
                 rebuild_single_service()
         elif choice == "4":
             if check_requirements():
-                run_command(["docker", "compose", "down"], "停止 Local OJ 系统")
+                run_command(["docker", "compose", "down"], "停止 CodeRush OJ 系统")
                 input(f"\n{GREEN}系统已成功停止。按回车键返回...{RESET}")
         elif choice == "5":
             if check_requirements():
@@ -408,7 +408,7 @@ def main_menu():
                     print(f"\n{GREEN}操作已取消。{RESET}")
                     time.sleep(1)
         elif choice == "0":
-            print(f"\n{BLUE}👋 感谢使用 Local OJ 启动控制台，祝您编码愉快！{RESET}\n")
+            print(f"\n{BLUE}👋 感谢使用 CodeRush OJ 启动控制台，祝您编码愉快！{RESET}\n")
             sys.exit(0)
         else:
             print(f"\n{RED}❌ 输入错误，请输入 0 到 7 之间的数字！{RESET}")

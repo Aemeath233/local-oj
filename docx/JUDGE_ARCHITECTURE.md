@@ -1,4 +1,4 @@
-# Local OJ - Judge & Sandbox Architecture
+# CodeRush OJ - Judge & Sandbox Architecture
 
 This document outlines the design, execution flow, security posture, and verdict mapping rules of the sandboxed execution subsystem.
 
@@ -6,7 +6,7 @@ This document outlines the design, execution flow, security posture, and verdict
 
 ## 🔄 Judge Execution Flow
 
-Local OJ separates the judging service from the core API backend to ensure asynchronous reliability, high throughput, and robust fault-isolation.
+CodeRush OJ separates the judging service from the core API backend to ensure asynchronous reliability, high throughput, and robust fault-isolation.
 
 ```text
   User Submits Code
@@ -34,7 +34,7 @@ Local OJ separates the judging service from the core API backend to ensure async
 
 ## 🔒 Security Posture & Isolation
 
-Submitting user code is inherently running untrusted instructions on a shared system. Local OJ establishes deep defense bounds:
+Submitting user code is inherently running untrusted instructions on a shared system. CodeRush OJ establishes deep defense bounds:
 
 1. **go-judge Sandboxing**:
    - Treatment of sandboxed run as a separated HTTP service. Main API and workers do not run code natively.
@@ -55,7 +55,7 @@ Submitting user code is inherently running untrusted instructions on a shared sy
 
 The judge worker translates execution states returned by `go-judge` into a concise, standard set of Online Judge verdicts:
 
-| `go-judge` Execution Status | Exit Status | Local OJ Verdict | Verdict Description |
+| `go-judge` Execution Status | Exit Status | CodeRush OJ Verdict | Verdict Description |
 | :--- | :--- | :--- | :--- |
 | **Accepted** | `0` | **AC** (Accepted) | Code ran successfully and outputs match the test case perfectly. |
 | **Accepted** | Non-zero | **RE** (Runtime Error) | Program terminated with a non-zero exit code or crashed. |

@@ -30,6 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.concurrent.TimeUnit;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -155,7 +157,36 @@ public class SubmissionService {
     }
 
     public List<SubmissionSummary> listSummaries(CurrentUser user) {
-        return list(user).stream().map(this::toSummary).toList();
+        long current3MinIndex = System.currentTimeMillis() / (3 * 60 * 1000L);
+        String cachedKey = "cache:submissions:3min:" + current3MinIndex;
+        try {
+            String cachedJson = redisTemplate.opsForValue().get(cachedKey);
+            if (cachedJson != null && !cachedJson.isBlank()) {
+                List<SubmissionSummary> cachedList = objectMapper.readValue(
+                        cachedJson, 
+                        new TypeReference<List<SubmissionSummary>>() {}
+                );
+                if (cachedList != null && !cachedList.isEmpty()) {
+                    return cachedList;
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to read submissions list from Redis cache", e);
+        }
+
+        List<SubmissionSummary> list = list(user).stream().map(this::toSummary).toList();
+
+        if (list != null && !list.isEmpty()) {
+            try {
+                String json = objectMapper.writeValueAsString(list);
+                // Cache for 10 minutes (600 seconds) to ensure it covers the current 3-minute block, and clean up automatically
+                redisTemplate.opsForValue().set(cachedKey, json, 600, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.error("Failed to write submissions list to Redis cache", e);
+            }
+        }
+
+        return list;
     }
 
     public Submission requireVisibleSubmission(CurrentUser user, Long id) {

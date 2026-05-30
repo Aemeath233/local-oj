@@ -67,11 +67,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onActivated, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, ArrowRight, User } from '@element-plus/icons-vue'
 import { http } from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
 
 interface TrainingSetDto {
   id: number
@@ -100,11 +101,23 @@ const filteredSets = computed(() => {
 
 onMounted(() => {
   load()
+  forceUpdateSectionVersion('trainings')
 })
 
-async function load() {
-  loading.value = true
+onActivated(async () => {
+  if (await shouldRefreshSection('trainings')) {
+    await load(true)
+  }
+})
+
+async function load(isSilent: boolean = false) {
+  if (!isSilent) {
+    loading.value = true
+  }
   try {
+    if (!isSilent) {
+      forceUpdateSectionVersion('trainings')
+    }
     const res = await http.get('/training')
     if (res.data && res.data.data) {
       sets.value = res.data.data

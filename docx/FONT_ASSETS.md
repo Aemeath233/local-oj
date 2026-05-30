@@ -1,4 +1,4 @@
-# Local OJ - Local Offline Font Asset Configuration
+# CodeRush OJ - Local Offline Font Asset Configuration
 
 This document specifies the design, configuration, and maintenance details of the system's local offline font loading system.
 
@@ -6,7 +6,7 @@ This document specifies the design, configuration, and maintenance details of th
 
 ## 🎨 Design Goal
 
-Local OJ is deployed inside isolated, pure-offline enterprise networks where external Internet access is restricted. Standard browser links targeting font CDNs (like `fonts.googleapis.com` or `fonts.gstatic.com`) fail to load, resulting in slow page loading times and generic fallback typography.
+CodeRush OJ is deployed inside isolated, pure-offline enterprise networks where external Internet access is restricted. Standard browser links targeting font CDNs (like `fonts.googleapis.com` or `fonts.gstatic.com`) fail to load, resulting in slow page loading times and generic fallback typography.
 
 To ensure visual excellence, premium appearance, and complete offline capability, all fonts are bundled directly in the frontend build artifact and served locally.
 

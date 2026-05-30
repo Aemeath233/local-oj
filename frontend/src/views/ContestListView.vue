@@ -118,11 +118,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, onActivated, onDeactivated, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { fetchContests } from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
 import type { Contest } from '../types'
 
 const router = useRouter()
@@ -150,22 +151,49 @@ function countByStatus(status: string) {
   return contests.value.filter(c => getContestStatus(c) === status).length
 }
 
-onMounted(() => {
-  load()
+function startClock() {
+  if (timerId) return
   timerId = window.setInterval(() => {
     nowRef.value = new Date()
   }, 1000)
+}
+
+function stopClock() {
+  if (timerId) {
+    window.clearInterval(timerId)
+    timerId = undefined
+  }
+}
+
+onMounted(() => {
+  load()
+  startClock()
+  forceUpdateSectionVersion('contests')
 })
 
 onUnmounted(() => {
-  if (timerId) {
-    window.clearInterval(timerId)
-  }
+  stopClock()
 })
 
-async function load() {
-  loading.value = true
+onActivated(async () => {
+  if (await shouldRefreshSection('contests')) {
+    await load(true)
+  }
+  startClock()
+})
+
+onDeactivated(() => {
+  stopClock()
+})
+
+async function load(isSilent: boolean = false) {
+  if (!isSilent) {
+    loading.value = true
+  }
   try {
+    if (!isSilent) {
+      forceUpdateSectionVersion('contests')
+    }
     contests.value = await fetchContests()
   } finally {
     loading.value = false

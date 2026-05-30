@@ -156,7 +156,7 @@ public class AdminProblemController {
                     $1 \\le a, b \\le 10^9$
                     """);
             addZipText(zip, "README.md", """
-                    # LocalOJ 题目导入包规范说明
+                    # CodeRush OJ 题目导入包规范说明
 
                     本压缩包是一个标准的题目包示例，用于快速在后台导入题目。如果您使用 AI Agent（如 Claude, GPT）来为您自动批量生成题目包，可以把本规范作为提示词（Prompt）约束直接提供给 Agent 遵守。
 
@@ -219,7 +219,7 @@ public class AdminProblemController {
             addZipText(zip, "cases/2.out", "42\n");
         }
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=localoj-problem-package-example.zip")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=coderush-oj-problem-package-example.zip")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(output.toByteArray());
     }

@@ -74,7 +74,11 @@
       </el-header>
   
       <el-main class="main">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <keep-alive :include="['HomeView', 'ProblemListView', 'TrainingListView', 'LeaderboardView', 'ContestListView', 'SubmissionListView']">
+            <component :is="Component" />
+          </keep-alive>
+        </RouterView>
       </el-main>
     </el-container>
   </el-config-provider>

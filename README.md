@@ -1,4 +1,4 @@
-# Local OJ
+# CodeRush OJ
 
 A lightweight internal Online Judge system built around Spring Boot, Vue, Redis, MySQL, and go-judge.
 

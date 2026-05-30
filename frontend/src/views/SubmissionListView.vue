@@ -108,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, onActivated, onDeactivated, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { fetchSubmission, fetchSubmissions } from '../api/http'
@@ -116,6 +116,7 @@ import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
 import { ElMessage } from 'element-plus'
 import VerdictTag from '../components/VerdictTag.vue'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
+import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
 import type { SubmissionDetail, SubmissionSummary } from '../types'
 
 const loading = ref(false)
@@ -176,15 +177,40 @@ function resetFilters() {
   filterVerdict.value = ''
 }
 
-onMounted(() => {
-  load()
-  timer = window.setInterval(() => load(true), 3000)
+function startPolling() {
+  if (timer) return
+  timer = window.setInterval(async () => {
+    if (await shouldRefreshSection('submissions')) {
+      load(true)
+    }
+  }, 3000)
+}
+
+function stopPolling() {
+  if (timer) {
+    window.clearInterval(timer)
+    timer = undefined
+  }
+}
+
+onMounted(async () => {
+  await load()
+  startPolling()
 })
 
 onUnmounted(() => {
-  if (timer) {
-    window.clearInterval(timer)
+  stopPolling()
+})
+
+onActivated(async () => {
+  if (await shouldRefreshSection('submissions')) {
+    await load(true)
   }
+  startPolling()
+})
+
+onDeactivated(() => {
+  stopPolling()
 })
 
 async function load(isSilent = false) {
@@ -192,6 +218,9 @@ async function load(isSilent = false) {
     loading.value = true
   }
   try {
+    if (!isSilent) {
+      forceUpdateSectionVersion('submissions')
+    }
     submissions.value = await fetchSubmissions()
     if (drawerVisible.value && selected.value) {
       selected.value = await fetchSubmission(selected.value.submission.id)

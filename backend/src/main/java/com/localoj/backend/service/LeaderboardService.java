@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 public class LeaderboardService {
     private static final Logger log = LoggerFactory.getLogger(LeaderboardService.class);
     private static final String CACHE_KEY = "cache:leaderboard:top200";
-    private static final long CACHE_TTL_SECONDS = 3;
+    private static final long CACHE_TTL_SECONDS = 3600;
 
     private final JdbcTemplate jdbcTemplate;
     private final StringRedisTemplate redisTemplate;
@@ -36,8 +36,10 @@ public class LeaderboardService {
     }
 
     private List<LeaderboardRow> getAllLeaderboard() {
+        long currentHourIndex = System.currentTimeMillis() / 3600000L;
+        String cachedKey = "cache:leaderboard:hour:" + currentHourIndex;
         try {
-            String cachedJson = redisTemplate.opsForValue().get("cache:leaderboard:all1000");
+            String cachedJson = redisTemplate.opsForValue().get(cachedKey);
             if (cachedJson != null && !cachedJson.isBlank()) {
                 List<LeaderboardRow> cachedRows = objectMapper.readValue(
                         cachedJson, 
@@ -56,13 +58,19 @@ public class LeaderboardService {
         if (rows != null && !rows.isEmpty()) {
             try {
                 String json = objectMapper.writeValueAsString(rows);
-                redisTemplate.opsForValue().set("cache:leaderboard:all1000", json, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
+                // Cache for 2 hours (7200 seconds) to ensure it covers the current hour, and clean up automatically
+                redisTemplate.opsForValue().set(cachedKey, json, 7200, TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.error("Failed to write leaderboard to Redis cache", e);
             }
         }
 
         return rows == null ? Collections.emptyList() : rows;
+    }
+
+    public long getLastUpdatedTime() {
+        // Return the start of the current clock hour in milliseconds as the version
+        return (System.currentTimeMillis() / 3600000L) * 3600000L;
     }
 
     public List<LeaderboardRow> top(int limit) {

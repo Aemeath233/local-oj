@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# Local OJ Linux 一键生产部署与管理脚本
+# CodeRush OJ Linux 一键生产部署与管理脚本
 # ==============================================================================
 # 适用系统: Ubuntu 22.04+, Debian 12+, Rocky Linux 9+
 # 运行权限: 需要 sudo / root 权限
@@ -30,7 +30,7 @@ print_logo() {
     echo "  / /__| (_) | (_| (_| | (__| |_\ \__/\ \ \/ /            "
     echo "  \____/\___/ \___\__,_|\___|_(_)____/ \ \__/             "
     echo "                                                          "
-    echo "         Local OJ 局域网轻量化判题系统 - 一键部署工具       "
+    echo "         CodeRush OJ 局域网轻量化判题系统 - 一键部署工具       "
     echo "  ========================================================"
     echo -e "${NC}"
 }
@@ -61,7 +61,7 @@ check_root() {
 # 检查当前运行路径是否是 local-oj 根目录
 check_directory() {
     if [ ! -f "docker-compose.yml" ] || [ ! -d "backend" ] || [ ! -d "frontend" ]; then
-        log_error "当前目录似乎不是 Local OJ 项目根目录。"
+        log_error "当前目录似乎不是 CodeRush OJ 项目根目录。"
         log_info "请先进入项目克隆根目录，然后再运行此脚本："
         echo -e "  cd /path/to/local-oj && sudo ./deploy.sh"
         exit 1
@@ -267,7 +267,7 @@ configure_systemd() {
         log_info "正在写入守护服务配置文件: /etc/systemd/system/localoj.service"
         cat > /etc/systemd/system/localoj.service <<EOF
 [Unit]
-Description=Local OJ System - Docker Compose Service
+Description=CodeRush OJ System - Docker Compose Service
 Requires=docker.service
 After=docker.service
 
@@ -307,9 +307,9 @@ show_report() {
 
     echo ""
     echo -e "${GREEN}${BOLD}========================================================================"
-    echo -e "                        Local OJ 部署完毕报告                           "
+    echo -e "                        CodeRush OJ 部署完毕报告                           "
     echo -e "========================================================================${NC}"
-    echo -e "  恭喜！Local OJ 系统已经顺利在一台 Linux 宿主机上完成容器化安全部署。"
+    echo -e "  恭喜！CodeRush OJ 系统已经顺利在一台 Linux 宿主机上完成容器化安全部署。"
     echo -e ""
     echo -e "  ${BOLD}1. 访问控制路径${NC}"
     echo -e "     - 本地局域网内所有终端，均可通过如下地址访问："

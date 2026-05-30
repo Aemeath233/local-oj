@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/contests/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/leaderboard").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/profile/avatar/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/system/versions").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/admin/tags").permitAll()
                         .requestMatchers("/api/admin/settings/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/admin/users/**").hasRole("SUPER_ADMIN")
