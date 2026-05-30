@@ -14,6 +14,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
 import java.util.List;
 import java.util.Map;
 
@@ -121,7 +126,7 @@ public class ProblemController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<ProblemDetail> detail(@PathVariable("id") Long id) {
+    public ResponseEntity<?> detail(@PathVariable("id") Long id, HttpServletRequest request) {
         Problem problem = problemService.requireProblem(id);
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         if (!Boolean.TRUE.equals(problem.getVisible())) {
@@ -129,14 +134,30 @@ public class ProblemController {
                 throw new IllegalArgumentException("Problem not found");
             }
         }
+
+        String solveStatus = problemService.solveStatuses(user, List.of(id))
+                .getOrDefault(id, "UNATTEMPTED");
+        long updateEpoch = problem.getUpdatedAt() != null
+                ? problem.getUpdatedAt().toEpochSecond(java.time.ZoneOffset.UTC) : 0;
+        String etag = "\"p" + id + "-" + updateEpoch + "-" + solveStatus.hashCode() + "\"";
+
+        String ifNoneMatch = request.getHeader("If-None-Match");
+        if (etag.equals(ifNoneMatch)) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                    .eTag(etag)
+                    .cacheControl(CacheControl.noCache())
+                    .build();
+        }
+
         List<TestCase> samples = problemService.testCases(id).stream()
                 .filter(testCase -> Boolean.TRUE.equals(testCase.getSample()))
                 .toList();
-        String solveStatus = problemService.solveStatuses(user, List.of(id))
-                .getOrDefault(id, "UNATTEMPTED");
         Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(List.of(id));
         ProblemService.SubmissionStats pStats = stats.getOrDefault(id, new ProblemService.SubmissionStats(0, 0));
-        return ApiResponse.ok(ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus, pStats));
+        return ResponseEntity.ok()
+                .eTag(etag)
+                .cacheControl(CacheControl.noCache())
+                .body(ApiResponse.ok(ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus, pStats)));
     }
 
     public record ProblemSummary(

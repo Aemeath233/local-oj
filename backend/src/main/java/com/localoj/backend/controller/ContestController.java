@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
 import java.util.List;
 import java.util.Map;
 
@@ -67,20 +72,37 @@ public class ContestController {
     }
 
     @GetMapping("/{id}/problems/{problemId}")
-    public ApiResponse<ProblemController.ProblemDetail> problemDetail(
+    public ResponseEntity<?> problemDetail(
             @PathVariable("id") Long id,
-            @PathVariable("problemId") Long problemId
+            @PathVariable("problemId") Long problemId,
+            HttpServletRequest request
     ) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         Problem problem = contestService.getContestProblemDetail(id, problemId, user);
+
+        String solveStatus = problemService.solveStatuses(user, List.of(problemId))
+                .getOrDefault(problemId, "UNATTEMPTED");
+        long updateEpoch = problem.getUpdatedAt() != null
+                ? problem.getUpdatedAt().toEpochSecond(java.time.ZoneOffset.UTC) : 0;
+        String etag = "\"cp" + id + "-" + problemId + "-" + updateEpoch + "-" + solveStatus.hashCode() + "\"";
+
+        String ifNoneMatch = request.getHeader("If-None-Match");
+        if (etag.equals(ifNoneMatch)) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                    .eTag(etag)
+                    .cacheControl(CacheControl.noCache())
+                    .build();
+        }
+
         List<TestCase> samples = problemService.testCases(problemId).stream()
                 .filter(testCase -> Boolean.TRUE.equals(testCase.getSample()))
                 .toList();
-        String solveStatus = problemService.solveStatuses(user, List.of(problemId))
-                .getOrDefault(problemId, "UNATTEMPTED");
         Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(List.of(problemId));
         ProblemService.SubmissionStats pStats = stats.getOrDefault(problemId, new ProblemService.SubmissionStats(0, 0));
-        return ApiResponse.ok(ProblemController.ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus, pStats));
+        return ResponseEntity.ok()
+                .eTag(etag)
+                .cacheControl(CacheControl.noCache())
+                .body(ApiResponse.ok(ProblemController.ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus, pStats)));
     }
 
     @GetMapping("/{id}/submissions")

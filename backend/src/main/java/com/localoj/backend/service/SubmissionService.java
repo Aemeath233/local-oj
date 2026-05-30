@@ -145,6 +145,7 @@ public class SubmissionService {
                 "language=" + submission.getLanguage() + "; contestId=" + submission.getContestId()
         );
         publishJudgeJobAfterCommit(submission.getId());
+        redisTemplate.delete(SUBMISSIONS_CACHE_KEY);
         return submission;
     }
 
@@ -156,14 +157,14 @@ public class SubmissionService {
         return submissionMapper.selectList(query);
     }
 
+    private static final String SUBMISSIONS_CACHE_KEY = "cache:submissions:latest100";
+
     public List<SubmissionSummary> listSummaries(CurrentUser user) {
-        long current3MinIndex = System.currentTimeMillis() / (3 * 60 * 1000L);
-        String cachedKey = "cache:submissions:3min:" + current3MinIndex;
         try {
-            String cachedJson = redisTemplate.opsForValue().get(cachedKey);
+            String cachedJson = redisTemplate.opsForValue().get(SUBMISSIONS_CACHE_KEY);
             if (cachedJson != null && !cachedJson.isBlank()) {
                 List<SubmissionSummary> cachedList = objectMapper.readValue(
-                        cachedJson, 
+                        cachedJson,
                         new TypeReference<List<SubmissionSummary>>() {}
                 );
                 if (cachedList != null && !cachedList.isEmpty()) {
@@ -179,8 +180,7 @@ public class SubmissionService {
         if (list != null && !list.isEmpty()) {
             try {
                 String json = objectMapper.writeValueAsString(list);
-                // Cache for 10 minutes (600 seconds) to ensure it covers the current 3-minute block, and clean up automatically
-                redisTemplate.opsForValue().set(cachedKey, json, 600, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set(SUBMISSIONS_CACHE_KEY, json, 30, TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.error("Failed to write submissions list to Redis cache", e);
             }

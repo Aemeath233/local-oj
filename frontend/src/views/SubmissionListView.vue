@@ -183,7 +183,7 @@ function startPolling() {
     if (await shouldRefreshSection('submissions')) {
       load(true)
     }
-  }, 3000)
+  }, 15000)
 }
 
 function stopPolling() {

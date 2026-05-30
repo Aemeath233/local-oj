@@ -189,41 +189,8 @@ export async function fetchMyRank() {
 }
 
 export async function fetchProblem(id: number) {
-  try {
-    const versions = await fetchSystemVersions()
-    if (versions && versions.problems) {
-      const serverVersion = versions.problems
-      const cacheKey = `localoj:cache:problem:${id}`
-      const cachedStr = sessionStorage.getItem(cacheKey)
-      if (cachedStr) {
-        const cached = JSON.parse(cachedStr)
-        if (cached && cached.version >= serverVersion) {
-          return cached.data
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Failed to read problem cache or check versions', err)
-  }
-
   const response = await http.get<ApiEnvelope<ProblemDetail>>(`/problems/${id}`)
-  const problemDetail = response.data.data
-
-  try {
-    const versions = await fetchSystemVersions()
-    if (versions && versions.problems) {
-      const serverVersion = versions.problems
-      const cacheKey = `localoj:cache:problem:${id}`
-      sessionStorage.setItem(cacheKey, JSON.stringify({
-        data: problemDetail,
-        version: serverVersion
-      }))
-    }
-  } catch (err) {
-    console.error('Failed to write problem cache', err)
-  }
-
-  return problemDetail
+  return response.data.data
 }
 
 export async function submitSolution(problemId: number, language: Language, sourceCode: string) {
@@ -456,41 +423,8 @@ export async function fetchContestProblems(id: number) {
 }
 
 export async function fetchContestProblem(contestId: number, problemId: number) {
-  try {
-    const versions = await fetchSystemVersions()
-    if (versions && versions.problems) {
-      const serverVersion = versions.problems
-      const cacheKey = `localoj:cache:contest-problem:${contestId}:${problemId}`
-      const cachedStr = sessionStorage.getItem(cacheKey)
-      if (cachedStr) {
-        const cached = JSON.parse(cachedStr)
-        if (cached && cached.version >= serverVersion) {
-          return cached.data
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Failed to read contest problem cache or check versions', err)
-  }
-
   const response = await http.get<ApiEnvelope<ProblemDetail>>(`/contests/${contestId}/problems/${problemId}`)
-  const problemDetail = response.data.data
-
-  try {
-    const versions = await fetchSystemVersions()
-    if (versions && versions.problems) {
-      const serverVersion = versions.problems
-      const cacheKey = `localoj:cache:contest-problem:${contestId}:${problemId}`
-      sessionStorage.setItem(cacheKey, JSON.stringify({
-        data: problemDetail,
-        version: serverVersion
-      }))
-    }
-  } catch (err) {
-    console.error('Failed to write contest problem cache', err)
-  }
-
-  return problemDetail
+  return response.data.data
 }
 
 export async function fetchContestSubmissions(id: number) {
