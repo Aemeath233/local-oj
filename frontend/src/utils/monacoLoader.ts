@@ -1,7 +1,9 @@
 let monacoPromise: Promise<any> | null = null
 
+const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+
 const CDN_URLS = [
-  '/libs/monaco-editor/vs' // Exclusively local server path
+  `${base}/libs/monaco-editor/vs` // Exclusively local server path
 ]
 
 export function loadMonaco(): Promise<any> {

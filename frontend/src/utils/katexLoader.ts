@@ -1,11 +1,13 @@
 let katexPromise: Promise<any> | null = null
 
+const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+
 const CDN_URLS = [
-  '/libs/katex/katex.min.js' // Exclusively local server path
+  `${base}/libs/katex/katex.min.js` // Exclusively local server path
 ]
 
 const CSS_CDN_URLS = [
-  '/libs/katex/katex.min.css' // Exclusively local server path
+  `${base}/libs/katex/katex.min.css` // Exclusively local server path
 ]
 
 export function loadKaTeX(): Promise<any> {
@@ -16,11 +18,24 @@ export function loadKaTeX(): Promise<any> {
 
     function loadScript(url: string, timeout = 4000): Promise<void> {
       return new Promise((res, rej) => {
+        // Monaco's global AMD loader defines "window.define".
+        // This causes KaTeX (a UMD module) to define itself as an AMD module instead of window.katex.
+        // We temporarily override "window.define" during script execution to force UMD global registration.
+        const existingDefine = (window as any).define
+        let defineOverridden = false
+        if (existingDefine && existingDefine.amd) {
+          (window as any).define = undefined
+          defineOverridden = true
+        }
+
         const script = document.createElement('script')
         script.src = url
         script.async = true
         
         const timer = setTimeout(() => {
+          if (defineOverridden && existingDefine) {
+            (window as any).define = existingDefine
+          }
           cleanup()
           rej(new Error(`Timeout loading script: ${url}`))
         }, timeout)
@@ -35,10 +50,16 @@ export function loadKaTeX(): Promise<any> {
         }
 
         script.onload = () => {
+          if (defineOverridden && existingDefine) {
+            (window as any).define = existingDefine
+          }
           cleanup()
           res()
         }
         script.onerror = () => {
+          if (defineOverridden && existingDefine) {
+            (window as any).define = existingDefine
+          }
           cleanup()
           rej(new Error(`Failed to load script: ${url}`))
         }

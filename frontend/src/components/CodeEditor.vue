@@ -70,7 +70,7 @@ onMounted(() => {
     
     if (document.fonts) {
       document.fonts.ready.then(() => {
-        if (monaco) {
+        if (monaco && typeof (monaco.editor as any).remeasureTemplates === 'function') {
           (monaco.editor as any).remeasureTemplates()
         }
         editor?.layout()

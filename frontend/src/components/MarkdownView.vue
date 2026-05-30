@@ -212,7 +212,8 @@ markdown.renderer.rules.link_open = (tokens, index, options, env, self) => {
 }
 
 const html = computed(() => DOMPurify.sanitize(markdown.render(props.source ?? ''), {
-  USE_PROFILES: { html: true, mathMl: true }
+  USE_PROFILES: { html: true, svg: true, mathMl: true },
+  ADD_ATTR: ['aria-hidden']
 }))
 </script>
 
