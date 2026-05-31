@@ -158,6 +158,7 @@ public class JudgeQueueConsumer {
             }
         } finally {
             inFlightJobs.decrementAndGet();
+            bustSubmissionsCache();
         }
     }
 
@@ -166,6 +167,16 @@ public class JudgeQueueConsumer {
             redisTemplate.opsForList().remove(processingKey, 1, payload);
         } catch (Exception ex) {
             log.warn("Failed to ack judge job from processing queue {}", processingKey, ex);
+        }
+    }
+
+    private static final String SUBMISSIONS_CACHE_KEY = "cache:submissions:latest100";
+
+    private void bustSubmissionsCache() {
+        try {
+            redisTemplate.delete(SUBMISSIONS_CACHE_KEY);
+        } catch (Exception ex) {
+            log.warn("Failed to bust submissions list cache", ex);
         }
     }
 
