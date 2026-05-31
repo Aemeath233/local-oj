@@ -236,7 +236,6 @@ async function initProblem() {
   loading.value = true
   try {
     problem.value = await fetchProblem(problemId.value)
-    await loadSubmissions()
     clearSelfTest()
     
     // Auto populate the first sample case input if available
@@ -250,6 +249,9 @@ async function initProblem() {
   } finally {
     loading.value = false
   }
+
+  // Load submissions in the background without blocking the main page display
+  loadSubmissions()
 }
 
 onMounted(async () => {
