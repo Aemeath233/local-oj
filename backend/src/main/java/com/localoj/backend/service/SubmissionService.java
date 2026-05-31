@@ -35,6 +35,9 @@ import java.util.concurrent.TimeUnit;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Collections;
+import java.util.stream.Collectors;
 
 @Service
 public class SubmissionService {
@@ -151,6 +154,7 @@ public class SubmissionService {
 
     public List<Submission> list(CurrentUser user) {
         QueryWrapper<Submission> query = new QueryWrapper<Submission>()
+                .select("id", "user_id", "problem_id", "language", "status", "verdict", "score", "time_ms", "memory_kb", "created_at", "judged_at", "contest_id")
                 .isNull("contest_id")
                 .orderByDesc("id")
                 .last("LIMIT 100");
@@ -175,7 +179,59 @@ public class SubmissionService {
             log.error("Failed to read submissions list from Redis cache", e);
         }
 
-        List<SubmissionSummary> list = list(user).stream().map(this::toSummary).toList();
+        List<Submission> submissions = list(user);
+        if (submissions.isEmpty()) {
+            return List.of();
+        }
+
+        // Batch load users to prevent N+1 query loop
+        List<Long> userIds = submissions.stream()
+                .map(Submission::getUserId)
+                .distinct()
+                .toList();
+        Map<Long, User> userMap = Collections.emptyMap();
+        if (!userIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(userIds);
+            userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
+        }
+
+        // Batch load problems to prevent N+1 query loop
+        List<Long> problemIds = submissions.stream()
+                .map(Submission::getProblemId)
+                .distinct()
+                .toList();
+        Map<Long, Problem> problemMap = Collections.emptyMap();
+        if (!problemIds.isEmpty()) {
+            List<Problem> problems = problemMapper.selectBatchIds(problemIds);
+            problemMap = problems.stream().collect(Collectors.toMap(Problem::getId, p -> p));
+        }
+
+        final Map<Long, User> finalUserMap = userMap;
+        final Map<Long, Problem> finalProblemMap = problemMap;
+
+        List<SubmissionSummary> list = submissions.stream()
+                .map(s -> {
+                    User submitter = finalUserMap.get(s.getUserId());
+                    Problem problem = finalProblemMap.get(s.getProblemId());
+                    return new SubmissionSummary(
+                            s.getId(),
+                            s.getUserId(),
+                            submitter == null ? null : submitter.getUsername(),
+                            submitter == null ? null : submitter.getDisplayName(),
+                            submitter == null ? null : submitter.getAvatarUrl(),
+                            s.getProblemId(),
+                            problem == null ? null : problem.getTitle(),
+                            s.getLanguage().name(),
+                            s.getStatus().name(),
+                            s.getVerdict() == null ? null : s.getVerdict().name(),
+                            s.getScore(),
+                            s.getTimeMs(),
+                            s.getMemoryKb(),
+                            s.getCreatedAt(),
+                            s.getJudgedAt()
+                    );
+                })
+                .toList();
 
         if (list != null && !list.isEmpty()) {
             try {

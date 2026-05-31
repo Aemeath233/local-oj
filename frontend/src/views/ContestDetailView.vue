@@ -367,7 +367,6 @@ const selectedSubmission = ref<SubmissionDetail | null>(null)
 // live countdown variables
 const nowRef = ref(new Date())
 let countdownInterval: number | undefined
-let submissionsInterval: number | undefined
 
 // Map cache for faster lookup in Submissions tab
 const problemCodeMap = computed(() => {
@@ -451,42 +450,98 @@ const filteredStandings = computed(() => {
   )
 })
 
+let eventSource: EventSource | null = null
+let reconnectTimeout: number | undefined
+
+function connectSse() {
+  if (eventSource) return
+  if (!auth.token) return
+
+  const sseUrl = `/api/submissions/live?token=${encodeURIComponent(auth.token)}`
+  eventSource = new EventSource(sseUrl)
+
+  eventSource.addEventListener('update', (event) => {
+    try {
+      const parts = event.data.split(',')
+      if (parts.length >= 2) {
+        const subId = Number(parts[0])
+        const status = parts[1]
+        const verdict = parts[2] || null
+
+        const existing = submissions.value.find(s => s.id === subId)
+        if (existing) {
+          existing.status = status as any
+          existing.verdict = verdict as any
+
+          if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
+            fetchSubmission(subId).then(detail => {
+              selectedSubmission.value = detail
+            }).catch(console.error)
+          }
+        } else {
+          // If a new submission came in, silent refresh list
+          loadSubmissions(true)
+        }
+
+        if (status === 'FINISHED') {
+          // Silent refresh to populate time, memory, score
+          loadSubmissions(true)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to handle SSE message in ContestDetailView', err)
+    }
+  })
+
+  eventSource.onerror = (err) => {
+    console.error('SSE connection error in ContestDetailView, closing...', err)
+    disconnectSse()
+    if (!reconnectTimeout) {
+      reconnectTimeout = window.setTimeout(() => {
+        reconnectTimeout = undefined
+        connectSse()
+      }, 5000)
+    }
+  }
+}
+
+function disconnectSse() {
+  if (reconnectTimeout) {
+    window.clearTimeout(reconnectTimeout)
+    reconnectTimeout = undefined
+  }
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
+  }
+}
+
 onMounted(async () => {
   await loadAll()
   countdownInterval = window.setInterval(updateTimer, 1000)
+  if (activeTab.value === 'submissions') {
+    connectSse()
+  }
 })
 
 onUnmounted(() => {
   if (countdownInterval) {
     window.clearInterval(countdownInterval)
   }
-  if (submissionsInterval) {
-    window.clearInterval(submissionsInterval)
-  }
+  disconnectSse()
 })
 
 watch(activeTab, (tab) => {
   if (tab === 'submissions') {
     loadSubmissions()
-  } else if (tab === 'standings') {
-    loadStandings()
+    connectSse()
+  } else {
+    disconnectSse()
+    if (tab === 'standings') {
+      loadStandings()
+    }
   }
 })
-
-// Poll submissions in ContestDetailView when tab is active and there's a pending run
-watch(
-  [activeTab, submissions],
-  ([tab, list]) => {
-    const hasRunning = list.some(s => s.status === 'PENDING' || s.status === 'RUNNING')
-    if (tab === 'submissions' && hasRunning && !submissionsInterval) {
-      submissionsInterval = window.setInterval(() => loadSubmissions(true), 3000)
-    } else if ((tab !== 'submissions' || !hasRunning) && submissionsInterval) {
-      window.clearInterval(submissionsInterval)
-      submissionsInterval = undefined
-    }
-  },
-  { deep: true }
-)
 
 watch(timeState, (newVal, oldVal) => {
   if (oldVal === 'UPCOMING' && newVal === 'RUNNING') {

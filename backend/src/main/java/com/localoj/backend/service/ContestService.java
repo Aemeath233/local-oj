@@ -226,6 +226,7 @@ public class ContestService {
         Contest contest = requireContest(contestId, user);
         requireRegistration(contest, user);
         QueryWrapper<Submission> query = new QueryWrapper<Submission>()
+                .select("id", "user_id", "problem_id", "language", "status", "verdict", "score", "time_ms", "memory_kb", "created_at", "judged_at", "contest_id")
                 .eq("contest_id", contestId)
                 .orderByDesc("id");
         if (!isEnded(contest) && !isAdmin(user)) {

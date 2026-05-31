@@ -117,13 +117,14 @@ import { ElMessage } from 'element-plus'
 import VerdictTag from '../components/VerdictTag.vue'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
+import { useAuthStore } from '../stores/auth'
 import type { SubmissionDetail, SubmissionSummary } from '../types'
 
+const auth = useAuthStore()
 const loading = ref(false)
 const submissions = ref<SubmissionSummary[]>([])
 const selected = ref<SubmissionDetail | null>(null)
 const drawerVisible = ref(false)
-let timer: number | undefined
 
 // Filter states
 const filterUser = ref('')
@@ -177,40 +178,90 @@ function resetFilters() {
   filterVerdict.value = ''
 }
 
-function startPolling() {
-  if (timer) return
-  timer = window.setInterval(async () => {
-    if (await shouldRefreshSection('submissions')) {
-      load(true)
+let eventSource: EventSource | null = null
+let reconnectTimeout: number | undefined
+
+function connectSse() {
+  if (eventSource) return
+  if (!auth.token) return
+
+  const sseUrl = `/api/submissions/live?token=${encodeURIComponent(auth.token)}`
+  eventSource = new EventSource(sseUrl)
+
+  eventSource.addEventListener('update', (event) => {
+    try {
+      const parts = event.data.split(',')
+      if (parts.length >= 2) {
+        const subId = Number(parts[0])
+        const status = parts[1]
+        const verdict = parts[2] || null
+
+        const existing = submissions.value.find(s => s.id === subId)
+        if (existing) {
+          existing.status = status
+          existing.verdict = verdict
+          
+          if (drawerVisible.value && selected.value && selected.value.submission.id === subId) {
+            fetchSubmission(subId).then(detail => {
+              selected.value = detail
+            }).catch(console.error)
+          }
+        } else {
+          // New submission not in current feed, trigger reload to pull it in
+          load(true)
+        }
+
+        if (status === 'FINISHED') {
+          // Silent reload to populate exact run metrics (time, memory)
+          load(true)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to handle SSE message', err)
     }
-  }, 5000)
+  })
+
+  eventSource.onerror = (err) => {
+    console.error('SSE connection error, closing and scheduling reconnect...', err)
+    disconnectSse()
+    if (!reconnectTimeout) {
+      reconnectTimeout = window.setTimeout(() => {
+        reconnectTimeout = undefined
+        connectSse()
+      }, 5000)
+    }
+  }
 }
 
-function stopPolling() {
-  if (timer) {
-    window.clearInterval(timer)
-    timer = undefined
+function disconnectSse() {
+  if (reconnectTimeout) {
+    window.clearTimeout(reconnectTimeout)
+    reconnectTimeout = undefined
+  }
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
   }
 }
 
 onMounted(async () => {
   await load()
-  startPolling()
+  connectSse()
 })
 
 onUnmounted(() => {
-  stopPolling()
+  disconnectSse()
 })
 
 onActivated(async () => {
   if (await shouldRefreshSection('submissions')) {
     await load(true)
   }
-  startPolling()
+  connectSse()
 })
 
 onDeactivated(() => {
-  stopPolling()
+  disconnectSse()
 })
 
 async function load(isSilent = false) {

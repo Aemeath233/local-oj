@@ -16,6 +16,7 @@ import com.localoj.worker.gojudge.GoJudgeClient;
 import com.localoj.worker.gojudge.GoJudgeResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -39,6 +40,7 @@ public class JudgeService {
     private final TestCaseDataReader testCaseDataReader;
     private final SandboxSettingsProvider sandboxSettingsProvider;
     private final WorkerSystemLogService systemLogService;
+    private final StringRedisTemplate redisTemplate;
 
     public JudgeService(
             SubmissionMapper submissionMapper,
@@ -49,7 +51,8 @@ public class JudgeService {
             OutputComparator outputComparator,
             TestCaseDataReader testCaseDataReader,
             SandboxSettingsProvider sandboxSettingsProvider,
-            WorkerSystemLogService systemLogService
+            WorkerSystemLogService systemLogService,
+            StringRedisTemplate redisTemplate
     ) {
         this.submissionMapper = submissionMapper;
         this.problemMapper = problemMapper;
@@ -60,6 +63,16 @@ public class JudgeService {
         this.testCaseDataReader = testCaseDataReader;
         this.sandboxSettingsProvider = sandboxSettingsProvider;
         this.systemLogService = systemLogService;
+        this.redisTemplate = redisTemplate;
+    }
+
+    private void publishStatusUpdate(Long submissionId, SubmissionStatus status, Verdict verdict) {
+        try {
+            String msg = submissionId + "," + status.name() + "," + (verdict == null ? "" : verdict.name());
+            redisTemplate.convertAndSend("pubsub:submission-updates", msg);
+        } catch (Exception ex) {
+            log.error("Failed to publish submission status update for {}", submissionId, ex);
+        }
     }
 
     public void judge(Long submissionId) {
@@ -102,6 +115,7 @@ public class JudgeService {
         submission.setStatus(SubmissionStatus.RUNNING);
         submission.setErrorMessage(null);
         submissionMapper.updateById(submission);
+        publishStatusUpdate(submissionId, SubmissionStatus.RUNNING, null);
         caseResultMapper.delete(new QueryWrapper<SubmissionCaseResult>().eq("submission_id", submissionId));
         systemLogService.info(
                 "judge",
@@ -359,6 +373,7 @@ public class JudgeService {
         submission.setErrorMessage(trimForStorage(message));
         submission.setJudgedAt(LocalDateTime.now());
         submissionMapper.updateById(submission);
+        publishStatusUpdate(submission.getId(), SubmissionStatus.FINISHED, verdict);
         String details = "score=" + submission.getScore()
                 + "; timeMs=" + timeMs
                 + "; memoryKb=" + memoryKb
