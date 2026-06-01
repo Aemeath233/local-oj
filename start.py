@@ -6,6 +6,18 @@ import subprocess
 import re
 import shutil
 
+# Force stdout/stderr to use UTF-8 encoding to avoid UnicodeEncodeError on Windows CP936/GBK environments
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 # Initialize ANSI color codes on Windows
 if os.name == 'nt':
     os.system('color')
@@ -219,6 +231,282 @@ def run_command(cmd, desc):
         print(f"\n{YELLOW}⚠️  已取消执行。{RESET}")
         return False
 
+def get_dir_size(path):
+    """Calculate total directory size recursively."""
+    total = 0
+    try:
+        for entry in os.scandir(path):
+            if entry.is_file():
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                total += get_dir_size(entry.path)
+    except Exception:
+        pass
+    return total
+
+def get_file_size_str(size_bytes):
+    """Format bytes to human readable string."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.2f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+def get_dir_size_str(path):
+    if not os.path.exists(path):
+        return "0 B"
+    return get_file_size_str(get_dir_size(path))
+
+def find_backup_files():
+    """Find all potential backup zip files in root and backups directory."""
+    backups = []
+    # Search in root
+    try:
+        for file in os.listdir("."):
+            if file.endswith(".zip") and ("backup" in file.lower() or "localoj" in file.lower()):
+                backups.append(os.path.join(".", file))
+    except Exception:
+        pass
+            
+    # Search in backups folder
+    if os.path.exists("./backups"):
+        try:
+            for file in os.listdir("./backups"):
+                if file.endswith(".zip") and ("backup" in file.lower() or "localoj" in file.lower()):
+                    backups.append(os.path.join("backups", file))
+        except Exception:
+            pass
+                
+    # Deduplicate and sort by modification time descending (latest first)
+    unique_backups = list(set(backups))
+    try:
+        unique_backups.sort(key=os.path.getmtime, reverse=True)
+    except Exception:
+        pass
+    return unique_backups
+
+def backup_data():
+    """Backup the entire system data folder."""
+    print(CLEAR_SCREEN)
+    print_header()
+    print(f"{BOLD}💾 系统数据一键备份 (Backup Utility){RESET}\n")
+    
+    if not os.path.exists("./data") or not os.path.isdir("./data"):
+        print(f"{RED}❌ 错误: 未检测到本地数据目录 './data'！{RESET}")
+        print(f"{YELLOW}💡 提示: 请先运行主菜单选项 [1] 启动系统，系统会自动创建并初始化 './data' 目录。{RESET}")
+        input(f"\n{BLUE}按回车键返回...{RESET}")
+        return
+
+    # Check container states to see if any are running
+    states = get_container_states()
+    running_count = sum(1 for s in SERVICES if states[s["service"]]["status"] == "running")
+    
+    print(f"{CYAN}系统检测到数据目录：{RESET} ./data")
+    print(f"├─ MySQL 数据库数据: ./data/mysql (约 {get_dir_size_str('./data/mysql')})")
+    print(f"├─ Redis 缓存与队列: ./data/redis (约 {get_dir_size_str('./data/redis')})")
+    print(f"└─ OJ 评测题目与文件: ./data/oj (约 {get_dir_size_str('./data/oj')})")
+    print("-" * 50)
+    
+    print(f"{BOLD}请选择备份模式：{RESET}")
+    print(f"  {GREEN}{BOLD}[1] 安全冷备份 (推荐){RESET} - 自动暂停容器，备份数据，最后恢复运行。100% 保证数据库完整性。")
+    print(f"  [2] 快速热备份       - 不暂停容器，直接在线压缩。可能导致备份中包含未落盘的临时事务。")
+    print("  [0] 取消并返回")
+    
+    choice = input(f"\n{BOLD}请选择备份方式 [0-2]: {RESET}").strip()
+    if choice not in ["1", "2"]:
+        print(f"\n{YELLOW}操作已取消。{RESET}")
+        time.sleep(1)
+        return
+        
+    was_running = (running_count > 0)
+    
+    if choice == "1" and was_running:
+        print(f"\n{BLUE}⏳ 正在安全暂停所有运行中的 Docker 容器...{RESET}")
+        subprocess.run(["docker", "compose", "down"])
+        print(f"{GREEN}✅ 容器已成功停止运行。{RESET}")
+        
+    print(f"\n{BLUE}📦 正在对数据包进行高比例压缩打包...{RESET}")
+    
+    # Ensure backups folder exists
+    os.makedirs("./backups", exist_ok=True)
+    
+    # Generate timestamped archive
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    backup_filename = f"backup_localoj_{timestamp}"
+    backup_filepath = os.path.join("backups", backup_filename)
+    
+    try:
+        archive_path = shutil.make_archive(backup_filepath, "zip", "./data")
+        archive_size = os.path.getsize(archive_path)
+        archive_size_str = get_file_size_str(archive_size)
+        
+        print("\n" + "=" * 55)
+        print(f"{GREEN}{BOLD}🎉 备份打包成功！{RESET}")
+        print(f"📂 备份文件: {BOLD}{archive_path}{RESET}")
+        print(f"📊 文件大小: {BOLD}{archive_size_str}{RESET}")
+        print(f"📅 备份时间: {BOLD}{time.strftime('%Y-%m-%d %H:%M:%S')}{RESET}")
+        print("=" * 55)
+        
+    except Exception as e:
+        print(f"\n{RED}❌ 备份压缩失败: {e}{RESET}")
+        
+    if choice == "1" and was_running:
+        print(f"\n{BLUE}🚀 正在重新恢复并启动所有 Docker 容器...{RESET}")
+        subprocess.run(["docker", "compose", "up", "-d"])
+        print(f"{GREEN}✅ 系统已恢复运行！{RESET}")
+        
+    input(f"\n{BLUE}按回车键返回...{RESET}")
+
+def restore_data():
+    """Select and restore a backup ZIP archive."""
+    print(CLEAR_SCREEN)
+    print_header()
+    print(f"{BOLD}🔄 恢复历史备份 (Restore Utility){RESET}\n")
+    
+    backups = find_backup_files()
+    
+    if not backups:
+        print(f"{YELLOW}⚠️  未检测到任何可用的备份包 (*.zip)！{RESET}")
+        print(f"💡 提示:")
+        print(f"  1. 您可以使用选项 [1] 创建一个新的数据备份包。")
+        print(f"  2. 如果您是跨机器迁移，请将从其他机器导出的备份 zip 文件放置在项目根目录")
+        print(f"     或新建的 {BOLD}./backups{RESET} 文件夹下，然后重新进入该菜单。")
+        input(f"\n{BLUE}按回车键返回...{RESET}")
+        return
+        
+    print(f"{CYAN}检测到以下备份包 (已按时间由新到旧排序):{RESET}")
+    print("-" * 70)
+    print(f"{BOLD}{'序号':<6} | {'备份文件路径':<38} | {'文件大小':<12}{RESET}")
+    print("-" * 70)
+    
+    for idx, path in enumerate(backups, 1):
+        size_bytes = os.path.getsize(path)
+        size_str = get_file_size_str(size_bytes)
+        print(f" [{idx:<2}]  | {path:<36} | {size_str:<12}")
+    print("-" * 70)
+    print(" [0]   | 返回上一级")
+    print("-" * 70)
+    
+    choice = input(f"\n{BOLD}请选择要恢复的备份序号 [0-{len(backups)}]: {RESET}").strip()
+    if choice == "0" or not choice:
+        return
+        
+    try:
+        idx = int(choice)
+        if 1 <= idx <= len(backups):
+            selected_backup = backups[idx - 1]
+        else:
+            print(f"{RED}❌ 输入序号无效！{RESET}")
+            time.sleep(1.5)
+            return
+    except ValueError:
+        print(f"{RED}❌ 输入序号无效！{RESET}")
+        time.sleep(1.5)
+        return
+        
+    print(f"\n{RED}{BOLD}⚠️  警告：该操作是覆盖性恢复！{RESET}")
+    print(f"您选择恢复的备份是: {BOLD}{selected_backup}{RESET}")
+    print(f"这将会覆盖您现有的系统数据 (数据库、Redis、题目包等)。")
+    print(f"虽然脚本会自动备份当前数据到 `./data.old_*` 文件夹，但也请谨慎操作。")
+    
+    confirm = input(f"\n{YELLOW}{BOLD}请输入大写 'RESTORE' 确认恢复数据: {RESET}").strip()
+    if confirm != "RESTORE":
+        print(f"\n{GREEN}操作已取消。{RESET}")
+        time.sleep(1)
+        return
+        
+    # Perform cold restore
+    states = get_container_states()
+    running_count = sum(1 for s in SERVICES if states[s["service"]]["status"] == "running")
+    was_running = (running_count > 0)
+    
+    print(f"\n{BLUE}⏳ 正在停止运行中的 Docker 容器...{RESET}")
+    subprocess.run(["docker", "compose", "down"])
+    time.sleep(2) # Give Windows/WSL a brief moment to close files
+    
+    # 2. Safety rename of existing data
+    backup_old_dir = None
+    if os.path.exists("./data"):
+        old_data_timestamp = time.strftime("%Y%m%d_%H%M%S")
+        backup_old_dir = f"./data.old_{old_data_timestamp}"
+        print(f"\n{YELLOW}⚠️  正在将现有的数据目录重命名以作安全备份: {RESET}")
+        print(f"   ./data  ==>  {backup_old_dir}")
+        try:
+            os.rename("./data", backup_old_dir)
+            print(f"{GREEN}✅ 重命名备份完成！若恢复有误，您可在同目录下找回该文件夹。{RESET}")
+        except Exception as e:
+            print(f"{RED}❌ 无法重命名 './data' 目录 (可能是文件被占用): {e}{RESET}")
+            print(f"{YELLOW}💡 请尝试手动关闭任何打开了该目录的程序 (如 VS Code、命令行、文件管理器) 后重试。{RESET}")
+            if was_running:
+                print(f"\n{BLUE}🚀 正在重新启动容器恢复原状...{RESET}")
+                subprocess.run(["docker", "compose", "up", "-d"])
+            input(f"\n{BLUE}按回车键返回...{RESET}")
+            return
+            
+    # 3. Unzip
+    print(f"\n{BLUE}📦 正在解压并恢复数据文件...{RESET}")
+    try:
+        os.makedirs("./data", exist_ok=True)
+        shutil.unpack_archive(selected_backup, "./data")
+        print(f"{GREEN}✅ 数据包解压并还原成功！{RESET}")
+    except Exception as e:
+        print(f"{RED}❌ 解压恢复失败: {e}{RESET}")
+        # Rollback
+        if backup_old_dir and os.path.exists(backup_old_dir):
+            print(f"{YELLOW}⚠️  正在尝试自动恢复旧的数据目录...{RESET}")
+            try:
+                if os.path.exists("./data"):
+                    shutil.rmtree("./data")
+                os.rename(backup_old_dir, "./data")
+                print(f"{GREEN}✅ 旧数据目录已成功还原。{RESET}")
+            except Exception as re_err:
+                print(f"{RED}❌ 还原旧数据目录失败，请手动将 '{backup_old_dir}' 重命名为 'data'。{RESET}")
+        if was_running:
+            print(f"\n{BLUE}🚀 正在重新启动容器...{RESET}")
+            subprocess.run(["docker", "compose", "up", "-d"])
+        input(f"\n{BLUE}按回车键返回...{RESET}")
+        return
+        
+    # 4. Restart containers
+    print(f"\n{BLUE}🚀 正在重新启动所有 Docker 容器...{RESET}")
+    subprocess.run(["docker", "compose", "up", "-d"])
+    print(f"\n{GREEN}{BOLD}🎉 系统数据恢复已完全成功！所有服务已恢复运行。{RESET}")
+    
+    if backup_old_dir:
+        print(f"{CYAN}💡 提示: 原有数据已安全存档在 '{backup_old_dir}' 目录下，确认数据完整后可手动将其删除。{RESET}")
+        
+    input(f"\n{BLUE}按回车键返回...{RESET}")
+
+def backup_restore_menu():
+    """Backup & Restore management menu."""
+    while True:
+        print(CLEAR_SCREEN)
+        print_header()
+        print(f"{BOLD}💾 一键备份与恢复系统数据 (Backup & Restore){RESET}")
+        print("=" * 55)
+        print(f"{BOLD}1. 📦 创建数据备份 (Create Backup Archive){RESET}")
+        print(f"   将当前系统数据目录压缩归档至 backups 目录（支持冷热备份）。")
+        print()
+        print(f"{BOLD}2. 🔄 恢复数据备份 (Restore Backup Archive){RESET}")
+        print(f"   选择已有的压缩包恢复数据，自动重命名旧数据保护安全，支持跨机器。")
+        print()
+        print("0. 🔙 返回主菜单")
+        print("=" * 55)
+        
+        choice = input(f"{BOLD}请选择操作序号 [0-2]: {RESET}").strip()
+        if choice == "1":
+            backup_data()
+        elif choice == "2":
+            restore_data()
+        elif choice == "0":
+            break
+        else:
+            print(f"\n{RED}❌ 输入错误，请输入 0 到 2 之间的数字！{RESET}")
+            time.sleep(1)
+
 def show_monitor_view(ports):
     """Real-time updating dashboard showing container statuses."""
     try:
@@ -372,10 +660,11 @@ def main_menu():
         print(f"{BOLD}5. 📊 查看系统监控与健康台{RESET}")
         print(f"{BOLD}6. 📄 查看服务运行日志{RESET}")
         print(f"{BOLD}7. 🗑️  全量清理 (停止服务并彻底删除数据和缓存){RESET}")
+        print(f"{BOLD}8. 💾 一键备份与恢复系统数据 (Backup & Restore){RESET}")
         print("0. 🚪 退出脚本")
         print("=" * 50)
         
-        choice = input(f"{BOLD}请选择操作序号 [0-7]: {RESET}").strip()
+        choice = input(f"{BOLD}请选择操作序号 [0-8]: {RESET}").strip()
         
         if choice == "1":
             if check_requirements():
@@ -407,11 +696,13 @@ def main_menu():
                 else:
                     print(f"\n{GREEN}操作已取消。{RESET}")
                     time.sleep(1)
+        elif choice == "8":
+            backup_restore_menu()
         elif choice == "0":
             print(f"\n{BLUE}👋 感谢使用 CodeRush OJ 启动控制台，祝您编码愉快！{RESET}\n")
             sys.exit(0)
         else:
-            print(f"\n{RED}❌ 输入错误，请输入 0 到 7 之间的数字！{RESET}")
+            print(f"\n{RED}❌ 输入错误，请输入 0 到 8 之间的数字！{RESET}")
             time.sleep(1.5)
 
 if __name__ == "__main__":
@@ -431,9 +722,13 @@ if __name__ == "__main__":
         elif arg == "status":
             if check_requirements():
                 show_monitor_view(get_env_ports())
+        elif arg == "backup":
+            backup_data()
+        elif arg == "restore":
+            restore_data()
         else:
             print(f"Unknown argument: {arg}")
-            print("Usage: python start.py [up | down | build | status]")
+            print("Usage: python start.py [up | down | build | status | backup | restore]")
     else:
         # Interactive mode
         main_menu()

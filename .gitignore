@@ -11,10 +11,10 @@ dist/
 .env
 *.log
 
-data/mysql/
-data/redis/
-data/problems/
-data/submissions/
+data/
+backups/
+data.old*/
+__pycache__/
 
 scratch/
 
