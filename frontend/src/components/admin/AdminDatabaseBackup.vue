@@ -1,6 +1,7 @@
 <template>
   <div class="tab-content backup-tab" v-loading="loading">
     <div v-if="backupData">
+      <!-- Database Connection Meta Info -->
       <div class="backup-meta-grid">
         <div class="meta-card">
           <div class="meta-item">
@@ -24,44 +25,69 @@
         </div>
       </div>
 
-      <!-- Commands sections -->
+      <!-- Commands sections grouped by Environment -->
       <div class="commands-list">
-        <!-- Command Box 1 -->
-        <div class="command-box">
-          <div class="box-header">
+        <!-- Group 1: Docker Compose Container Environment -->
+        <div class="command-group-card">
+          <div class="group-header">
             <span class="badge docker">Docker 容器环境</span>
-            <h4>通过宿主机控制台一键备份 (推荐)</h4>
-            <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.dockerBackupCommand)">一键复制</el-button>
+            <h3>Docker-Compose 容器运行模式 (推荐)</h3>
           </div>
-          <p class="desc">在部署了 Docker-Compose 的宿主机终端直接运行。命令会读取 MySQL 容器内的密码环境变量，不会在页面展示明文密码：</p>
-          <div class="code-container">
-            <pre><code>{{ backupData.dockerBackupCommand }}</code></pre>
+          <p class="group-desc">最简单的备份恢复模式。直接在运行 Docker 的宿主机终端执行，命令会自动读取容器内部的环境变量密码，安全且无需输入明文：</p>
+          
+          <!-- Docker Backup -->
+          <div class="command-box">
+            <div class="box-header">
+              <span class="action-tag backup">一键备份数据库 (Backup)</span>
+              <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.dockerBackupCommand)">复制备份命令</el-button>
+            </div>
+            <div class="code-container">
+              <pre><code>{{ backupData.dockerBackupCommand }}</code></pre>
+            </div>
+          </div>
+
+          <!-- Docker Restore -->
+          <div class="command-box">
+            <div class="box-header">
+              <span class="action-tag restore">一键恢复数据库 (Restore)</span>
+              <el-button size="small" type="danger" link :icon="DocumentCopy" @click="copyText(backupData.dockerRestoreCommand)">复制恢复命令</el-button>
+            </div>
+            <p class="sub-desc"><span class="warn-label">警告：</span>恢复操作为覆盖写，会覆盖当前同名数据库的数据表，请在恢复前再次确认备份 SQL 的文件名！</p>
+            <div class="code-container">
+              <pre><code>{{ backupData.dockerRestoreCommand }}</code></pre>
+            </div>
           </div>
         </div>
 
-        <!-- Command Box 2 -->
-        <div class="command-box">
-          <div class="box-header">
+        <!-- Group 2: Exposed Port Local Client Environment -->
+        <div class="command-group-card">
+          <div class="group-header">
             <span class="badge host">宿主机外置端口</span>
-            <h4>通过 3307 映射端口备份</h4>
-            <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.nativeBackupCommand)">一键复制</el-button>
+            <h3>物理/外置客户端模式</h3>
           </div>
-          <p class="desc">在外部局域网或宿主机控制台直接基于暴露的 3307 端口调取客户端工具输出。运行命令后需要输入数据库密码：</p>
-          <div class="code-container">
-            <pre><code>{{ backupData.nativeBackupCommand }}</code></pre>
-          </div>
-        </div>
+          <p class="group-desc">适合本地装有 MySQL/mysqldump 客户端或需要异地/外部服务器备份还原的情景（基于暴露的 3307 映射端口）：</p>
 
-        <!-- Command Box 3 -->
-        <div class="command-box">
-          <div class="box-header">
-            <span class="badge danger">高危还原</span>
-            <h4>数据恢复/还原指令 (Restore)</h4>
-            <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.dockerRestoreCommand)">一键复制</el-button>
+          <!-- Native Backup -->
+          <div class="command-box">
+            <div class="box-header">
+              <span class="action-tag backup">端口备份数据库 (Backup)</span>
+              <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.nativeBackupCommand)">复制备份命令</el-button>
+            </div>
+            <div class="code-container">
+              <pre><code>{{ backupData.nativeBackupCommand }}</code></pre>
+            </div>
           </div>
-          <p class="desc">当发生系统损坏时，将之前备份的 SQL 文件还原覆盖写入 Docker 容器数据库：</p>
-          <div class="code-container">
-            <pre><code>{{ backupData.dockerRestoreCommand }}</code></pre>
+
+          <!-- Native Restore -->
+          <div class="command-box">
+            <div class="box-header">
+              <span class="action-tag restore">端口恢复数据库 (Restore)</span>
+              <el-button size="small" type="danger" link :icon="DocumentCopy" @click="copyText(backupData.nativeRestoreCommand)">复制恢复命令</el-button>
+            </div>
+            <p class="sub-desc"><span class="warn-label">警告：</span>数据还原覆盖操作。执行后，终端会提示输入密码，请配合输入数据库管理员密码确认：</p>
+            <div class="code-container">
+              <pre><code>{{ backupData.nativeRestoreCommand }}</code></pre>
+            </div>
           </div>
         </div>
       </div>
@@ -69,7 +95,7 @@
       <!-- Maintenance Guidelines -->
       <div class="maintenance-box mt-4">
         <div class="section-title">
-          <el-icon><InfoFilled /></el-icon> 运维维护最佳实践建议
+          <el-icon><InfoFilled /></el-icon> 运维维护及灾备恢复最佳实践建议
         </div>
         <ul class="guideline-list">
           <li v-for="(rec, idx) in backupData.recommendations" :key="idx">
@@ -149,50 +175,105 @@ function copyText(text: string) {
 }
 
 .meta-item .val code {
-  background: #fff;
+  background: var(--bg-muted, #f3f4f6);
   padding: 2px 6px;
   border-radius: 4px;
   border: 1px solid var(--el-border-color-light);
   font-family: var(--font-mono, monospace);
-  color: var(--el-color-primary);
+  color: var(--primary, #0284c7);
 }
 
 .commands-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
   margin-bottom: 2rem;
 }
 
+.command-group-card {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.group-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+}
+
+.group-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #4b5563);
+  line-height: 1.5;
+}
+
 .command-box {
-  background: #fafbfc;
-  border: 1px solid #d8dee6;
+  background: var(--bg-muted, #f9fafb);
+  border: 1px solid var(--border-color, #e5e7eb);
   border-radius: 8px;
   padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .box-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 0.75rem;
+  justify-content: space-between;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
-.box-header h4 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+.action-tag {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 4px;
 }
 
-.box-header .el-button {
-  margin-left: auto;
+.action-tag.backup {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.action-tag.restore {
+  background: #fff5f5;
+  color: #e53e3e;
+  border: 1px solid #fed7d7;
+}
+
+.sub-desc {
+  margin: 0 0 4px 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #4b5563);
+  line-height: 1.4;
+}
+
+.warn-label {
+  color: #e53e3e;
+  font-weight: 700;
 }
 
 .badge {
   font-size: 0.75rem;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 4px;
   font-weight: 600;
 }
@@ -209,35 +290,32 @@ function copyText(text: string) {
   border: 1px solid #bbf7d0;
 }
 
-.badge.danger {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-}
-
-.command-box .desc {
-  margin: 0 0 10px 0;
-  font-size: 0.88rem;
-  color: var(--el-text-color-secondary);
-  line-height: 1.4;
-}
-
 .code-container {
-  background: #0f172a;
+  background: #0f172a !important; /* Enforce premium deep slate black background */
   border-radius: 6px;
-  padding: 12px 16px;
+  padding: 14px 18px;
   overflow-x: auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .code-container pre {
-  margin: 0;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
 }
 
 .code-container code {
-  color: #e2e8f0;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.88rem;
+  color: #38bdf8 !important; /* Premium light cyan color for commands, 100% high contrast and visible */
+  background: transparent !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 0.9rem !important;
+  padding: 0 !important;
+  border: none !important;
+  text-shadow: 0 0 2px rgba(56, 189, 248, 0.2);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .maintenance-box {
