@@ -111,7 +111,7 @@
 import { computed, onMounted, onUnmounted, onActivated, onDeactivated, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh, Search } from '@element-plus/icons-vue'
-import { fetchSubmission, fetchSubmissions } from '../api/http'
+import { fetchSubmission, fetchSubmissions, requestSseTicket } from '../api/http'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
 import { ElMessage } from 'element-plus'
 import VerdictTag from '../components/VerdictTag.vue'
@@ -181,49 +181,60 @@ function resetFilters() {
 let eventSource: EventSource | null = null
 let reconnectTimeout: number | undefined
 
-function connectSse() {
+async function connectSse() {
   if (eventSource) return
   if (!auth.token) return
 
-  const sseUrl = `/api/submissions/live?token=${encodeURIComponent(auth.token)}`
-  eventSource = new EventSource(sseUrl)
+  try {
+    const ticket = await requestSseTicket()
+    const sseUrl = `/api/submissions/live?ticket=${encodeURIComponent(ticket)}`
+    eventSource = new EventSource(sseUrl)
 
-  eventSource.addEventListener('update', (event) => {
-    try {
-      const parts = event.data.split(',')
-      if (parts.length >= 2) {
-        const subId = Number(parts[0])
-        const status = parts[1]
-        const verdict = parts[2] || null
+    eventSource.addEventListener('update', (event) => {
+      try {
+        const parts = event.data.split(',')
+        if (parts.length >= 2) {
+          const subId = Number(parts[0])
+          const status = parts[1]
+          const verdict = parts[2] || null
 
-        const existing = submissions.value.find(s => s.id === subId)
-        if (existing) {
-          existing.status = status
-          existing.verdict = verdict
-          
-          if (drawerVisible.value && selected.value && selected.value.submission.id === subId) {
-            fetchSubmission(subId).then(detail => {
-              selected.value = detail
-            }).catch(console.error)
+          const existing = submissions.value.find(s => s.id === subId)
+          if (existing) {
+            existing.status = status
+            existing.verdict = verdict
+            
+            if (drawerVisible.value && selected.value && selected.value.submission.id === subId) {
+              fetchSubmission(subId).then(detail => {
+                selected.value = detail
+              }).catch(console.error)
+            }
+          } else {
+            // New submission not in current feed, trigger reload to pull it in
+            load(true)
           }
-        } else {
-          // New submission not in current feed, trigger reload to pull it in
-          load(true)
-        }
 
-        if (status === 'FINISHED') {
-          // Silent reload to populate exact run metrics (time, memory)
-          load(true)
+          if (status === 'FINISHED') {
+            // Silent reload to populate exact run metrics (time, memory)
+            load(true)
+          }
         }
+      } catch (err) {
+        console.error('Failed to handle SSE message', err)
       }
-    } catch (err) {
-      console.error('Failed to handle SSE message', err)
-    }
-  })
+    })
 
-  eventSource.onerror = (err) => {
-    console.error('SSE connection error, closing and scheduling reconnect...', err)
-    disconnectSse()
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error, closing and scheduling reconnect...', err)
+      disconnectSse()
+      if (!reconnectTimeout) {
+        reconnectTimeout = window.setTimeout(() => {
+          reconnectTimeout = undefined
+          connectSse()
+        }, 5000)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to obtain SSE ticket, scheduling reconnect...', err)
     if (!reconnectTimeout) {
       reconnectTimeout = window.setTimeout(() => {
         reconnectTimeout = undefined

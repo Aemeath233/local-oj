@@ -42,17 +42,17 @@
           <el-input :value="props.form.email" disabled />
         </el-form-item>
         
-        <el-form-item label="原邮箱验证码" prop="code">
+        <el-form-item label="新邮箱" prop="newEmail">
+          <el-input v-model="emailForm.newEmail" placeholder="请输入新邮箱" />
+        </el-form-item>
+
+        <el-form-item label="新邮箱验证码" prop="code">
           <div class="code-input-row">
             <el-input v-model="emailForm.code" placeholder="输入 6 位验证码" maxlength="6" />
             <el-button type="primary" :disabled="countdown > 0" @click="sendEmailCode" :loading="sendingCode">
               {{ countdown > 0 ? `${countdown} 秒后重试` : '发送验证码' }}
             </el-button>
           </div>
-        </el-form-item>
-        
-        <el-form-item label="新邮箱" prop="newEmail">
-          <el-input v-model="emailForm.newEmail" placeholder="请输入新邮箱" />
         </el-form-item>
       </el-form>
       
@@ -158,10 +158,20 @@ function openEmailDialog() {
 }
 
 async function sendEmailCode() {
+  if (!emailForm.newEmail) {
+    ElMessage.warning('请输入新邮箱')
+    return
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(emailForm.newEmail.trim())) {
+    ElMessage.warning('请输入正确的邮箱格式')
+    return
+  }
+
   sendingCode.value = true
   try {
-    await requestEmailChangeCode()
-    ElMessage.success('验证码已发送至原邮箱，请注意查收')
+    await requestEmailChangeCode(emailForm.newEmail.trim())
+    ElMessage.success('验证码已发送至新邮箱，请注意查收')
     countdown.value = 60
     timer = window.setInterval(() => {
       if (countdown.value > 0) {

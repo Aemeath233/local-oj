@@ -381,25 +381,29 @@ public class ProfileService {
         );
     }
 
-    public void sendEmailChangeCode(CurrentUser currentUser) {
+    public void sendEmailChangeCode(CurrentUser currentUser, String newEmail) {
         User user = requireUser(currentUser.id());
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            throw new IllegalArgumentException("当前账号未绑定邮箱，无法发送换绑验证码");
+        String normalizedNewEmail = emailVerificationService.normalizeEmail(newEmail);
+        if (normalizedNewEmail.equals(user.getEmail())) {
+            throw new IllegalArgumentException("新邮箱不能与当前邮箱相同");
         }
-        emailVerificationService.sendEmailChangeCode(user.getEmail());
+        Long count = userMapper.selectCount(new QueryWrapper<User>()
+                .eq("email", normalizedNewEmail)
+                .ne("id", user.getId()));
+        if (count > 0) {
+            throw new IllegalArgumentException("新邮箱已被其他账号绑定");
+        }
+        emailVerificationService.sendEmailChangeCode(normalizedNewEmail);
     }
 
     @Transactional
     public ProfileView changeEmail(CurrentUser currentUser, String newEmail, String code) {
         User user = requireUser(currentUser.id());
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            throw new IllegalArgumentException("当前账号没有邮箱，无法换绑");
-        }
         String normalizedNewEmail = emailVerificationService.normalizeEmail(newEmail);
         if (normalizedNewEmail.equals(user.getEmail())) {
-            throw new IllegalArgumentException("新邮箱不能与旧邮箱相同");
+            throw new IllegalArgumentException("新邮箱不能与当前邮箱相同");
         }
-        emailVerificationService.consumeEmailChangeCode(user.getEmail(), code);
+        emailVerificationService.consumeEmailChangeCode(normalizedNewEmail, code);
 
         Long count = userMapper.selectCount(new QueryWrapper<User>()
                 .eq("email", normalizedNewEmail)

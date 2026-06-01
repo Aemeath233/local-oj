@@ -133,13 +133,18 @@ export async function fetchPublicProfile(userId: number) {
   return response.data.data
 }
 
-export async function requestEmailChangeCode() {
-  await http.post<ApiEnvelope<null>>('/profile/email-change-code')
+export async function requestEmailChangeCode(newEmail: string) {
+  await http.post<ApiEnvelope<null>>('/profile/email-change-code', { newEmail })
 }
 
 export async function changeEmail(payload: { newEmail: string; code: string }) {
   const response = await http.put<ApiEnvelope<User>>('/profile/email', payload)
   return response.data.data
+}
+
+export async function requestSseTicket() {
+  const response = await http.post<ApiEnvelope<{ ticket: string }>>('/submissions/sse-ticket')
+  return response.data.data.ticket
 }
 
 export async function uploadAvatar(file: File) {

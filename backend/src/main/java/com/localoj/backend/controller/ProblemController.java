@@ -43,51 +43,11 @@ public class ProblemController {
             @RequestParam(value = "sortBy", defaultValue = "ID_ASC") String sortBy
     ) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
-        List<Problem> problems = problemService.visibleProblems(keyword, tags);
-        List<Long> problemIds = problems.stream().map(Problem::getId).toList();
-        Map<Long, String> statuses = problemService.solveStatuses(user, problemIds);
-        Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(problemIds);
-        String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
-        
-        List<ProblemSummary> filtered = problems.stream()
-                .map(problem -> ProblemSummary.from(
-                        problem,
-                        statuses.getOrDefault(problem.getId(), "UNATTEMPTED"),
-                        stats.getOrDefault(problem.getId(), new ProblemService.SubmissionStats(0, 0))
-                ))
-                .filter(summary -> normalizedStatus.isBlank() || normalizedStatus.equals(summary.solveStatus()))
-                .toList();
-
-        List<ProblemSummary> mutableFiltered = new java.util.ArrayList<>(filtered);
-        
-        if ("ID_DESC".equalsIgnoreCase(sortBy)) {
-            mutableFiltered.sort((a, b) -> b.id().compareTo(a.id()));
-        } else if ("DIFFICULTY_ASC".equalsIgnoreCase(sortBy)) {
-            mutableFiltered.sort((a, b) -> Integer.compare(difficultyValue(a.difficulty()), difficultyValue(b.difficulty())));
-        } else if ("DIFFICULTY_DESC".equalsIgnoreCase(sortBy)) {
-            mutableFiltered.sort((a, b) -> Integer.compare(difficultyValue(b.difficulty()), difficultyValue(a.difficulty())));
-        } else if ("AC_RATE_DESC".equalsIgnoreCase(sortBy)) {
-            mutableFiltered.sort((a, b) -> Double.compare(acRate(b), acRate(a)));
-        } else if ("AC_RATE_ASC".equalsIgnoreCase(sortBy)) {
-            mutableFiltered.sort((a, b) -> Double.compare(acRate(a), acRate(b)));
-        } else {
-            mutableFiltered.sort((a, b) -> a.id().compareTo(b.id()));
+        ProblemListResult result = problemService.listProblemsPaged(keyword, tags, user, status, sortBy, page, pageSize);
+        if (page == null) {
+            return ApiResponse.ok(result.list());
         }
-
-        if (page != null) {
-            int total = mutableFiltered.size();
-            int fromIndex = (page - 1) * pageSize;
-            int toIndex = Math.min(fromIndex + pageSize, total);
-            List<ProblemSummary> pageList;
-            if (fromIndex >= total || fromIndex < 0) {
-                pageList = List.of();
-            } else {
-                pageList = mutableFiltered.subList(fromIndex, toIndex);
-            }
-            return ApiResponse.ok(new ProblemListResult(pageList, total));
-        }
-
-        return ApiResponse.ok(mutableFiltered);
+        return ApiResponse.ok(result);
     }
 
     private int difficultyValue(String difficulty) {

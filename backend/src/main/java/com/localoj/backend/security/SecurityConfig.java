@@ -18,6 +18,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -25,6 +29,31 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Autowired
+    private Environment environment;
+
+    @Value("${app.jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${app.admin.password:admin123}")
+    private String adminPassword;
+
+    @PostConstruct
+    public void validateProdSecuritySettings() {
+        if (environment != null && Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
+            if ("change-this-internal-secret-at-least-32-bytes".equals(jwtSecret)
+                    || jwtSecret == null
+                    || jwtSecret.contains("change-this-internal-secret-at-least-32-bytes")
+                    || jwtSecret.length() < 32) {
+                throw new IllegalStateException("FATAL: Production mode is active, but the default JWT secret is in use or is insecure! Please set JWT_SECRET in environment variables with at least 32 bytes.");
+            }
+            if ("admin123".equals(adminPassword)) {
+                throw new IllegalStateException("FATAL: Production mode is active, but the default ADMIN_PASSWORD is in use! Please set ADMIN_PASSWORD in environment variables.");
+            }
+        }
+    }
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         return http

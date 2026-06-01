@@ -79,14 +79,19 @@ public class ProfileController {
     }
 
     @PostMapping("/email-change-code")
-    public ApiResponse<Object> sendEmailChangeCode() {
-        profileService.sendEmailChangeCode(SecurityUtils.currentUser());
+    public ApiResponse<Object> sendEmailChangeCode(@Valid @RequestBody SendEmailChangeCodeRequest request) {
+        profileService.sendEmailChangeCode(SecurityUtils.currentUser(), request.newEmail());
         return ApiResponse.ok(null);
     }
 
     @PutMapping("/email")
     public ApiResponse<ProfileService.ProfileView> changeEmail(@Valid @RequestBody ChangeEmailRequest request) {
         return ApiResponse.ok(profileService.changeEmail(SecurityUtils.currentUser(), request.newEmail(), request.code()));
+    }
+
+    public record SendEmailChangeCodeRequest(
+            @NotBlank @jakarta.validation.constraints.Email String newEmail
+    ) {
     }
 
     public record UpdateProfileRequest(String username, @NotBlank String displayName, String studentNo, String major) {

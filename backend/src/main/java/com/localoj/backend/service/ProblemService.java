@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class ProblemService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ProblemService.class);
+
     private final ProblemMapper problemMapper;
     private final TestCaseMapper testCaseMapper;
     private final SubmissionMapper submissionMapper;
@@ -36,6 +38,7 @@ public class ProblemService {
     private final ProblemSolutionMapper problemSolutionMapper;
     private final ProblemTagMapper problemTagMapper;
     private final ProblemTagRelationMapper problemTagRelationMapper;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public ProblemService(
             ProblemMapper problemMapper,
@@ -45,7 +48,8 @@ public class ProblemService {
             ContestProblemVisibilityService contestProblemVisibilityService,
             ProblemSolutionMapper problemSolutionMapper,
             ProblemTagMapper problemTagMapper,
-            ProblemTagRelationMapper problemTagRelationMapper
+            ProblemTagRelationMapper problemTagRelationMapper,
+            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate
     ) {
         this.problemMapper = problemMapper;
         this.testCaseMapper = testCaseMapper;
@@ -55,6 +59,7 @@ public class ProblemService {
         this.problemSolutionMapper = problemSolutionMapper;
         this.problemTagMapper = problemTagMapper;
         this.problemTagRelationMapper = problemTagRelationMapper;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     public List<Problem> visibleProblems() {
@@ -381,6 +386,239 @@ public class ProblemService {
             val = map.get(key.toUpperCase());
         }
         return val instanceof Number ? ((Number) val).intValue() : null;
+    }
+
+    public com.localoj.backend.controller.ProblemController.ProblemListResult listProblemsPaged(
+            String keyword,
+            List<String> tags,
+            CurrentUser user,
+            String status,
+            String sortBy,
+            Integer page,
+            int pageSize
+    ) {
+        contestProblemVisibilityService.releaseEndedContestLocks();
+
+        StringBuilder sql = new StringBuilder();
+        StringBuilder countSql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        List<Object> countParams = new ArrayList<>();
+
+        sql.append("SELECT p.id, p.slug, p.title, p.difficulty, p.time_limit_ms, p.memory_limit_kb, p.visible, ");
+        sql.append("COALESCE(stats.submit_cnt, 0) as submit_cnt, ");
+        sql.append("COALESCE(stats.ac_cnt, 0) as ac_cnt, ");
+        sql.append("(CAST(COALESCE(stats.ac_cnt, 0) AS DOUBLE) / CASE WHEN COALESCE(stats.submit_cnt, 0) > 0 THEN stats.submit_cnt ELSE 1 END) as ac_rate ");
+        sql.append("FROM problems p ");
+
+        countSql.append("FROM problems p ");
+
+        // Left join stats
+        String statsJoin = "LEFT JOIN ( " +
+                "    SELECT problem_id, COUNT(*) as submit_cnt, SUM(CASE WHEN verdict = 'AC' THEN 1 ELSE 0 END) as ac_cnt " +
+                "    FROM submissions " +
+                "    GROUP BY problem_id " +
+                ") stats ON p.id = stats.problem_id ";
+        sql.append(statsJoin);
+        countSql.append(statsJoin);
+
+        // Left join user status if logged in
+        if (user != null) {
+            String userJoin = "LEFT JOIN ( " +
+                    "    SELECT problem_id, MAX(CASE WHEN verdict = 'AC' THEN 2 ELSE 1 END) as user_status " +
+                    "    FROM submissions " +
+                    "    WHERE user_id = ? " +
+                    "    GROUP BY problem_id " +
+                    ") s_user ON p.id = s_user.problem_id ";
+            sql.append(userJoin);
+            countSql.append(userJoin);
+            params.add(user.id());
+            countParams.add(user.id());
+        }
+
+        // WHERE clauses
+        StringBuilder where = new StringBuilder("WHERE p.visible = 1 ");
+
+        // Tag filter
+        if (tags != null && !tags.isEmpty()) {
+            List<String> normalizedFilterTags = tags.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .flatMap(value -> Arrays.stream(value.split("[,，]")))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .distinct()
+                    .toList();
+            if (!normalizedFilterTags.isEmpty()) {
+                where.append("AND p.id IN ( ");
+                where.append("    SELECT ptr.problem_id FROM problem_tag_relation ptr ");
+                where.append("    JOIN problem_tags pt ON ptr.tag_id = pt.id ");
+                where.append("    WHERE pt.name IN (");
+                where.append(normalizedFilterTags.stream().map(t -> "?").collect(Collectors.joining(",")));
+                where.append(") ");
+                where.append("    GROUP BY ptr.problem_id HAVING COUNT(DISTINCT pt.id) = ");
+                where.append(normalizedFilterTags.size());
+                where.append(") ");
+
+                for (String t : normalizedFilterTags) {
+                    params.add(t);
+                    countParams.add(t);
+                }
+            }
+        }
+
+        // Keyword filter
+        String normalizedKeyword = keyword == null ? "" : keyword.trim();
+        if (!normalizedKeyword.isEmpty()) {
+            where.append("AND (p.title LIKE ? OR p.slug LIKE ? OR p.description LIKE ? ");
+            params.add("%" + normalizedKeyword + "%");
+            params.add("%" + normalizedKeyword + "%");
+            params.add("%" + normalizedKeyword + "%");
+            countParams.add("%" + normalizedKeyword + "%");
+            countParams.add("%" + normalizedKeyword + "%");
+            countParams.add("%" + normalizedKeyword + "%");
+
+            Long id = parseId(normalizedKeyword);
+            if (id != null) {
+                where.append("OR p.id = ? ");
+                params.add(id);
+                countParams.add(id);
+            }
+
+            // Tags match via keyword
+            where.append("OR p.id IN ( ");
+            where.append("    SELECT ptr.problem_id FROM problem_tag_relation ptr ");
+            where.append("    JOIN problem_tags pt ON ptr.tag_id = pt.id ");
+            where.append("    WHERE pt.name LIKE ? ");
+            where.append(") ) ");
+            params.add("%" + normalizedKeyword + "%");
+            countParams.add("%" + normalizedKeyword + "%");
+        }
+
+        // Status filter
+        if (status != null && !status.trim().isEmpty()) {
+            String normalizedStatus = status.trim().toUpperCase();
+            if (user == null) {
+                if (!"UNATTEMPTED".equals(normalizedStatus)) {
+                    // Guest has no attempted/accepted problems
+                    where.append("AND 1 = 0 ");
+                }
+            } else {
+                if ("ACCEPTED".equals(normalizedStatus)) {
+                    where.append("AND s_user.user_status = 2 ");
+                } else if ("ATTEMPTED".equals(normalizedStatus)) {
+                    where.append("AND s_user.user_status = 1 ");
+                } else if ("UNATTEMPTED".equals(normalizedStatus)) {
+                    where.append("AND (s_user.user_status IS NULL OR s_user.user_status = 0) ");
+                }
+            }
+        }
+
+        sql.append(where);
+        countSql.insert(0, "SELECT COUNT(DISTINCT p.id) ");
+        countSql.append(where);
+
+        // Sorting
+        String orderClause = "ORDER BY p.id ASC ";
+        if ("ID_DESC".equalsIgnoreCase(sortBy)) {
+            orderClause = "ORDER BY p.id DESC ";
+        } else if ("DIFFICULTY_ASC".equalsIgnoreCase(sortBy)) {
+            orderClause = "ORDER BY CASE WHEN UPPER(p.difficulty) IN ('EASY', '简单') THEN 1 WHEN UPPER(p.difficulty) IN ('MEDIUM', '中等') THEN 2 WHEN UPPER(p.difficulty) IN ('HARD', '困难') THEN 3 ELSE 0 END ASC, p.id ASC ";
+        } else if ("DIFFICULTY_DESC".equalsIgnoreCase(sortBy)) {
+            orderClause = "ORDER BY CASE WHEN UPPER(p.difficulty) IN ('EASY', '简单') THEN 1 WHEN UPPER(p.difficulty) IN ('MEDIUM', '中等') THEN 2 WHEN UPPER(p.difficulty) IN ('HARD', '困难') THEN 3 ELSE 0 END DESC, p.id DESC ";
+        } else if ("AC_RATE_DESC".equalsIgnoreCase(sortBy)) {
+            orderClause = "ORDER BY ac_rate DESC, p.id DESC ";
+        } else if ("AC_RATE_ASC".equalsIgnoreCase(sortBy)) {
+            orderClause = "ORDER BY ac_rate ASC, p.id ASC ";
+        }
+        sql.append(orderClause);
+
+        // Count query
+        long total = 0;
+        try {
+            Long countVal = jdbcTemplate.queryForObject(countSql.toString(), Long.class, countParams.toArray());
+            total = countVal != null ? countVal : 0L;
+        } catch (Exception e) {
+            log.error("Failed to query problems count", e);
+        }
+
+        // Limit & offset
+        if (page != null && page > 0) {
+            int offset = (page - 1) * pageSize;
+            sql.append("LIMIT ? OFFSET ? ");
+            params.add(pageSize);
+            params.add(offset);
+        }
+
+        List<com.localoj.backend.controller.ProblemController.ProblemSummary> list = new ArrayList<>();
+        try {
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+            // Collect ids to populate tags
+            List<Long> problemIds = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                problemIds.add(getLongValue(row, "id"));
+            }
+
+            // Query tags for these problems
+            Map<Long, String> problemTagsMap = new HashMap<>();
+            if (!problemIds.isEmpty()) {
+                List<ProblemTagRelation> relations = problemTagRelationMapper.selectList(
+                        new QueryWrapper<ProblemTagRelation>().in("problem_id", problemIds)
+                );
+                if (!relations.isEmpty()) {
+                    List<Long> tagIds = relations.stream().map(ProblemTagRelation::getTagId).distinct().toList();
+                    List<ProblemTag> matchingTags = problemTagMapper.selectList(
+                            new QueryWrapper<ProblemTag>().in("id", tagIds)
+                    );
+                    Map<Long, String> tagIdToName = matchingTags.stream()
+                            .collect(Collectors.toMap(ProblemTag::getId, ProblemTag::getName));
+                    for (ProblemTagRelation rel : relations) {
+                        String tagName = tagIdToName.get(rel.getTagId());
+                        if (tagName != null) {
+                            problemTagsMap.merge(rel.getProblemId(), tagName, (existing, add) -> existing + "," + add);
+                        }
+                    }
+                }
+            }
+
+            for (Map<String, Object> row : rows) {
+                Long id = getLongValue(row, "id");
+                String slug = (String) row.getOrDefault("slug", row.get("SLUG"));
+                String title = (String) row.getOrDefault("title", row.get("TITLE"));
+                String difficulty = (String) row.getOrDefault("difficulty", row.get("DIFFICULTY"));
+                Integer timeLimitMs = getIntValue(row, "time_limit_ms");
+                Integer memoryLimitKb = getIntValue(row, "memory_limit_kb");
+                Integer submitCnt = getIntValue(row, "submit_cnt");
+                Integer acCnt = getIntValue(row, "ac_cnt");
+
+                String solveStatusStr = "UNATTEMPTED";
+                if (user != null) {
+                    Integer userStatus = getIntValue(row, "user_status");
+                    if (userStatus != null) {
+                        if (userStatus == 2) {
+                            solveStatusStr = "ACCEPTED";
+                        } else if (userStatus == 1) {
+                            solveStatusStr = "ATTEMPTED";
+                        }
+                    }
+                }
+
+                list.add(new com.localoj.backend.controller.ProblemController.ProblemSummary(
+                        id,
+                        slug,
+                        title,
+                        difficulty,
+                        problemTagsMap.getOrDefault(id, ""),
+                        timeLimitMs,
+                        memoryLimitKb,
+                        solveStatusStr,
+                        acCnt != null ? acCnt : 0,
+                        submitCnt != null ? submitCnt : 0
+                ));
+            }
+        } catch (Exception e) {
+            log.error("Failed to query problems paged list", e);
+        }
+
+        return new com.localoj.backend.controller.ProblemController.ProblemListResult(list, total);
     }
 
     public record SubmissionStats(int acceptedCount, int submitCount) {}

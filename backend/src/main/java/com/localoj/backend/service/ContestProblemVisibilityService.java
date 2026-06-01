@@ -56,7 +56,7 @@ public class ContestProblemVisibilityService {
             if (visibilityLockMapper.selectOne(new QueryWrapper<ContestProblemVisibilityLock>()
                     .eq("contest_id", contestId)
                     .eq("problem_id", problemId)) == null) {
-                visibilityLockMapper.insert(new ContestProblemVisibilityLock(contestId, problemId, now));
+                visibilityLockMapper.insert(new ContestProblemVisibilityLock(contestId, problemId, now, problem.getVisible()));
             }
             if (Boolean.TRUE.equals(problem.getVisible())) {
                 problem.setVisible(false);
@@ -73,7 +73,7 @@ public class ContestProblemVisibilityService {
         List<ContestProblemVisibilityLock> locks = visibilityLockMapper.selectList(new QueryWrapper<ContestProblemVisibilityLock>()
                 .eq("contest_id", contestId));
         visibilityLockMapper.delete(new QueryWrapper<ContestProblemVisibilityLock>().eq("contest_id", contestId));
-        restoreUnlockedProblems(locks.stream().map(ContestProblemVisibilityLock::getProblemId).collect(java.util.stream.Collectors.toSet()));
+        restoreUnlockedProblems(locks);
     }
 
     @Transactional
@@ -96,15 +96,19 @@ public class ContestProblemVisibilityService {
         }
     }
 
-    private void restoreUnlockedProblems(Set<Long> problemIds) {
-        for (Long problemId : problemIds) {
+    private void restoreUnlockedProblems(List<ContestProblemVisibilityLock> releasedLocks) {
+        for (ContestProblemVisibilityLock lock : releasedLocks) {
+            Long problemId = lock.getProblemId();
             if (visibilityLockMapper.selectCount(new QueryWrapper<ContestProblemVisibilityLock>().eq("problem_id", problemId)) > 0) {
                 continue;
             }
             Problem problem = problemMapper.selectById(problemId);
-            if (problem != null && !Boolean.TRUE.equals(problem.getVisible())) {
-                problem.setVisible(true);
-                problemMapper.updateById(problem);
+            if (problem != null) {
+                boolean originalVisible = Boolean.TRUE.equals(lock.getOriginalVisible());
+                if (problem.getVisible() != originalVisible) {
+                    problem.setVisible(originalVisible);
+                    problemMapper.updateById(problem);
+                }
             }
         }
     }

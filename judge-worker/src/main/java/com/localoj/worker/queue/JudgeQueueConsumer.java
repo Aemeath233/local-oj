@@ -30,6 +30,7 @@ public class JudgeQueueConsumer {
     private final WorkerSystemLogService systemLogService;
     private final String queueKey;
     private final String processingKey;
+    private final String uniqueProcessingKey;
     private final String dlqKey;
     private final ExecutorService executorService = Executors.newFixedThreadPool(32);
     private final AtomicInteger inFlightJobs = new AtomicInteger(0);
@@ -52,13 +53,32 @@ public class JudgeQueueConsumer {
         this.queueKey = queueKey;
         this.processingKey = processingKey;
         this.dlqKey = dlqKey;
+
+        String hostIdent = "worker";
+        try {
+            hostIdent = java.net.InetAddress.getLocalHost().getHostName();
+        } catch (Exception ignored) {
+            try {
+                hostIdent = java.net.InetAddress.getLocalHost().getHostAddress();
+            } catch (Exception e) {
+                String envHost = System.getenv("HOSTNAME");
+                if (envHost != null && !envHost.isBlank()) {
+                    hostIdent = envHost;
+                }
+            }
+        }
+        if (hostIdent == null || hostIdent.isBlank()) {
+            hostIdent = "worker-default";
+        }
+        hostIdent = hostIdent.replaceAll("[^a-zA-Z0-9.-]", "_");
+        this.uniqueProcessingKey = processingKey + ":" + hostIdent;
     }
 
     @PostConstruct
     public void recoverProcessingQueue() {
         long recovered = 0;
         while (true) {
-            String payload = redisTemplate.opsForList().rightPop(processingKey);
+            String payload = redisTemplate.opsForList().rightPop(uniqueProcessingKey);
             if (payload == null) {
                 break;
             }
@@ -73,7 +93,7 @@ public class JudgeQueueConsumer {
                     null,
                     null,
                     null,
-                    "processingKey=" + processingKey + "; recovered=" + recovered
+                    "processingKey=" + uniqueProcessingKey + "; recovered=" + recovered
             );
         }
     }
@@ -82,7 +102,7 @@ public class JudgeQueueConsumer {
     public void poll() {
         int limit = sandboxSettingsProvider.current().effectiveConcurrentJobs();
         while (inFlightJobs.get() < limit) {
-            String payload = redisTemplate.opsForList().rightPopAndLeftPush(queueKey, processingKey, Duration.ofMillis(150));
+            String payload = redisTemplate.opsForList().rightPopAndLeftPush(queueKey, uniqueProcessingKey, Duration.ofMillis(150));
             if (payload == null) {
                 return;
             }
@@ -164,9 +184,9 @@ public class JudgeQueueConsumer {
 
     private void ackProcessing(String payload) {
         try {
-            redisTemplate.opsForList().remove(processingKey, 1, payload);
+            redisTemplate.opsForList().remove(uniqueProcessingKey, 1, payload);
         } catch (Exception ex) {
-            log.warn("Failed to ack judge job from processing queue {}", processingKey, ex);
+            log.warn("Failed to ack judge job from processing queue {}", uniqueProcessingKey, ex);
         }
     }
 

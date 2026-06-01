@@ -9,6 +9,7 @@ public class ContestProblemVisibilityLock {
     private Long contestId;
     private Long problemId;
     private LocalDateTime createdAt;
+    private Boolean originalVisible;
 
     public ContestProblemVisibilityLock() {
     }
@@ -17,6 +18,14 @@ public class ContestProblemVisibilityLock {
         this.contestId = contestId;
         this.problemId = problemId;
         this.createdAt = createdAt;
+        this.originalVisible = true;
+    }
+
+    public ContestProblemVisibilityLock(Long contestId, Long problemId, LocalDateTime createdAt, Boolean originalVisible) {
+        this.contestId = contestId;
+        this.problemId = problemId;
+        this.createdAt = createdAt;
+        this.originalVisible = originalVisible;
     }
 
     public Long getContestId() {
@@ -41,5 +50,13 @@ public class ContestProblemVisibilityLock {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getOriginalVisible() {
+        return originalVisible;
+    }
+
+    public void setOriginalVisible(Boolean originalVisible) {
+        this.originalVisible = originalVisible;
     }
 }

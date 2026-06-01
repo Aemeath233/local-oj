@@ -133,8 +133,8 @@ public class SelfTestService {
     private CompiledArtifact compile(Language language, String sourceCode, SandboxSettingsService.SandboxSettingsView sandboxSettings) {
         return switch (language) {
             case C -> compileNative(language, sourceCode, sandboxSettings, "main.c", "main", List.of("/usr/bin/gcc", "-O2", "-pipe", "main.c", "-o", "main"));
-            case CPP -> compileNative(language, sourceCode, sandboxSettings, "main.cpp", "main", List.of("/usr/bin/g++", "-std=c++17", "-O2", "-pipe", "main.cpp", "-o", "main"));
-            case CPP_O3 -> compileNative(language, sourceCode, sandboxSettings, "main.cpp", "main", List.of("/usr/bin/g++", "-std=c++17", "-O3", "-pipe", "main.cpp", "-o", "main"));
+            case CPP -> compileNative(language, sourceCode, sandboxSettings, "main.cpp", "main", List.of("/usr/bin/g++", "-std=c++20", "-O2", "-pipe", "main.cpp", "-o", "main"));
+            case CPP_O3 -> compileNative(language, sourceCode, sandboxSettings, "main.cpp", "main", List.of("/usr/bin/g++", "-std=c++20", "-O3", "-pipe", "main.cpp", "-o", "main"));
             case PYTHON -> compilePython(sourceCode, sandboxSettings);
             case JAVA -> compileJava(sourceCode, sandboxSettings);
             case PYPY3 -> compilePyPy3(sourceCode, sandboxSettings);

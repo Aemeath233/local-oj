@@ -18,8 +18,8 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class LeaderboardService {
     private static final Logger log = LoggerFactory.getLogger(LeaderboardService.class);
-    private static final String CACHE_KEY = "cache:leaderboard:top200";
-    private static final long CACHE_TTL_SECONDS = 3600;
+    private static final String LEADERBOARD_CACHE_KEY = "cache:leaderboard:latest";
+    private static final long CACHE_TTL_SECONDS = 30;
 
     private final JdbcTemplate jdbcTemplate;
     private final StringRedisTemplate redisTemplate;
@@ -36,10 +36,8 @@ public class LeaderboardService {
     }
 
     private List<LeaderboardRow> getAllLeaderboard() {
-        long currentHourIndex = System.currentTimeMillis() / 3600000L;
-        String cachedKey = "cache:leaderboard:hour:" + currentHourIndex;
         try {
-            String cachedJson = redisTemplate.opsForValue().get(cachedKey);
+            String cachedJson = redisTemplate.opsForValue().get(LEADERBOARD_CACHE_KEY);
             if (cachedJson != null && !cachedJson.isBlank()) {
                 List<LeaderboardRow> cachedRows = objectMapper.readValue(
                         cachedJson, 
@@ -58,8 +56,7 @@ public class LeaderboardService {
         if (rows != null && !rows.isEmpty()) {
             try {
                 String json = objectMapper.writeValueAsString(rows);
-                // Cache for 2 hours (7200 seconds) to ensure it covers the current hour, and clean up automatically
-                redisTemplate.opsForValue().set(cachedKey, json, 7200, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set(LEADERBOARD_CACHE_KEY, json, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
             } catch (Exception e) {
                 log.error("Failed to write leaderboard to Redis cache", e);
             }
@@ -68,9 +65,17 @@ public class LeaderboardService {
         return rows == null ? Collections.emptyList() : rows;
     }
 
+    public void evictCache() {
+        try {
+            redisTemplate.delete(LEADERBOARD_CACHE_KEY);
+        } catch (Exception e) {
+            log.error("Failed to evict leaderboard cache", e);
+        }
+    }
+
     public long getLastUpdatedTime() {
-        // Return the start of the current clock hour in milliseconds as the version
-        return (System.currentTimeMillis() / 3600000L) * 3600000L;
+        // Return the current time aligned to 10 seconds as the version
+        return (System.currentTimeMillis() / 10000L) * 10000L;
     }
 
     public List<LeaderboardRow> top(int limit) {
@@ -106,7 +111,7 @@ public class LeaderboardService {
                     COUNT(s.id) AS submission_count,
                     MAX(CASE WHEN s.verdict = 'AC' THEN COALESCE(s.judged_at, s.created_at) END) AS last_accepted_at
                 FROM users u
-                LEFT JOIN submissions s ON s.user_id = u.id
+                LEFT JOIN submissions s ON s.user_id = u.id AND s.contest_id IS NULL
                 WHERE u.enabled = 1
                 GROUP BY u.id, u.username, u.email, u.display_name, u.avatar_url, u.student_no, u.major
                 ORDER BY accepted_count DESC,

@@ -18,6 +18,11 @@ public class SubmissionSseController {
     private static final Logger log = LoggerFactory.getLogger(SubmissionSseController.class);
 
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final com.localoj.backend.service.LeaderboardService leaderboardService;
+
+    public SubmissionSseController(com.localoj.backend.service.LeaderboardService leaderboardService) {
+        this.leaderboardService = leaderboardService;
+    }
 
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe() {
@@ -40,6 +45,20 @@ public class SubmissionSseController {
 
     public void handleRedisMessage(String message) {
         broadcast(message);
+        try {
+            if (message != null) {
+                String[] parts = message.split(",");
+                if (parts.length >= 3) {
+                    String status = parts[1];
+                    String verdict = parts[2];
+                    if ("FINISHED".equalsIgnoreCase(status) && "AC".equalsIgnoreCase(verdict)) {
+                        leaderboardService.evictCache();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to evict leaderboard cache on pubsub update", e);
+        }
     }
 
     public void broadcast(String data) {

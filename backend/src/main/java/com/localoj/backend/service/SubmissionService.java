@@ -425,6 +425,23 @@ public class SubmissionService {
         );
     }
 
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 30000)
+    public void recoverPendingSubmissions() {
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(2);
+        List<Submission> stuckSubmissions = submissionMapper.selectList(new QueryWrapper<Submission>()
+                .eq("status", SubmissionStatus.PENDING)
+                .le("created_at", threshold));
+        for (Submission sub : stuckSubmissions) {
+            log.warn("Found stuck PENDING submission {}, re-publishing to Redis...", sub.getId());
+            try {
+                publishJudgeJob(sub.getId());
+                systemLogService.info("judge-queue", "job_recovery_success", "成功自动重发卡死的 PENDING 任务", sub.getId(), sub.getProblemId(), sub.getUserId(), null);
+            } catch (Exception ex) {
+                log.error("Failed to recover submission " + sub.getId(), ex);
+            }
+        }
+    }
+
     public record SubmissionSummary(
             Long id,
             Long userId,

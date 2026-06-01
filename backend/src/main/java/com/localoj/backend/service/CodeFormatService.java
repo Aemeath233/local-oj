@@ -74,7 +74,7 @@ public class CodeFormatService {
             String indent = " ".repeat(currentLineIndent * 4);
             
             // Standardize spaces around common C++ elements
-            String processed = standardizeSpaces(trimmed);
+            String processed = formatLinePreservingLiterals(trimmed, false);
             
             formattedLines.add(indent + processed);
 
@@ -96,6 +96,108 @@ public class CodeFormatService {
         return String.join("\n", formattedLines) + "\n";
     }
 
+    private String formatLinePreservingLiterals(String line, boolean isPython) {
+        if (line == null) {
+            return null;
+        }
+        
+        StringBuilder result = new StringBuilder();
+        StringBuilder codeBuffer = new StringBuilder();
+        
+        int i = 0;
+        int len = line.length();
+        
+        while (i < len) {
+            char c = line.charAt(i);
+            
+            // Check for comments
+            if (!isPython && c == '/' && i + 1 < len && line.charAt(i + 1) == '/') {
+                // Single line comment
+                if (codeBuffer.length() > 0) {
+                    result.append(standardizeSpaces(codeBuffer.toString()));
+                    codeBuffer.setLength(0);
+                }
+                result.append(line.substring(i));
+                break;
+            }
+            if (isPython && c == '#') {
+                // Python comment
+                if (codeBuffer.length() > 0) {
+                    result.append(standardizeSpaces(codeBuffer.toString()));
+                    codeBuffer.setLength(0);
+                }
+                result.append(line.substring(i));
+                break;
+            }
+            
+            // Check for string literals (double quotes)
+            if (c == '"') {
+                if (codeBuffer.length() > 0) {
+                    result.append(standardizeSpaces(codeBuffer.toString()));
+                    codeBuffer.setLength(0);
+                }
+                
+                StringBuilder literal = new StringBuilder();
+                literal.append('"');
+                i++;
+                boolean escaped = false;
+                while (i < len) {
+                    char lc = line.charAt(i);
+                    literal.append(lc);
+                    if (escaped) {
+                        escaped = false;
+                    } else if (lc == '\\') {
+                        escaped = true;
+                    } else if (lc == '"') {
+                        break;
+                    }
+                    i++;
+                }
+                result.append(literal.toString());
+                i++;
+                continue;
+            }
+            
+            // Check for character literals (single quotes)
+            if (c == '\'') {
+                if (codeBuffer.length() > 0) {
+                    result.append(standardizeSpaces(codeBuffer.toString()));
+                    codeBuffer.setLength(0);
+                }
+                
+                StringBuilder literal = new StringBuilder();
+                literal.append('\'');
+                i++;
+                boolean escaped = false;
+                while (i < len) {
+                    char lc = line.charAt(i);
+                    literal.append(lc);
+                    if (escaped) {
+                        escaped = false;
+                    } else if (lc == '\\') {
+                        escaped = true;
+                    } else if (lc == '\'') {
+                        break;
+                    }
+                    i++;
+                }
+                result.append(literal.toString());
+                i++;
+                continue;
+            }
+            
+            // Otherwise, normal code character
+            codeBuffer.append(c);
+            i++;
+        }
+        
+        if (codeBuffer.length() > 0) {
+            result.append(standardizeSpaces(codeBuffer.toString()));
+        }
+        
+        return result.toString();
+    }
+
     private String formatPython(String sourceCode) {
         String[] lines = sourceCode.split("\\R");
         List<String> formattedLines = new ArrayList<>();
@@ -113,7 +215,7 @@ public class CodeFormatService {
 
             // Standardize spacing around operators in Python
             String leadingSpaces = line.substring(0, line.indexOf(line.trim()));
-            String processed = standardizeSpaces(trimmedRight.trim());
+            String processed = formatLinePreservingLiterals(trimmedRight.trim(), true);
             
             formattedLines.add(leadingSpaces + processed);
         }

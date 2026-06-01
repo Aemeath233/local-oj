@@ -25,9 +25,30 @@ import java.util.List;
 @RequestMapping("/api/submissions")
 public class SubmissionController {
     private final SubmissionService submissionService;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
-    public SubmissionController(SubmissionService submissionService) {
+    public SubmissionController(
+            SubmissionService submissionService,
+            org.springframework.data.redis.core.StringRedisTemplate redisTemplate,
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper
+    ) {
         this.submissionService = submissionService;
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+    }
+
+    @PostMapping("/sse-ticket")
+    public ApiResponse<java.util.Map<String, String>> generateSseTicket() {
+        CurrentUser user = SecurityUtils.currentUser();
+        String ticket = java.util.UUID.randomUUID().toString();
+        try {
+            String userJson = objectMapper.writeValueAsString(user);
+            redisTemplate.opsForValue().set("sse:ticket:" + ticket, userJson, 10, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to generate ticket", e);
+        }
+        return ApiResponse.ok(java.util.Map.of("ticket", ticket));
     }
 
     @PostMapping

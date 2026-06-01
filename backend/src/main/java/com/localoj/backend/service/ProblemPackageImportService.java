@@ -283,40 +283,215 @@ public class ProblemPackageImportService {
                 .toList();
     }
 
-    static PackageConfig parseConfig(String markdown) {
-        Map<String, String> values = new HashMap<>();
-        for (String rawLine : markdown.split("\\R")) {
-            String line = rawLine.trim();
-            if (line.isBlank() || line.equals("---") || line.equals("```") || line.startsWith("#")) {
-                continue;
-            }
-            if (line.startsWith("- ")) {
-                line = line.substring(2).trim();
-            }
-            int colon = line.indexOf(':');
-            if (colon <= 0) {
-                continue;
-            }
-            String key = canonicalKey(line.substring(0, colon));
-            String value = cleanValue(line.substring(colon + 1));
-            if (!key.isBlank()) {
-                values.put(key, value);
+    private static String extractYaml(String text) {
+        if (text == null) return "";
+        // Match code blocks ```yaml ... ``` or ``` ... ```
+        String cleaned = text.trim();
+        if (cleaned.startsWith("```")) {
+            int firstLineBreak = cleaned.indexOf('\n');
+            int lastBackticks = cleaned.lastIndexOf("```");
+            if (firstLineBreak > 0 && lastBackticks > firstLineBreak) {
+                return cleaned.substring(firstLineBreak + 1, lastBackticks).trim();
             }
         }
-        String title = value(values, "title");
+        // Also strip frontmatter delimiters --- if present
+        if (cleaned.startsWith("---")) {
+            int secondDash = cleaned.indexOf("---", 3);
+            if (secondDash > 0) {
+                return cleaned.substring(3, secondDash).trim();
+            }
+        }
+        return cleaned;
+    }
+
+    private static String getYamlString(Map<String, Object> data, String key) {
+        Object val = data.get(canonicalKey(key));
+        return val == null ? "" : val.toString().trim();
+    }
+
+    private static String getYamlTags(Map<String, Object> data, String key) {
+        Object val = data.get(canonicalKey(key));
+        if (val == null) {
+            return "";
+        }
+        if (val instanceof List<?> list) {
+            return list.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .map(Object::toString)
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(java.util.stream.Collectors.joining(","));
+        }
+        return val.toString().trim();
+    }
+
+    private static int getYamlInt(Map<String, Object> data, List<String> keys, int defaultValue, int min, String label) {
+        Object val = null;
+        for (String key : keys) {
+            val = data.get(canonicalKey(key));
+            if (val != null) {
+                break;
+            }
+        }
+        if (val == null) {
+            return defaultValue;
+        }
+        try {
+            int parsed;
+            if (val instanceof Number num) {
+                parsed = num.intValue();
+            } else {
+                parsed = Integer.parseInt(val.toString().trim());
+            }
+            if (parsed < min) {
+                throw new IllegalArgumentException(label + " 不能小于 " + min);
+            }
+            return parsed;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(label + " 必须是整数");
+        }
+    }
+
+    private static boolean getYamlBoolean(Map<String, Object> data, String key, boolean defaultValue) {
+        Object val = data.get(canonicalKey(key));
+        if (val == null) {
+            return defaultValue;
+        }
+        if (val instanceof Boolean b) {
+            return b;
+        }
+        String str = val.toString().trim().toLowerCase(Locale.ROOT);
+        return switch (str) {
+            case "true", "yes", "1", "on", "visible", "可见" -> true;
+            case "false", "no", "0", "off", "hidden", "隐藏" -> false;
+            default -> throw new IllegalArgumentException("visible 必须是 true/false");
+        };
+    }
+
+    private static Set<String> getYamlListOrSet(Map<String, Object> data, List<String> keys) {
+        Object val = null;
+        for (String key : keys) {
+            val = data.get(canonicalKey(key));
+            if (val != null) {
+                break;
+            }
+        }
+        Set<String> result = new HashSet<>();
+        if (val == null) {
+            return result;
+        }
+        if (val instanceof List<?> list) {
+            for (Object obj : list) {
+                if (obj != null) {
+                    String str = obj.toString().trim();
+                    if (!str.isEmpty()) {
+                        result.add(str);
+                    }
+                }
+            }
+            return result;
+        }
+        // Fallback to comma separated string parsing
+        for (String part : val.toString().replace(';', ',').split(",")) {
+            String name = part.trim();
+            if (!name.isEmpty()) {
+                result.add(name);
+            }
+        }
+        return result;
+    }
+
+    private static Map<String, Integer> getYamlScores(Map<String, Object> data, String key) {
+        Object val = data.get(canonicalKey(key));
+        Map<String, Integer> scores = new HashMap<>();
+        if (val == null) {
+            return scores;
+        }
+        if (val instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    String k = entry.getKey().toString().trim();
+                    int scoreVal;
+                    if (entry.getValue() instanceof Number num) {
+                        scoreVal = num.intValue();
+                    } else {
+                        scoreVal = Integer.parseInt(entry.getValue().toString().trim());
+                    }
+                    scores.put(k, scoreVal);
+                }
+            }
+            return scores;
+        }
+        // Fallback to string parsing
+        return parseScores(val.toString());
+    }
+
+    static PackageConfig parseConfig(String text) {
+        String yamlContent = extractYaml(text);
+        org.yaml.snakeyaml.Yaml yaml = new org.yaml.snakeyaml.Yaml();
+        Object parsedObj;
+        try {
+            parsedObj = yaml.load(yamlContent);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("YAML 配置文件格式错误，无法解析", e);
+        }
+
+        Map<String, Object> rawData = new HashMap<>();
+        if (parsedObj instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null) {
+                    rawData.put(entry.getKey().toString(), entry.getValue());
+                }
+            }
+        } else if (parsedObj instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    for (Map.Entry<?, ?> entry : map.entrySet()) {
+                        if (entry.getKey() != null) {
+                            rawData.put(entry.getKey().toString(), entry.getValue());
+                        }
+                    }
+                }
+            }
+        }
+
+        // Standardize keys (lowercase, no spaces/hyphens/underscores)
+        Map<String, Object> canonicalData = new HashMap<>();
+        for (Map.Entry<String, Object> entry : rawData.entrySet()) {
+            canonicalData.put(canonicalKey(entry.getKey()), entry.getValue());
+        }
+
+        String title = getYamlString(canonicalData, "title");
         if (title.isBlank()) {
             throw new IllegalArgumentException("配置文件缺少 title 字段");
         }
+
+        String slug = getYamlString(canonicalData, "slug");
+        String difficulty = defaultValue(getYamlString(canonicalData, "difficulty"), "Easy");
+        
+        // Handle tags: could be a string or a list!
+        String tags = getYamlTags(canonicalData, "tags");
+
+        int timeLimitMs = getYamlInt(canonicalData, List.of("timelimitms", "timelimit"), 1000, 100, "timeLimitMs");
+        int memoryLimitKb = getYamlInt(canonicalData, List.of("memorylimitkb", "memorylimit"), 262144, 16384, "memoryLimitKb");
+        boolean visible = getYamlBoolean(canonicalData, "visible", true);
+
+        // Handle samples: could be a string or a list!
+        Set<String> samples = getYamlListOrSet(canonicalData, List.of("samples", "samplecases"));
+
+        // Handle scores: could be a string or a map!
+        Map<String, Integer> scores = getYamlScores(canonicalData, "scores");
+
         return new PackageConfig(
                 title,
-                value(values, "slug"),
-                defaultValue(value(values, "difficulty"), "Easy"),
-                value(values, "tags"),
-                parseInteger(value(values, "timelimitms", "timelimit"), 1000, 100, "timeLimitMs"),
-                parseInteger(value(values, "memorylimitkb", "memorylimit"), 262144, 16384, "memoryLimitKb"),
-                parseBoolean(value(values, "visible"), true),
-                splitNames(value(values, "samples", "samplecases")),
-                parseScores(value(values, "scores"))
+                slug,
+                difficulty,
+                tags,
+                timeLimitMs,
+                memoryLimitKb,
+                visible,
+                samples,
+                scores
         );
     }
 

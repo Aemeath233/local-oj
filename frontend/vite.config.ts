@@ -70,5 +70,25 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('element-plus')) {
+              return 'vendor-element-plus'
+            }
+            if (id.includes('monaco-editor')) {
+              return 'vendor-monaco'
+            }
+            if (id.includes('katex')) {
+              return 'vendor-katex'
+            }
+            return 'vendor-core'
+          }
+        }
+      }
+    }
   }
 })
