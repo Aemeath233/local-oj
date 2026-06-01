@@ -458,8 +458,58 @@ menu() {
     esac
 }
 
+# 自动检查并更新脚本
+check_self_update() {
+    # 如果当前目录不是 git 仓库，直接跳过
+    if [ ! -d ".git" ]; then
+        return 0
+    fi
+
+    # 自动配置当前目录为 Git 安全目录以防 sudo 限制
+    git config --global --add safe.directory "$(pwd)" 2>/dev/null || true
+    
+    # 静默更新远程分支指针状态，限制最长 5 秒超时，防止无网时卡顿
+    if command -v timeout &>/dev/null; then
+        if ! timeout 5 git fetch &>/dev/null; then
+            return 0
+        fi
+    else
+        if ! git fetch &>/dev/null; then
+            return 0
+        fi
+    fi
+
+    # 提取本地、远程和共同祖先的 Commit Hash 进行比对
+    local LOCAL REMOTE BASE
+    LOCAL=$(git rev-parse @ 2>/dev/null || echo "")
+    REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "")
+    BASE=$(git merge-base @ @{u} 2>/dev/null || echo "")
+
+    # 判断本地版本是否落后于远程版本
+    if [ -n "$LOCAL" ] && [ -n "$REMOTE" ] && [ "$LOCAL" = "$BASE" ] && [ "$LOCAL" != "$REMOTE" ]; then
+        echo ""
+        echo -e "${YELLOW}${BOLD}💡 检测到 GitHub 远程仓库有新版本发布！${NC}"
+        read -r -p "是否立即自动拉取最新代码并重启部署工具？(Y/n) " update_choice
+        update_choice=${update_choice,,}
+        if [[ "$update_choice" == "y" || "$update_choice" == "yes" || -z "$update_choice" ]]; then
+            log_info "正在为您拉取最新版本代码..."
+            if git pull; then
+                log_success "代码同步成功！正在热重启部署工具..."
+                sleep 1
+                # 核心黑魔法：使用 exec 替换当前 Shell 进程，安全读取新脚本，规避任何行偏移错误
+                exec "$0" "$@"
+            else
+                log_warn "拉取失败，将继续使用当前本地版本运行。"
+            fi
+        fi
+    fi
+}
+
 # 脚本运行入口
 main() {
+    # 每次运行前自动检测更新并自我重载
+    check_self_update "$@"
+
     # 如果带参数 --auto 则跳过菜单直接执行全自动化一键部署
     if [[ "$1" == "--auto" ]]; then
         check_root
