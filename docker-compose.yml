@@ -11,7 +11,7 @@ services:
     ports:
       - "${MYSQL_PORT:-127.0.0.1:3307}:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - ./data/mysql:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${MYSQL_USER:-localoj}", "-p${MYSQL_PASSWORD:-localoj_pass}"]
       interval: 10s
@@ -24,7 +24,7 @@ services:
     ports:
       - "${REDIS_PORT:-127.0.0.1:6379}:6379"
     volumes:
-      - redis-data:/data
+      - ./data/redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -65,7 +65,7 @@ services:
     ports:
       - "${BACKEND_PORT:-127.0.0.1:8080}:8080"
     volumes:
-      - oj-data:/data
+      - ./data/oj:/data
     depends_on:
       mysql:
         condition: service_healthy
@@ -90,7 +90,7 @@ services:
       JUDGE_PROCESSING_KEY: ${JUDGE_PROCESSING_KEY:-judge:processing}
       JUDGE_DLQ_KEY: ${JUDGE_DLQ_KEY:-judge:dlq}
     volumes:
-      - oj-data:/data
+      - ./data/oj:/data
     depends_on:
       mysql:
         condition: service_healthy
@@ -108,7 +108,4 @@ services:
     depends_on:
       - backend
 
-volumes:
-  mysql-data:
-  redis-data:
-  oj-data:
+
