@@ -492,15 +492,35 @@ check_self_update() {
         read -r -p "是否立即自动拉取最新代码并重启部署工具？(Y/n) " update_choice
         update_choice=${update_choice,,}
         if [[ "$update_choice" == "y" || "$update_choice" == "yes" || -z "$update_choice" ]]; then
-            log_info "正在为您拉取最新版本代码..."
-            if git pull; then
-                log_success "代码同步成功！正在热重启部署工具..."
-                sleep 1
-                # 核心黑魔法：使用 exec 替换当前 Shell 进程，安全读取新脚本，规避任何行偏移错误
-                exec "$0" "$@"
-            else
-                log_warn "拉取失败，将继续使用当前本地版本运行。"
-            fi
+            local SCRIPT_PATH CURRENT_DIR temp_updater
+            SCRIPT_PATH=$(realpath "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$(pwd)/$0")
+            CURRENT_DIR=$(dirname "$SCRIPT_PATH")
+            temp_updater="/tmp/localoj_updater_$$.sh"
+            
+            # 写入临时升级代理脚本 (使用 'EOF' 防止变量在 heredoc 中被提前展开)
+            cat > "$temp_updater" <<'EOF'
+#!/usr/bin/env bash
+# LocalOJ 临时升级代理脚本
+sleep 0.5
+cd "$1"
+shift
+SCRIPT_PATH="$1"
+shift
+
+echo -e "\033[0;34m[INFO] 正在代理执行 Git 更新...\033[0m"
+if git pull; then
+    echo -e "\033[0;32m[SUCCESS] 代码同步成功！正在重新载入部署工具...\033[0m"
+    rm -f "$0"  # 临时脚本自我销毁
+    exec "$SCRIPT_PATH" "$@"
+else
+    echo -e "\033[0;33m[WARN] 代码拉取失败，尝试返回原版本运行...\033[0m"
+    rm -f "$0"  # 临时脚本自我销毁
+    exec "$SCRIPT_PATH" "$@"
+fi
+EOF
+            chmod +x "$temp_updater"
+            # 核心黑魔法：使用 exec 重定向到临时升级代理，腾出当前脚本的修改锁，100% 规避文件变更冲突
+            exec bash "$temp_updater" "$CURRENT_DIR" "$SCRIPT_PATH" "$@"
         fi
     fi
 }
