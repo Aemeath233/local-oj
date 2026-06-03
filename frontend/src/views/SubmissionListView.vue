@@ -111,7 +111,7 @@
 import { computed, onMounted, onUnmounted, onActivated, onDeactivated, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh, Search } from '@element-plus/icons-vue'
-import { fetchSubmission, fetchSubmissions } from '../api/http'
+import { fetchSubmission, fetchSubmissions, requestSseTicket } from '../api/http'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
 import { ElMessage } from 'element-plus'
 import VerdictTag from '../components/VerdictTag.vue'
@@ -179,53 +179,79 @@ function resetFilters() {
 }
 
 let eventSource: EventSource | null = null
+let reconnectTimeout: any = null
+let isConnecting = false
 
-function connectSse() {
-  if (eventSource) return
+async function connectSse() {
+  if (eventSource || isConnecting) return
   if (!auth.token) return
 
-  const sseUrl = `/api/submissions/live?token=${encodeURIComponent(auth.token)}`
-  eventSource = new EventSource(sseUrl)
+  isConnecting = true
+  try {
+    const ticket = await requestSseTicket()
+    if (!isConnecting || eventSource) return
 
-  eventSource.addEventListener('update', (event) => {
-    try {
-      const parts = event.data.split(',')
-      if (parts.length >= 2) {
-        const subId = Number(parts[0])
-        const status = parts[1]
-        const verdict = parts[2] || null
+    const sseUrl = `/api/submissions/live?ticket=${encodeURIComponent(ticket)}`
+    eventSource = new EventSource(sseUrl)
 
-        const existing = submissions.value.find(s => s.id === subId)
-        if (existing) {
-          existing.status = status
-          existing.verdict = verdict
-          
-          if (drawerVisible.value && selected.value && selected.value.submission.id === subId) {
-            fetchSubmission(subId).then(detail => {
-              selected.value = detail
-            }).catch(console.error)
+    eventSource.addEventListener('update', (event) => {
+      try {
+        const parts = event.data.split(',')
+        if (parts.length >= 2) {
+          const subId = Number(parts[0])
+          const status = parts[1]
+          const verdict = parts[2] || null
+
+          const existing = submissions.value.find(s => s.id === subId)
+          if (existing) {
+            existing.status = status
+            existing.verdict = verdict
+
+            if (drawerVisible.value && selected.value && selected.value.submission.id === subId) {
+              fetchSubmission(subId).then(detail => {
+                selected.value = detail
+              }).catch(console.error)
+            }
+          } else {
+            // New submission not in current feed, trigger reload to pull it in
+            load(true)
           }
-        } else {
-          // New submission not in current feed, trigger reload to pull it in
-          load(true)
-        }
 
-        if (status === 'FINISHED') {
-          // Silent reload to populate exact run metrics (time, memory)
-          load(true)
+          if (status === 'FINISHED') {
+            // Silent reload to populate exact run metrics (time, memory)
+            load(true)
+          }
         }
+      } catch (err) {
+        console.error('Failed to handle SSE message', err)
       }
-    } catch (err) {
-      console.error('Failed to handle SSE message', err)
-    }
-  })
+    })
 
-  eventSource.onerror = (err) => {
-    console.error('SSE connection error:', err)
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error, scheduled reconnect in 1s:', err)
+      disconnectSse()
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      reconnectTimeout = setTimeout(() => {
+        connectSse()
+      }, 1000)
+    }
+  } catch (error) {
+    console.error('Failed to fetch SSE ticket, scheduled reconnect in 1s:', error)
+    if (reconnectTimeout) clearTimeout(reconnectTimeout)
+    reconnectTimeout = setTimeout(() => {
+      connectSse()
+    }, 1000)
+  } finally {
+    isConnecting = false
   }
 }
 
 function disconnectSse() {
+  isConnecting = false
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout)
+    reconnectTimeout = null
+  }
   if (eventSource) {
     eventSource.close()
     eventSource = null

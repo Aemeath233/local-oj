@@ -121,6 +121,7 @@ public class LeaderboardService {
             log.info("Successfully saved {} users' rank snapshots.", currentLeaderboard.size());
         } catch (RuntimeException ex) {
             log.error("Failed to save leaderboard weekly rank snapshots", ex);
+            throw ex;
         }
     }
 

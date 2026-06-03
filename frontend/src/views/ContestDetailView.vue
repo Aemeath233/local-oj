@@ -334,7 +334,8 @@ import {
   fetchSubmission,
   fetchContestRegistration,
   registerContest,
-  downloadContestStandings
+  downloadContestStandings,
+  requestSseTicket
 } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import type {
@@ -468,53 +469,79 @@ const filteredStandings = computed(() => {
 })
 
 let eventSource: EventSource | null = null
+let reconnectTimeout: any = null
+let isConnecting = false
 
-function connectSse() {
-  if (eventSource) return
+async function connectSse() {
+  if (eventSource || isConnecting) return
   if (!auth.token) return
 
-  const sseUrl = `/api/submissions/live?token=${encodeURIComponent(auth.token)}`
-  eventSource = new EventSource(sseUrl)
+  isConnecting = true
+  try {
+    const ticket = await requestSseTicket()
+    if (!isConnecting || eventSource) return
 
-  eventSource.addEventListener('update', (event) => {
-    try {
-      const parts = event.data.split(',')
-      if (parts.length >= 2) {
-        const subId = Number(parts[0])
-        const status = parts[1]
-        const verdict = parts[2] || null
+    const sseUrl = `/api/submissions/live?ticket=${encodeURIComponent(ticket)}`
+    eventSource = new EventSource(sseUrl)
 
-        const existing = submissions.value.find(s => s.id === subId)
-        if (existing) {
-          existing.status = status as any
-          existing.verdict = verdict as any
+    eventSource.addEventListener('update', (event) => {
+      try {
+        const parts = event.data.split(',')
+        if (parts.length >= 2) {
+          const subId = Number(parts[0])
+          const status = parts[1]
+          const verdict = parts[2] || null
 
-          if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
-            fetchSubmission(subId).then(detail => {
-              selectedSubmission.value = detail
-            }).catch(console.error)
+          const existing = submissions.value.find(s => s.id === subId)
+          if (existing) {
+            existing.status = status as any
+            existing.verdict = verdict as any
+
+            if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
+              fetchSubmission(subId).then(detail => {
+                selectedSubmission.value = detail
+              }).catch(console.error)
+            }
+          } else {
+            // If a new submission came in, silent refresh list
+            loadSubmissions(true)
           }
-        } else {
-          // If a new submission came in, silent refresh list
-          loadSubmissions(true)
-        }
 
-        if (status === 'FINISHED') {
-          // Silent refresh to populate time, memory, score
-          loadSubmissions(true)
+          if (status === 'FINISHED') {
+            // Silent refresh to populate time, memory, score
+            loadSubmissions(true)
+          }
         }
+      } catch (err) {
+        console.error('Failed to handle SSE message in ContestDetailView', err)
       }
-    } catch (err) {
-      console.error('Failed to handle SSE message in ContestDetailView', err)
-    }
-  })
+    })
 
-  eventSource.onerror = (err) => {
-    console.error('SSE connection error in ContestDetailView:', err)
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error in ContestDetailView, scheduled reconnect in 1s:', err)
+      disconnectSse()
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      reconnectTimeout = setTimeout(() => {
+        connectSse()
+      }, 1000)
+    }
+  } catch (error) {
+    console.error('Failed to fetch SSE ticket in ContestDetailView, scheduled reconnect in 1s:', error)
+    if (reconnectTimeout) clearTimeout(reconnectTimeout)
+    reconnectTimeout = setTimeout(() => {
+      connectSse()
+    }, 1000)
+  } finally {
+    isConnecting = false
   }
 }
 
 function disconnectSse() {
+  isConnecting = false
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout)
+    reconnectTimeout = null
+  }
   if (eventSource) {
     eventSource.close()
     eventSource = null

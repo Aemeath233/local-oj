@@ -22,12 +22,20 @@ import java.util.concurrent.Executors;
 @RequestMapping("/api/self-tests")
 public class SelfTestController {
     private final SelfTestService selfTestService;
-    private final ExecutorService selfTestExecutor = Executors.newFixedThreadPool(16, r -> {
-        Thread thread = new Thread(r);
-        thread.setName("self-test-pool-" + thread.getId());
-        thread.setDaemon(true);
-        return thread;
-    });
+    private final ExecutorService selfTestExecutor = new java.util.concurrent.ThreadPoolExecutor(
+            8,
+            16,
+            60L,
+            java.util.concurrent.TimeUnit.SECONDS,
+            new java.util.concurrent.LinkedBlockingQueue<>(100),
+            r -> {
+                Thread thread = new Thread(r);
+                thread.setName("self-test-pool-" + thread.getId());
+                thread.setDaemon(true);
+                return thread;
+            },
+            new java.util.concurrent.ThreadPoolExecutor.AbortPolicy()
+    );
 
     public SelfTestController(SelfTestService selfTestService) {
         this.selfTestService = selfTestService;
@@ -36,14 +44,19 @@ public class SelfTestController {
     @PostMapping
     public CompletableFuture<ApiResponse<SelfTestService.SelfTestResult>> run(@Valid @RequestBody SelfTestRequest request) {
         CurrentUser user = SecurityUtils.currentUser();
-        return CompletableFuture.supplyAsync(() -> ApiResponse.ok(selfTestService.run(
-                user,
-                request.problemId(),
-                request.contestId(),
-                request.language(),
-                request.sourceCode(),
-                request.stdin()
-        )), selfTestExecutor);
+        selfTestService.checkAndApplyCooldown(user, request.problemId());
+        try {
+            return CompletableFuture.supplyAsync(() -> ApiResponse.ok(selfTestService.run(
+                    user,
+                    request.problemId(),
+                    request.contestId(),
+                    request.language(),
+                    request.sourceCode(),
+                    request.stdin()
+            )), selfTestExecutor);
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            throw new IllegalArgumentException("当前自测服务繁忙，请稍后再试！");
+        }
     }
 
     public record SelfTestRequest(

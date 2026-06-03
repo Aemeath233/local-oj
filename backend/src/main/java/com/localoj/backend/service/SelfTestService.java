@@ -55,6 +55,16 @@ public class SelfTestService {
         this.redisTemplate = redisTemplate;
     }
 
+    public void checkAndApplyCooldown(CurrentUser user, Long problemId) {
+        if (!isAdmin(user)) {
+            String redisKey = "cooldown:problem:" + problemId + ":user:" + user.id();
+            Boolean success = redisTemplate.opsForValue().setIfAbsent(redisKey, "1", java.time.Duration.ofSeconds(5));
+            if (success == null || !success) {
+                throw new IllegalArgumentException("提交过于频繁，该题目每 5 秒仅允许提交或自测一次！");
+            }
+        }
+    }
+
     public SelfTestResult run(CurrentUser user, Long problemId, Long contestId, Language language, String sourceCode, String stdin) {
         Problem problem = problemMapper.selectById(problemId);
         if (problem == null) {
@@ -66,14 +76,6 @@ public class SelfTestService {
             }
         } else {
             requireContestProblemAccess(user, contestId, problemId);
-        }
-
-        if (!isAdmin(user)) {
-            String redisKey = "cooldown:problem:" + problemId + ":user:" + user.id();
-            Boolean success = redisTemplate.opsForValue().setIfAbsent(redisKey, "1", java.time.Duration.ofSeconds(5));
-            if (success == null || !success) {
-                throw new IllegalArgumentException("提交过于频繁，该题目每 5 秒仅允许提交或自测一次！");
-            }
         }
 
         CompiledArtifact artifact = null;

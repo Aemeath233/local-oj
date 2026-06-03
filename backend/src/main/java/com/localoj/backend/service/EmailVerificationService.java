@@ -62,27 +62,32 @@ public class EmailVerificationService {
             throw new IllegalArgumentException("验证码发送过于频繁，请一分钟后再试！");
         }
 
-        SmtpSetting setting = smtpSettingsService.requireSettings();
-        validateSmtpSetting(setting);
+        try {
+            SmtpSetting setting = smtpSettingsService.requireSettings();
+            validateSmtpSetting(setting);
 
-        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
-        LocalDateTime now = LocalDateTime.now();
-        codeMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<EmailVerificationCode>()
-                .eq("email", normalizedEmail)
-                .eq("purpose", purpose)
-                .eq("consumed", false)
-                .set("consumed", true));
+            String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+            LocalDateTime now = LocalDateTime.now();
+            codeMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<EmailVerificationCode>()
+                    .eq("email", normalizedEmail)
+                    .eq("purpose", purpose)
+                    .eq("consumed", false)
+                    .set("consumed", true));
 
-        EmailVerificationCode verificationCode = new EmailVerificationCode();
-        verificationCode.setEmail(normalizedEmail);
-        verificationCode.setCode(code);
-        verificationCode.setPurpose(purpose);
-        verificationCode.setExpiresAt(now.plusMinutes(10));
-        verificationCode.setConsumed(false);
-        verificationCode.setCreatedAt(now);
-        codeMapper.insert(verificationCode);
+            EmailVerificationCode verificationCode = new EmailVerificationCode();
+            verificationCode.setEmail(normalizedEmail);
+            verificationCode.setCode(code);
+            verificationCode.setPurpose(purpose);
+            verificationCode.setExpiresAt(now.plusMinutes(10));
+            verificationCode.setConsumed(false);
+            verificationCode.setCreatedAt(now);
+            codeMapper.insert(verificationCode);
 
-        sendMail(setting, normalizedEmail, code, subject, textPrefix);
+            sendMail(setting, normalizedEmail, code, subject, textPrefix);
+        } catch (Exception ex) {
+            redisTemplate.delete(cooldownKey);
+            throw ex;
+        }
     }
 
     @Transactional

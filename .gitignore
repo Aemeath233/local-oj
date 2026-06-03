@@ -20,3 +20,7 @@ scratch/
 
 # Frontend public libs (like Monaco Editor copied files)
 frontend/public/libs/
+
+# Agent instructions and scratch files
+AGENTS.md
+agents.md
