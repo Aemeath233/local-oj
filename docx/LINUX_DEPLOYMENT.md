@@ -44,7 +44,7 @@ Before launching in production, you must set these environment variables in your
    ```
 
 2. **Configure Environment Variables**:
-   Edit `.env` to configure production database credentials, SMTP configuration, and data volumes:
+   Edit `.env` to configure production database credentials, SMTP configuration, and local data bind mounts:
    ```properties
    SPRING_PROFILES_ACTIVE=prod
    JWT_SECRET=your-secure-cryptographic-secret-at-least-32-chars
@@ -55,9 +55,11 @@ Before launching in production, you must set these environment variables in your
    REDIS_HOST=redis
    APP_DATA_ROOT=/data
    APP_WORKER_ID=judge-worker-1
+   GO_JUDGE_READ_TIMEOUT_MS=300000
    ```
 
-   Keep `APP_WORKER_ID` stable across restarts. For multiple judge-worker instances, assign a unique stable value to each instance so every worker owns and recovers its own Redis processing queue.
+   - **`GO_JUDGE_READ_TIMEOUT_MS`**: The HTTP read timeout for communicating with the judge service. This timeout must be larger than go-judge's maximum possible clockLimit (the compile clockLimit is calculated as `compileTimeoutMs * 2 + 1000ms` which is ~241,000ms when `compileTimeoutMs` is at its maximum of 120,000ms). Setting this value to `300000` (5 minutes) provides an adequate buffer.
+   - **`APP_WORKER_ID`**: Keep `APP_WORKER_ID` stable across restarts. For multiple judge-worker instances, assign a unique stable value to each instance so every worker owns and recovers its own Redis processing queue.
 
 3. **Deploy stack**:
    ```bash

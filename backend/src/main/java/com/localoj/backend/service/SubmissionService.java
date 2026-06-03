@@ -174,7 +174,11 @@ public class SubmissionService {
         return submissionMapper.selectList(query);
     }
 
-    private static final String SUBMISSIONS_CACHE_KEY = "cache:submissions:latest100";
+    public static final String SUBMISSIONS_CACHE_KEY = "cache:submissions:latest100";
+
+    public void evictLatestSubmissionsCache() {
+        redisTemplate.delete(SUBMISSIONS_CACHE_KEY);
+    }
 
     public List<SubmissionSummary> listSummaries(CurrentUser user) {
         return listSummaries(user, null, null);

@@ -250,11 +250,11 @@ migrate_named_volumes() {
     local oj_vol=""
     
     for vol in $volumes; do
-        if [[ "$vol" =~ mysql-data$ ]]; then
+        if [[ "$vol" == "local-oj_mysql-data" || "$vol" == "localoj_mysql-data" || "$vol" == "coderushoj_mysql-data" || "$vol" == "coderush_oj_mysql-data" ]]; then
             mysql_vol="$vol"
-        elif [[ "$vol" =~ redis-data$ ]]; then
+        elif [[ "$vol" == "local-oj_redis-data" || "$vol" == "localoj_redis-data" || "$vol" == "coderushoj_redis-data" || "$vol" == "coderush_oj_redis-data" ]]; then
             redis_vol="$vol"
-        elif [[ "$vol" =~ oj-data$ ]]; then
+        elif [[ "$vol" == "local-oj_oj-data" || "$vol" == "localoj_oj-data" || "$vol" == "coderushoj_oj-data" || "$vol" == "coderush_oj_oj-data" ]]; then
             oj_vol="$vol"
         fi
     done

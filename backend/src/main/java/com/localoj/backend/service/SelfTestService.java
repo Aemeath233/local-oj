@@ -65,6 +65,13 @@ public class SelfTestService {
         }
     }
 
+    public void clearCooldown(CurrentUser user, Long problemId) {
+        if (!isAdmin(user)) {
+            String redisKey = "cooldown:problem:" + problemId + ":user:" + user.id();
+            redisTemplate.delete(redisKey);
+        }
+    }
+
     public SelfTestResult run(CurrentUser user, Long problemId, Long contestId, Language language, String sourceCode, String stdin) {
         Problem problem = problemMapper.selectById(problemId);
         if (problem == null) {

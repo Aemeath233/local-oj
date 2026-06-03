@@ -214,11 +214,14 @@
           <pre class="zip-tree">problem-package.zip
 ├── config.yml
 ├── statement.md
+├── README.md
+├── AGENTS.md
 └── cases/
-    ├── 1.in
-    ├── 1.out
-    ├── 2.in
-    └── 2.out</pre>
+    ├── sample-1.in
+    ├── sample-1.out
+    ├── min-n.in
+    ├── min-n.out
+    └── ...</pre>
         </section>
       </div>
       <template #footer>

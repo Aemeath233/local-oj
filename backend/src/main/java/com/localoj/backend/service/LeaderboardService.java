@@ -29,15 +29,18 @@ public class LeaderboardService {
     private final JdbcTemplate jdbcTemplate;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     public LeaderboardService(
             JdbcTemplate jdbcTemplate,
             StringRedisTemplate redisTemplate,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            org.springframework.transaction.support.TransactionTemplate transactionTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.transactionTemplate = transactionTemplate;
     }
 
     private List<LeaderboardRow> getAllLeaderboard() {
@@ -103,20 +106,21 @@ public class LeaderboardService {
     }
 
     @Scheduled(cron = "0 0 0 * * SUN")
-    @Transactional
     public void snapshotRanks() {
         log.info("Generating weekly leaderboard rank snapshot...");
         List<LeaderboardRow> currentLeaderboard = queryLeaderboardFromDb(10000);
         try {
-            jdbcTemplate.update("DELETE FROM user_rank_snapshots");
-            if (!currentLeaderboard.isEmpty()) {
-                String insertSql = "INSERT INTO user_rank_snapshots (user_id, prev_rank) VALUES (?, ?)";
-                List<Object[]> batchArgs = new ArrayList<>();
-                for (LeaderboardRow row : currentLeaderboard) {
-                    batchArgs.add(new Object[]{row.userId(), row.rank()});
+            transactionTemplate.executeWithoutResult(status -> {
+                jdbcTemplate.update("DELETE FROM user_rank_snapshots");
+                if (!currentLeaderboard.isEmpty()) {
+                    String insertSql = "INSERT INTO user_rank_snapshots (user_id, prev_rank) VALUES (?, ?)";
+                    List<Object[]> batchArgs = new ArrayList<>();
+                    for (LeaderboardRow row : currentLeaderboard) {
+                        batchArgs.add(new Object[]{row.userId(), row.rank()});
+                    }
+                    jdbcTemplate.batchUpdate(insertSql, batchArgs);
                 }
-                jdbcTemplate.batchUpdate(insertSql, batchArgs);
-            }
+            });
             evictCache();
             log.info("Successfully saved {} users' rank snapshots.", currentLeaderboard.size());
         } catch (RuntimeException ex) {

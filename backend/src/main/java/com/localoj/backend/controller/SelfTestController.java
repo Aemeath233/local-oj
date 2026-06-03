@@ -55,6 +55,7 @@ public class SelfTestController {
                     request.stdin()
             )), selfTestExecutor);
         } catch (java.util.concurrent.RejectedExecutionException e) {
+            selfTestService.clearCooldown(user, request.problemId());
             throw new IllegalArgumentException("当前自测服务繁忙，请稍后再试！");
         }
     }

@@ -19,9 +19,14 @@ public class SubmissionSseController {
 
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
     private final com.localoj.backend.service.LeaderboardService leaderboardService;
+    private final com.localoj.backend.service.SubmissionService submissionService;
 
-    public SubmissionSseController(com.localoj.backend.service.LeaderboardService leaderboardService) {
+    public SubmissionSseController(
+            com.localoj.backend.service.LeaderboardService leaderboardService,
+            com.localoj.backend.service.SubmissionService submissionService
+    ) {
         this.leaderboardService = leaderboardService;
+        this.submissionService = submissionService;
     }
 
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -44,9 +49,11 @@ public class SubmissionSseController {
     }
 
     public void handleRedisMessage(String message) {
-        broadcast(message);
         try {
             if (message != null) {
+                // Clear submission list cache FIRST so that clients get fresh data when they refresh
+                submissionService.evictLatestSubmissionsCache();
+
                 String[] parts = message.split(",");
                 if (parts.length >= 3) {
                     String status = parts[1];
@@ -56,9 +63,11 @@ public class SubmissionSseController {
                     }
                 }
             }
-        } catch (Exception e) {
-            log.error("Failed to evict leaderboard cache on pubsub update", e);
+        } catch (Exception ex) {
+            log.warn("Failed to process pubsub submission status", ex);
         }
+
+        broadcast(message);
     }
 
     public void broadcast(String data) {

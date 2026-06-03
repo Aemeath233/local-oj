@@ -157,6 +157,13 @@ public class JudgeQueueConsumer {
                             null,
                             "attempts=" + attempts + "; backoff=" + delayMs + "ms; error=" + ex.getMessage()
                     );
+                    /*
+                     * 架构考量说明 (Architectural Trade-off):
+                     * 这里使用 Thread.sleep() 直接阻塞当前消费线程来实现指数退避重试，而不是使用 Redis ZSET 构建延迟队列。
+                     * 这是因为作为轻量级的内部 OJ 系统，最大重试仅为 3 次，且退避时间极短（1s, 2s, 3s），
+                     * 使用线程休眠可以保持代码极度精简，且不破坏现有的 RightPopAndLeftPush (可靠队列) 的语义和 DLQ 逻辑。
+                     * 如果后续并发量显著增大导致线程池 (32 线程) 被重试任务占满，可考虑引入专用的延迟中间件如 RabbitMQ 或重构为 ZSET。
+                     */
                     Thread.sleep(delayMs);
                     redisTemplate.opsForValue().increment(retryKey);
                     redisTemplate.expire(retryKey, Duration.ofHours(1));
@@ -182,7 +189,6 @@ public class JudgeQueueConsumer {
             }
         } finally {
             inFlightJobs.decrementAndGet();
-            bustSubmissionsCache();
         }
     }
 
@@ -194,15 +200,7 @@ public class JudgeQueueConsumer {
         }
     }
 
-    private static final String SUBMISSIONS_CACHE_KEY = "cache:submissions:latest100";
 
-    private void bustSubmissionsCache() {
-        try {
-            redisTemplate.delete(SUBMISSIONS_CACHE_KEY);
-        } catch (Exception ex) {
-            log.warn("Failed to bust submissions list cache", ex);
-        }
-    }
 
     @PreDestroy
     public void shutdown() {

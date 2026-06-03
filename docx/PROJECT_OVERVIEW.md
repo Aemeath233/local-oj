@@ -40,7 +40,7 @@ graph TD
 ### 2. Backend API (`backend/`)
 - **Technology Stack**: Spring Boot 3 + Java 21 + MyBatis-Plus + Spring Security / JWT.
 - **Key Features**:
-  - **Problem Management**: Single Markdown document authoring (no split input/output fields). Batch problem importing via standard ZIP format (markdown statement, YAML metadata config, same-basename `.in`/`.out`/`.ans` test cases).
+  - **Problem Management**: Single Markdown document authoring (no split input/output fields). Batch problem importing via standard ZIP format (markdown statement, YAML metadata config, same-basename `.in`/`.out`/`.ans` test cases). The admin importer offers a downloadable template ZIP with `README.md`, `AGENTS.md`, and broad edge/random sample cases for LLM-assisted problem generation.
   - **Submission Boundaries**: Practice submission history and problem status queries exclude contest submissions; contest submissions are served through contest-scoped APIs so registration and visibility rules stay centralized.
   - **SMTP Verified Settings**: User password changes and registrations utilize SMTP-verified code verification. Settings are managed dynamically in the administrative backend.
   - **Task Dispatcher**: Pushes submission judging tasks asynchronously to Redis and monitors state.
