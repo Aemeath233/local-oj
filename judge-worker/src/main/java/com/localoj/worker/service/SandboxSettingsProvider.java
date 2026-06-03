@@ -12,21 +12,40 @@ public class SandboxSettingsProvider {
     private static final long SETTINGS_ID = 1L;
 
     private final SandboxSettingMapper sandboxSettingMapper;
+    private volatile Settings cachedSettings;
+    private volatile long lastFetchTime;
+    private static final long CACHE_DURATION_MS = 5000L;
 
     public SandboxSettingsProvider(SandboxSettingMapper sandboxSettingMapper) {
         this.sandboxSettingMapper = sandboxSettingMapper;
     }
 
     public Settings current() {
-        try {
-            SandboxSetting setting = sandboxSettingMapper.selectById(SETTINGS_ID);
-            if (setting != null) {
-                return Settings.from(setting);
-            }
-        } catch (RuntimeException ex) {
-            log.warn("Failed to read sandbox settings, falling back to defaults", ex);
+        long now = System.currentTimeMillis();
+        Settings localCached = cachedSettings;
+        if (localCached != null && (now - lastFetchTime < CACHE_DURATION_MS)) {
+            return localCached;
         }
-        return Settings.defaults();
+        synchronized (this) {
+            localCached = cachedSettings;
+            if (localCached != null && (now - lastFetchTime < CACHE_DURATION_MS)) {
+                return localCached;
+            }
+            try {
+                SandboxSetting setting = sandboxSettingMapper.selectById(SETTINGS_ID);
+                if (setting != null) {
+                    localCached = Settings.from(setting);
+                } else {
+                    localCached = Settings.defaults();
+                }
+            } catch (RuntimeException ex) {
+                log.warn("Failed to read sandbox settings, falling back to defaults", ex);
+                localCached = Settings.defaults();
+            }
+            cachedSettings = localCached;
+            lastFetchTime = System.currentTimeMillis();
+            return localCached;
+        }
     }
 
     public record Settings(

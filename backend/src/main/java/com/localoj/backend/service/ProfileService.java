@@ -48,6 +48,7 @@ public class ProfileService {
     private final ProblemMapper problemMapper;
     private final SubmissionMapper submissionMapper;
     private final Path avatarRoot;
+    private final LeaderboardService leaderboardService;
 
     public ProfileService(
             UserMapper userMapper,
@@ -55,7 +56,8 @@ public class ProfileService {
             EmailVerificationService emailVerificationService,
             ProblemMapper problemMapper,
             SubmissionMapper submissionMapper,
-            @Value("${app.data-root:/data}") String dataRoot
+            @Value("${app.data-root:/data}") String dataRoot,
+            LeaderboardService leaderboardService
     ) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
@@ -63,6 +65,7 @@ public class ProfileService {
         this.problemMapper = problemMapper;
         this.submissionMapper = submissionMapper;
         this.avatarRoot = Paths.get(dataRoot).toAbsolutePath().normalize().resolve("avatars").normalize();
+        this.leaderboardService = leaderboardService;
     }
 
     @Transactional
@@ -137,6 +140,7 @@ public class ProfileService {
         user.setStudentNo(studentNo);
         user.setMajor(major);
         user.setUpdatedAt(now);
+        leaderboardService.evictCache();
         return ProfileView.from(user);
     }
 
@@ -162,6 +166,7 @@ public class ProfileService {
         user.setAvatarUrl("/api/profile/avatar/" + user.getId() + "/" + filename);
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateById(user);
+        leaderboardService.evictCache();
         return ProfileView.from(user);
     }
 

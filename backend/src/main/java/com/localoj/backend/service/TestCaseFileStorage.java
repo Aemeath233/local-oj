@@ -232,18 +232,60 @@ public class TestCaseFileStorage {
         Path backupDir = caseDir.resolveSibling("cases-" + newToken() + ".bak").normalize();
         ensureInside(dataRoot, backupDir);
         boolean hasBackup = false;
-        try {
-            if (Files.exists(caseDir)) {
-                Files.move(caseDir, backupDir);
-                hasBackup = true;
+
+        IOException lastEx = null;
+        for (int attempt = 1; attempt <= 5; attempt++) {
+            try {
+                if (Files.exists(caseDir)) {
+                    Files.move(caseDir, backupDir);
+                    hasBackup = true;
+                }
+                lastEx = null;
+                break;
+            } catch (IOException ex) {
+                lastEx = ex;
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted during folder lock retry", ie);
+                }
             }
-            Files.move(stagingDir, caseDir);
+        }
+        if (lastEx != null) {
+            throw new IOException("Failed to rename old test cases directory due to file locks on Windows", lastEx);
+        }
+
+        try {
+            lastEx = null;
+            for (int attempt = 1; attempt <= 5; attempt++) {
+                try {
+                    Files.move(stagingDir, caseDir);
+                    lastEx = null;
+                    break;
+                } catch (IOException ex) {
+                    lastEx = ex;
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("Interrupted during folder lock retry", ie);
+                    }
+                }
+            }
+            if (lastEx != null) {
+                throw lastEx;
+            }
+
             if (hasBackup) {
                 deleteRecursivelyIfExists(backupDir);
             }
         } catch (IOException ex) {
             if (!Files.exists(caseDir) && hasBackup && Files.exists(backupDir)) {
-                Files.move(backupDir, caseDir, StandardCopyOption.REPLACE_EXISTING);
+                try {
+                    Files.move(backupDir, caseDir, StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException ignored) {
+                }
             }
             throw ex;
         }

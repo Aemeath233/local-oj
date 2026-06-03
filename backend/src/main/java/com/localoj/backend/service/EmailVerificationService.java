@@ -28,15 +28,18 @@ public class EmailVerificationService {
     private final EmailVerificationCodeMapper codeMapper;
     private final UserMapper userMapper;
     private final SmtpSettingsService smtpSettingsService;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
 
     public EmailVerificationService(
             EmailVerificationCodeMapper codeMapper,
             UserMapper userMapper,
-            SmtpSettingsService smtpSettingsService
+            SmtpSettingsService smtpSettingsService,
+            org.springframework.data.redis.core.StringRedisTemplate redisTemplate
     ) {
         this.codeMapper = codeMapper;
         this.userMapper = userMapper;
         this.smtpSettingsService = smtpSettingsService;
+        this.redisTemplate = redisTemplate;
     }
 
     @Transactional
@@ -53,6 +56,12 @@ public class EmailVerificationService {
     }
 
     private void sendCode(String normalizedEmail, String purpose, String subject, String textPrefix) {
+        String cooldownKey = "cooldown:email:code:" + purpose + ":" + normalizedEmail;
+        Boolean cooldownSuccess = redisTemplate.opsForValue().setIfAbsent(cooldownKey, "1", java.time.Duration.ofSeconds(60));
+        if (cooldownSuccess == null || !cooldownSuccess) {
+            throw new IllegalArgumentException("验证码发送过于频繁，请一分钟后再试！");
+        }
+
         SmtpSetting setting = smtpSettingsService.requireSettings();
         validateSmtpSetting(setting);
 

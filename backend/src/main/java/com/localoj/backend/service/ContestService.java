@@ -468,20 +468,24 @@ public class ContestService {
                 Integer problemScore = isOI ? 0 : null;
 
                 if (isOI) {
+                    LocalDateTime problemBestScoreTime = null;
                     for (Submission s : pSubs) {
                         int sScore = s.getScore() != null ? s.getScore() : 0;
                         if (sScore > problemScore) {
                             problemScore = sScore;
+                            problemBestScoreTime = s.getCreatedAt();
                         }
                         if (sScore == 100) {
                             accepted = true;
                         }
-                        if (lastSubTime == null || s.getCreatedAt().isAfter(lastSubTime)) {
-                            lastSubTime = s.getCreatedAt();
-                        }
                     }
                     if (problemScore > 0) {
                         totalScore += problemScore;
+                    }
+                    if (problemBestScoreTime != null) {
+                        if (lastSubTime == null || problemBestScoreTime.isAfter(lastSubTime)) {
+                            lastSubTime = problemBestScoreTime;
+                        }
                     }
                 } else {
                     for (Submission s : pSubs) {

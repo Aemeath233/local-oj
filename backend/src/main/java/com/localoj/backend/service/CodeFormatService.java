@@ -262,7 +262,7 @@ public class CodeFormatService {
         result = result.replaceAll("\\s*<=\\s*", " <= ");
         result = result.replaceAll("(?<![\\+\\-\\*\\/\\%\\&\\|\\^\\<\\>\\=!])\\s*=\\s*(?![=])", " = ");
         result = result.replaceAll("(?<![\\+\\-\\*\\/\\%\\&\\|\\^])\\s*\\+\\s*(?![\\+=])", " + ");
-        result = result.replaceAll("(?<![\\+\\-\\*\\/\\%\\&\\|\\^])\\s*-\\s*(?![\\-=])", " - ");
+        result = result.replaceAll("(?<![\\+\\-\\*\\/\\%\\&\\|\\^])\\s*-\\s*(?![\\-=>])", " - ");
         result = result.replaceAll("\\s*&&\\s*", " && ");
         result = result.replaceAll("\\s*\\|\\|\\s*", " || ");
         

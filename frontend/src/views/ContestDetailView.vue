@@ -334,8 +334,7 @@ import {
   fetchSubmission,
   fetchContestRegistration,
   registerContest,
-  downloadContestStandings,
-  requestSseTicket
+  downloadContestStandings
 } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import type {
@@ -469,76 +468,53 @@ const filteredStandings = computed(() => {
 })
 
 let eventSource: EventSource | null = null
-let reconnectTimeout: number | undefined
 
-async function connectSse() {
+function connectSse() {
   if (eventSource) return
   if (!auth.token) return
 
-  try {
-    const ticket = await requestSseTicket()
-    const sseUrl = `/api/submissions/live?ticket=${encodeURIComponent(ticket)}`
-    eventSource = new EventSource(sseUrl)
+  const sseUrl = `/api/submissions/live?token=${encodeURIComponent(auth.token)}`
+  eventSource = new EventSource(sseUrl)
 
-    eventSource.addEventListener('update', (event) => {
-      try {
-        const parts = event.data.split(',')
-        if (parts.length >= 2) {
-          const subId = Number(parts[0])
-          const status = parts[1]
-          const verdict = parts[2] || null
+  eventSource.addEventListener('update', (event) => {
+    try {
+      const parts = event.data.split(',')
+      if (parts.length >= 2) {
+        const subId = Number(parts[0])
+        const status = parts[1]
+        const verdict = parts[2] || null
 
-          const existing = submissions.value.find(s => s.id === subId)
-          if (existing) {
-            existing.status = status as any
-            existing.verdict = verdict as any
+        const existing = submissions.value.find(s => s.id === subId)
+        if (existing) {
+          existing.status = status as any
+          existing.verdict = verdict as any
 
-            if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
-              fetchSubmission(subId).then(detail => {
-                selectedSubmission.value = detail
-              }).catch(console.error)
-            }
-          } else {
-            // If a new submission came in, silent refresh list
-            loadSubmissions(true)
+          if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
+            fetchSubmission(subId).then(detail => {
+              selectedSubmission.value = detail
+            }).catch(console.error)
           }
-
-          if (status === 'FINISHED') {
-            // Silent refresh to populate time, memory, score
-            loadSubmissions(true)
-          }
+        } else {
+          // If a new submission came in, silent refresh list
+          loadSubmissions(true)
         }
-      } catch (err) {
-        console.error('Failed to handle SSE message in ContestDetailView', err)
-      }
-    })
 
-    eventSource.onerror = (err) => {
-      console.error('SSE connection error in ContestDetailView, closing...', err)
-      disconnectSse()
-      if (!reconnectTimeout) {
-        reconnectTimeout = window.setTimeout(() => {
-          reconnectTimeout = undefined
-          connectSse()
-        }, 5000)
+        if (status === 'FINISHED') {
+          // Silent refresh to populate time, memory, score
+          loadSubmissions(true)
+        }
       }
+    } catch (err) {
+      console.error('Failed to handle SSE message in ContestDetailView', err)
     }
-  } catch (err) {
-    console.error('Failed to obtain SSE ticket in ContestDetailView, scheduling reconnect...', err)
-    if (!reconnectTimeout) {
-      reconnectTimeout = window.setTimeout(() => {
-        reconnectTimeout = undefined
-        connectSse()
-      }, 5000)
-    }
+  })
+
+  eventSource.onerror = (err) => {
+    console.error('SSE connection error in ContestDetailView:', err)
   }
 }
 
 function disconnectSse() {
-  if (reconnectTimeout) {
-    window.clearTimeout(reconnectTimeout)
-    reconnectTimeout = undefined
-  }
   if (eventSource) {
     eventSource.close()
     eventSource = null
