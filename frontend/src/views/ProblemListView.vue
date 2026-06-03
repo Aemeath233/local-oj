@@ -22,7 +22,7 @@
         <el-select v-model="sortBy" style="width: 140px">
           <el-option
             :label="sortField === 'ID' ? `创建时间 ${sortOrder === 'ASC' ? '↑' : '↓'}` : '创建时间'"
-            :value="sortField === 'ID' ? `ID_${sortOrder}` : 'ID_ASC'"
+            :value="sortField === 'ID' ? `ID_${sortOrder}` : 'ID_DESC'"
             @click="handleOptionClick('ID')"
           />
           <el-option
@@ -159,16 +159,16 @@ function handleJump() {
 const loading = ref(false)
 const keyword = ref('')
 const statusFilter = ref<ProblemStatus | ''>('')
-const sortBy = ref('ID_ASC')
+const sortBy = ref('ID_DESC')
 const sortField = ref('ID')
-const sortOrder = ref('ASC')
+const sortOrder = ref('DESC')
 
 function handleOptionClick(field: string) {
   if (sortField.value === field) {
     sortOrder.value = sortOrder.value === 'ASC' ? 'DESC' : 'ASC'
   } else {
     sortField.value = field
-    sortOrder.value = field === 'AC_RATE' ? 'DESC' : 'ASC'
+    sortOrder.value = (field === 'AC_RATE' || field === 'ID') ? 'DESC' : 'ASC'
   }
   sortBy.value = `${sortField.value}_${sortOrder.value}`
   handleFilterChange()
