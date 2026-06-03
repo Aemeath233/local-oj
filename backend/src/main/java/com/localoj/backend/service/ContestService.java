@@ -222,7 +222,7 @@ public class ContestService {
         return problemMapper.selectById(problemId);
     }
 
-    public List<Submission> listContestSubmissions(Long contestId, CurrentUser user) {
+    public List<SubmissionService.SubmissionSummary> listContestSubmissions(Long contestId, CurrentUser user) {
         Contest contest = requireContest(contestId, user);
         requireRegistration(contest, user);
         QueryWrapper<Submission> query = new QueryWrapper<Submission>()
@@ -232,7 +232,59 @@ public class ContestService {
         if (!isEnded(contest) && !isAdmin(user)) {
             query.eq("user_id", user.id());
         }
-        return submissionMapper.selectList(query);
+        List<Submission> submissions = submissionMapper.selectList(query);
+        if (submissions.isEmpty()) {
+            return List.of();
+        }
+
+        // Batch load users
+        List<Long> userIds = submissions.stream()
+                .map(Submission::getUserId)
+                .distinct()
+                .toList();
+        Map<Long, User> userMap = java.util.Collections.emptyMap();
+        if (!userIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(userIds);
+            userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
+        }
+
+        // Batch load problems
+        List<Long> problemIds = submissions.stream()
+                .map(Submission::getProblemId)
+                .distinct()
+                .toList();
+        Map<Long, Problem> problemMap = java.util.Collections.emptyMap();
+        if (!problemIds.isEmpty()) {
+            List<Problem> problems = problemMapper.selectBatchIds(problemIds);
+            problemMap = problems.stream().collect(Collectors.toMap(Problem::getId, p -> p));
+        }
+
+        final Map<Long, User> finalUserMap = userMap;
+        final Map<Long, Problem> finalProblemMap = problemMap;
+
+        return submissions.stream()
+                .map(s -> {
+                    User submitter = finalUserMap.get(s.getUserId());
+                    Problem problem = finalProblemMap.get(s.getProblemId());
+                    return new SubmissionService.SubmissionSummary(
+                            s.getId(),
+                            s.getUserId(),
+                            submitter == null ? null : submitter.getUsername(),
+                            submitter == null ? null : submitter.getDisplayName(),
+                            submitter == null ? null : submitter.getAvatarUrl(),
+                            s.getProblemId(),
+                            problem == null ? null : problem.getTitle(),
+                            s.getLanguage().name(),
+                            s.getStatus().name(),
+                            s.getVerdict() == null ? null : s.getVerdict().name(),
+                            s.getScore(),
+                            s.getTimeMs(),
+                            s.getMemoryKb(),
+                            s.getCreatedAt(),
+                            s.getJudgedAt()
+                    );
+                })
+                .toList();
     }
 
     @Transactional

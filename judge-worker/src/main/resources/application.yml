@@ -25,6 +25,8 @@ mybatis-plus:
     banner: false
 
 app:
+  worker:
+    id: ${APP_WORKER_ID:}
   queue:
     submission-key: ${JUDGE_QUEUE_KEY:judge:queue}
     processing-key: ${JUDGE_PROCESSING_KEY:judge:processing}

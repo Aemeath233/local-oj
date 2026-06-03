@@ -135,13 +135,21 @@
       </el-tab-pane>
 
       <!-- Tab 3: Submissions -->
-      <el-tab-pane v-if="isRegisteredOrAdmin && timeState !== 'UPCOMING'" label="我的提交" name="submissions">
+      <el-tab-pane v-if="isRegisteredOrAdmin && timeState !== 'UPCOMING'" :label="submissionsTabLabel" name="submissions">
         <div class="panel">
           <div class="submissions-toolbar">
             <el-button :icon="Refresh" @click="loadSubmissions" :loading="submissionsLoading">刷新</el-button>
           </div>
           <el-table v-loading="submissionsLoading" :data="submissions" row-key="id">
             <el-table-column prop="id" label="提交 ID" width="100" />
+            <el-table-column v-if="showUserColumn" label="用户" min-width="150">
+              <template #default="{ row }">
+                <div class="user-cell">
+                  <el-avatar :size="20" :src="row.avatarUrl">{{ row.username ? row.username.slice(0, 1).toUpperCase() : 'U' }}</el-avatar>
+                  <span class="user-display">{{ row.displayName || row.username }}</span>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column label="评测状态" width="150">
               <template #default="{ row }">
                 <VerdictTag :status="row.status" :verdict="row.verdict" />
@@ -336,7 +344,8 @@ import type {
   Submission,
   ContestStandingsRow,
   SubmissionDetail,
-  ContestRegistrationStatus
+  ContestRegistrationStatus,
+  SubmissionSummary
 } from '../types'
 
 const route = useRoute()
@@ -353,11 +362,19 @@ const isRegisteredOrAdmin = computed(() => {
 })
 const contest = ref<Contest | null>(null)
 const problems = ref<ContestProblemDetail[]>([])
-const submissions = ref<Submission[]>([])
+const submissions = ref<SubmissionSummary[]>([])
 const standings = ref<ContestStandingsRow[]>([])
 
 const activeTab = ref('problems')
 const standingsSearch = ref('')
+
+const submissionsTabLabel = computed(() => {
+  return timeState.value === 'FINISHED' ? '提交记录' : '我的提交'
+})
+
+const showUserColumn = computed(() => {
+  return auth.isAdmin || timeState.value === 'FINISHED'
+})
 
 const submissionsLoading = ref(false)
 const standingsLoading = ref(false)
@@ -664,7 +681,7 @@ async function exportStandings() {
   }
 }
 
-async function openSubmissionDetail(row: Submission) {
+async function openSubmissionDetail(row: SubmissionSummary) {
   loading.value = true
   try {
     selectedSubmission.value = await fetchSubmission(row.id)

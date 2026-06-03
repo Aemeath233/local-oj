@@ -54,7 +54,10 @@ Before launching in production, you must set these environment variables in your
    DB_PASSWORD=your-secure-db-password
    REDIS_HOST=redis
    APP_DATA_ROOT=/data
+   APP_WORKER_ID=judge-worker-1
    ```
+
+   Keep `APP_WORKER_ID` stable across restarts. For multiple judge-worker instances, assign a unique stable value to each instance so every worker owns and recovers its own Redis processing queue.
 
 3. **Deploy stack**:
    ```bash

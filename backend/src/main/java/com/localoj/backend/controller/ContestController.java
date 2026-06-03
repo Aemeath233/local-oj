@@ -6,6 +6,7 @@ import com.localoj.backend.security.SecurityUtils;
 import com.localoj.backend.service.ContestService;
 import com.localoj.backend.service.ProblemService;
 import com.localoj.backend.service.TestCaseFileStorage;
+import com.localoj.backend.service.SubmissionService;
 import com.localoj.common.model.Contest;
 import com.localoj.common.model.Problem;
 import com.localoj.common.model.Submission;
@@ -106,7 +107,7 @@ public class ContestController {
     }
 
     @GetMapping("/{id}/submissions")
-    public ApiResponse<List<Submission>> submissions(@PathVariable("id") Long id) {
+    public ApiResponse<List<SubmissionService.SubmissionSummary>> submissions(@PathVariable("id") Long id) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         return ApiResponse.ok(contestService.listContestSubmissions(id, user));
     }

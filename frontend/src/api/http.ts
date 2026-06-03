@@ -214,8 +214,11 @@ export async function runSelfTest(problemId: number, language: Language, sourceC
   return response.data.data
 }
 
-export async function fetchSubmissions() {
-  const response = await http.get<ApiEnvelope<SubmissionSummary[]>>('/submissions')
+export async function fetchSubmissions(params?: {
+  problemId?: number
+  mine?: boolean
+}) {
+  const response = await http.get<ApiEnvelope<SubmissionSummary[]>>('/submissions', { params })
   return response.data.data
 }
 
@@ -433,7 +436,7 @@ export async function fetchContestProblem(contestId: number, problemId: number) 
 }
 
 export async function fetchContestSubmissions(id: number) {
-  const response = await http.get<ApiEnvelope<Submission[]>>(`/contests/${id}/submissions`)
+  const response = await http.get<ApiEnvelope<SubmissionSummary[]>>(`/contests/${id}/submissions`)
   return response.data.data
 }
 
@@ -620,5 +623,4 @@ export async function fetchSystemVersions() {
   const response = await http.get<ApiEnvelope<Record<string, number>>>('/system/versions')
   return response.data.data
 }
-
 

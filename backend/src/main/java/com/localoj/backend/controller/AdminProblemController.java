@@ -72,6 +72,7 @@ public class AdminProblemController {
             @Valid @RequestBody CreateProblemRequest request,
             @RequestParam(value = "autolinkTrainingId", required = false) Long autolinkTrainingId
     ) {
+        validateTestCaseScores(request);
         Problem problem = problemService.createProblem(request.toCommand());
         if (autolinkTrainingId != null) {
             trainingService.linkProblems(autolinkTrainingId, List.of(problem.getId()));
@@ -100,8 +101,29 @@ public class AdminProblemController {
 
     @PutMapping("/{id}")
     public ApiResponse<AdminProblemDetail> update(@PathVariable("id") Long id, @Valid @RequestBody CreateProblemRequest request) {
+        validateTestCaseScores(request);
         problemService.updateProblem(id, request.toCommand());
         return ApiResponse.ok(detail(id));
+    }
+
+    private void validateTestCaseScores(CreateProblemRequest request) {
+        if (request.testCases() == null || request.testCases().isEmpty()) {
+            throw new IllegalArgumentException("测试点不能为空");
+        }
+        int totalScore = 0;
+        for (TestCaseRequest tc : request.testCases()) {
+            Integer score = tc.score();
+            if (score == null) {
+                score = 100;
+            }
+            if (score < 0 || score > 100) {
+                throw new IllegalArgumentException("测试点分值必须在 0 到 100 之间");
+            }
+            totalScore += score;
+        }
+        if (totalScore != 100) {
+            throw new IllegalArgumentException("所有测试点的分值总和必须等于 100");
+        }
     }
 
     @DeleteMapping("/{id}")

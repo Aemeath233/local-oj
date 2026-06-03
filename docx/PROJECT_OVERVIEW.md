@@ -41,6 +41,7 @@ graph TD
 - **Technology Stack**: Spring Boot 3 + Java 21 + MyBatis-Plus + Spring Security / JWT.
 - **Key Features**:
   - **Problem Management**: Single Markdown document authoring (no split input/output fields). Batch problem importing via standard ZIP format (markdown statement, YAML metadata config, same-basename `.in`/`.out`/`.ans` test cases).
+  - **Submission Boundaries**: Practice submission history and problem status queries exclude contest submissions; contest submissions are served through contest-scoped APIs so registration and visibility rules stay centralized.
   - **SMTP Verified Settings**: User password changes and registrations utilize SMTP-verified code verification. Settings are managed dynamically in the administrative backend.
   - **Task Dispatcher**: Pushes submission judging tasks asynchronously to Redis and monitors state.
 
@@ -48,6 +49,7 @@ graph TD
 - **Technology Stack**: Spring Boot 3 + Java 21 + MyBatis-Plus + Redis queue processing.
 - **Key Features**:
   - **Deterministic Task Processing**: Moves submission tasks atomically from a Redis pending queue to an active processing queue to prevent loss.
+  - **Restart Recovery**: Uses a stable `APP_WORKER_ID` to recover that worker's Redis processing queue on startup without age-based duplicate judging of active `RUNNING` submissions.
   - **Sandbox Orchestrator**: Submits compiled binary, source codes, execution limits, and paired test inputs to `go-judge` via HTTP API, then parses execution states.
   - **Verdicts Normalization**: Resolves executions into clean standard OJ verdicts: `AC` (Accepted), `WA` (Wrong Answer), `TLE` (Time Limit Exceeded), `MLE` (Memory Limit Exceeded), `OLE` (Output Limit Exceeded), `RE` (Runtime Error), `CE` (Compilation Error), and `IE` (Internal Error).
 

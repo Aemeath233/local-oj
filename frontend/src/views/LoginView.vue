@@ -46,7 +46,7 @@
             </el-form-item>
             <el-form-item label="用户名">
               <el-input v-model="registerForm.username" placeholder="3-32位，仅限字母、数字、下划线" autocomplete="username" />
-              <div class="form-hint">用户名注册后<strong>不可更改</strong>，是你的唯一标识，请认真填写</div>
+              <div class="form-hint">用户名注册后<strong>每自然月最多修改 3 次</strong>，是你的唯一标识，请认真填写</div>
             </el-form-item>
             <el-form-item label="昵称">
               <el-input v-model="registerForm.displayName" />

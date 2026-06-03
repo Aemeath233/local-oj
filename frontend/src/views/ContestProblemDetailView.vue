@@ -19,6 +19,20 @@
           <MarkdownView :source="statementMarkdown" />
         </section>
 
+        <!-- If mobile, show a nice info block about writing code on PC -->
+        <el-card v-if="isMobile" class="mobile-warning-card" style="margin-top: 20px; margin-bottom: 15px;">
+          <div style="display: flex; gap: 15px; align-items: flex-start;">
+            <el-icon style="font-size: 24px; color: var(--el-color-warning); margin-top: 2px;"><Monitor /></el-icon>
+            <div>
+              <h3 style="margin: 0 0 8px 0; font-size: 16px;">建议使用电脑端</h3>
+              <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--el-text-color-secondary); line-height: 1.5;">
+                本系统支持在电脑端进行代码编写、调试与提交。建议在电脑浏览器打开当前链接以获得最佳答题体验。
+              </p>
+              <el-button type="primary" size="small" @click="copyLink">复制题目链接</el-button>
+            </div>
+          </div>
+        </el-card>
+
         <section v-if="sampleCases.length > 0" class="sample-list">
           <h2>样例</h2>
           <div v-for="(sample, index) in sampleCases" :key="index" class="sample-block">
@@ -39,7 +53,7 @@
                       复制
                     </el-button>
                     <el-button
-                      v-if="sample.inputText"
+                      v-if="sample.inputText && !isMobile"
                       type="success"
                       link
                       size="small"
@@ -76,12 +90,12 @@
       </article>
 
       <!-- Drag Resizable Divider -->
-      <div v-if="problem" class="resize-divider" @mousedown="startDrag">
+      <div v-if="problem && !isMobile" class="resize-divider" @mousedown="startDrag">
         <div class="resize-divider-line"></div>
       </div>
 
       <!-- Right side: Code Editor & Submissions & Custom Stdin Test Console -->
-      <aside class="sidebar" :style="rightStyle">
+      <aside v-if="!isMobile" class="sidebar" :style="rightStyle">
         <!-- Editor Header -->
         <div class="editor-bar panel">
           <div class="bar-left">
@@ -215,7 +229,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Upload, VideoPlay, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading, Brush } from '@element-plus/icons-vue'
+import { Upload, VideoPlay, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading, Brush, Monitor } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CodeEditor from '../components/CodeEditor.vue'
 import MarkdownView from '../components/MarkdownView.vue'
@@ -234,7 +248,7 @@ import {
 } from '../api/http'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import { useAuthStore } from '../stores/auth'
-import type { Language, ProblemDetail, SelfTestResult, Submission, SubmissionDetail } from '../types'
+import type { Language, ProblemDetail, SelfTestResult, SubmissionDetail, SubmissionSummary } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -247,12 +261,14 @@ let startWidthPercent = 0
 
 // Check if mobile or desktop split screen is active
 const isWideScreen = ref(window.innerWidth >= 1041)
+const isMobile = ref(window.innerWidth <= 768)
 function handleResize() {
   isWideScreen.value = window.innerWidth >= 1041
+  isMobile.value = window.innerWidth <= 768
 }
 
 const leftStyle = computed(() => {
-  if (!isWideScreen.value) return {}
+  if (!isWideScreen.value || isMobile.value) return {}
   return {
     width: `${leftWidthPercent.value}%`,
     flex: `0 0 ${leftWidthPercent.value}%`
@@ -260,12 +276,17 @@ const leftStyle = computed(() => {
 })
 
 const rightStyle = computed(() => {
-  if (!isWideScreen.value) return {}
+  if (!isWideScreen.value || isMobile.value) return {}
   return {
     width: `${100 - leftWidthPercent.value}%`,
     flex: `0 0 ${100 - leftWidthPercent.value}%`
   }
 })
+
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href)
+  ElMessage.success('链接已复制到剪贴板，快去电脑上打开吧！')
+}
 
 function startDrag(event: MouseEvent) {
   event.preventDefault()
@@ -405,7 +426,7 @@ const selfTestMessage = computed(() => {
 // UX & Layout reactive variables
 const consoleExpanded = ref(false)
 const activeConsoleTab = ref('input')
-const submissions = ref<Submission[]>([])
+const submissions = ref<SubmissionSummary[]>([])
 const submissionsLoading = ref(false)
 const drawerVisible = ref(false)
 const selectedSubmission = ref<SubmissionDetail | null>(null)
@@ -524,7 +545,7 @@ async function loadSubmissions(isSilent = false) {
   }
 }
 
-async function openSubmissionDetail(row: Submission) {
+async function openSubmissionDetail(row: SubmissionSummary) {
   loading.value = true
   try {
     selectedSubmission.value = await fetchSubmission(row.id)
@@ -935,5 +956,18 @@ function templateFor(value: Language) {
 .mini-sub-time {
   font-size: 0.75rem;
   color: var(--el-text-color-placeholder);
+}
+@media (max-width: 768px) {
+  .problem-layout {
+    grid-template-columns: 1fr !important;
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+  .statement {
+    overflow-y: visible !important;
+  }
+  .problem-page-container {
+    height: auto !important;
+  }
 }
 </style>

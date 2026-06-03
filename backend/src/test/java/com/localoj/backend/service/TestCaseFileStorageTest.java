@@ -42,12 +42,13 @@ public class TestCaseFileStorageTest {
         assertEquals("1.out", testCases.get(0).outputFile());
         assertEquals(6, testCases.get(0).inputSize());
         assertEquals(7, testCases.get(0).outputSize());
-        assertEquals(100, testCases.get(0).score());
+        assertEquals(50, testCases.get(0).score());
         assertFalse(testCases.get(0).sample());
 
         assertEquals("2", testCases.get(1).name());
         assertEquals("2.in", testCases.get(1).inputFile());
         assertEquals("2.ans", testCases.get(1).outputFile());
+        assertEquals(50, testCases.get(1).score());
 
         Path uploadDir = tempDir.resolve("uploads").resolve(testCases.get(0).uploadToken());
         assertEquals("input1", Files.readString(uploadDir.resolve("1.in")));
@@ -76,6 +77,28 @@ public class TestCaseFileStorageTest {
         Path uploadDir = tempDir.resolve("uploads").resolve(testCases.getFirst().uploadToken());
         assertEquals("4 5\n", Files.readString(uploadDir.resolve("sample.in")));
         assertEquals("9\n", Files.readString(uploadDir.resolve("sample.out")));
+    }
+
+    @Test
+    public void testImportFilesDistributesRemainderAcrossScores() {
+        TestCaseFileStorage storage = new TestCaseFileStorage(tempDir.toString());
+
+        List<MultipartFile> files = List.of(
+                file("1.in", "input1"),
+                file("1.out", "output1"),
+                file("2.in", "input2"),
+                file("2.out", "output2"),
+                file("3.in", "input3"),
+                file("3.out", "output3")
+        );
+
+        List<TestCaseFileStorage.ImportedCase> testCases = storage.importFiles(files);
+
+        assertEquals(3, testCases.size());
+        assertEquals(34, testCases.get(0).score());
+        assertEquals(33, testCases.get(1).score());
+        assertEquals(33, testCases.get(2).score());
+        assertEquals(100, testCases.stream().mapToInt(TestCaseFileStorage.ImportedCase::score).sum());
     }
 
     private MockMultipartFile file(String name, String content) {

@@ -23,6 +23,8 @@ Copy-Item .env.example .env
 
 The Compose MySQL service maps to host port `3307` by default so it does not collide with an existing local MySQL on `3306`.
 Uploaded problem test files are kept in the Compose `oj-data` volume under `/data/problems/{problemId}/cases`.
+Paired test case uploads are scored to a total of 100 by default; edit the per-case scores before saving when a custom distribution is needed.
+The judge worker uses `APP_WORKER_ID` to derive its Redis processing queue, so keep it stable across restarts for reliable recovery of in-flight jobs.
 
 Then start the stack:
 

@@ -43,7 +43,8 @@ public class ProblemController {
             @RequestParam(value = "sortBy", defaultValue = "ID_ASC") String sortBy
     ) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
-        ProblemListResult result = problemService.listProblemsPaged(keyword, tags, user, status, sortBy, page, pageSize);
+        int cappedPageSize = Math.min(100, Math.max(1, pageSize));
+        ProblemListResult result = problemService.listProblemsPaged(keyword, tags, user, status, sortBy, page, cappedPageSize);
         if (page == null) {
             return ApiResponse.ok(result.list());
         }

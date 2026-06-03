@@ -1,7 +1,12 @@
 <template>
   <div class="problem-page-container" v-loading="loading">
-    <section class="problem-layout" ref="problemLayoutRef">
-      <article v-if="problem" class="statement panel" style="display: flex; flex-direction: column;" :style="leftStyle">
+    <div v-if="hasError" style="margin: 40px auto; max-width: 400px; text-align: center;">
+      <el-empty description="加载题目失败或题目不存在/无权限访问">
+        <el-button type="primary" @click="router.push('/problems')">返回题目列表</el-button>
+      </el-empty>
+    </div>
+    <section v-else-if="problem" class="problem-layout" ref="problemLayoutRef">
+      <article class="statement panel" style="display: flex; flex-direction: column;" :style="leftStyle">
         <el-tabs v-model="activeLeftTab" class="statement-tabs" style="flex: 1; display: flex; flex-direction: column;">
           <!-- Tab 1: Problem Description -->
           <el-tab-pane label="题目描述" name="statement" style="padding-top: 10px;">
@@ -11,6 +16,20 @@
               :reader-font-family="readerFontFamily"
               @fill-self-test="fillSelfTest"
             />
+
+            <!-- If mobile, show a nice info block about writing code on PC -->
+            <el-card v-if="isMobile" class="mobile-warning-card" style="margin-top: 15px;">
+              <div style="display: flex; gap: 15px; align-items: flex-start;">
+                <el-icon style="font-size: 24px; color: var(--el-color-warning); margin-top: 2px;"><Monitor /></el-icon>
+                <div>
+                  <h3 style="margin: 0 0 8px 0; font-size: 16px;">建议使用电脑端</h3>
+                  <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--el-text-color-secondary); line-height: 1.5;">
+                    本系统支持在电脑端进行代码编写、调试与提交。建议在电脑浏览器打开当前链接以获得最佳答题体验。
+                  </p>
+                  <el-button type="primary" size="small" @click="copyLink">复制题目链接</el-button>
+                </div>
+              </div>
+            </el-card>
           </el-tab-pane>
 
           <!-- Tab 2: Editorials & Solutions Board -->
@@ -21,11 +40,11 @@
       </article>
 
       <!-- Drag Resizable Divider -->
-      <div v-if="problem" class="resize-divider" @mousedown="startDrag">
+      <div v-if="!isMobile" class="resize-divider" @mousedown="startDrag">
         <div class="resize-divider-line"></div>
       </div>
 
-      <aside class="submit-panel panel" :style="rightStyle">
+      <aside v-if="!isMobile" class="submit-panel panel" :style="rightStyle">
         <div class="submit-toolbar">
           <el-select v-model="language" class="language-select">
             <el-option label="C++20 (O2)" value="CPP" />
@@ -82,8 +101,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { Upload, VideoPlay, Brush } from '@element-plus/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Upload, VideoPlay, Brush, Monitor } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CodeEditor from '../components/CodeEditor.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
@@ -103,6 +122,7 @@ import { useAuthStore } from '../stores/auth'
 import type { Language, ProblemDetail, SelfTestResult, SubmissionSummary, SubmissionDetail } from '../types'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 
 const problemLayoutRef = ref<HTMLElement | null>(null)
@@ -113,12 +133,15 @@ let startWidthPercent = 0
 
 // Check if mobile or desktop split screen is active
 const isWideScreen = ref(window.innerWidth >= 1041)
+const isMobile = ref(window.innerWidth <= 768)
+
 function handleResize() {
   isWideScreen.value = window.innerWidth >= 1041
+  isMobile.value = window.innerWidth <= 768
 }
 
 const leftStyle = computed(() => {
-  if (!isWideScreen.value) return {}
+  if (!isWideScreen.value || isMobile.value) return {}
   return {
     width: `${leftWidthPercent.value}%`,
     flex: `0 0 ${leftWidthPercent.value}%`
@@ -126,7 +149,7 @@ const leftStyle = computed(() => {
 })
 
 const rightStyle = computed(() => {
-  if (!isWideScreen.value) return {}
+  if (!isWideScreen.value || isMobile.value) return {}
   return {
     width: `${100 - leftWidthPercent.value}%`,
     flex: `0 0 ${100 - leftWidthPercent.value}%`
@@ -232,8 +255,11 @@ watch(sourceCode, (newCode) => {
   }
 })
 
+const hasError = ref(false)
+
 async function initProblem() {
   loading.value = true
+  hasError.value = false
   try {
     problem.value = await fetchProblem(problemId.value)
     clearSelfTest()
@@ -246,12 +272,20 @@ async function initProblem() {
     }
   } catch (error) {
     console.error('Failed to initialize problem details', error)
+    hasError.value = true
   } finally {
     loading.value = false
   }
 
   // Load submissions in the background without blocking the main page display
-  loadSubmissions()
+  if (!hasError.value) {
+    loadSubmissions()
+  }
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href)
+  ElMessage.success('链接已复制到剪贴板，快去电脑上打开吧！')
 }
 
 onMounted(async () => {
@@ -341,11 +375,11 @@ async function loadSubmissions(isSilent = false) {
     submissionsLoading.value = true
   }
   try {
-    const allSubmissions = await fetchSubmissions()
-    const currentUserId = authStore.user?.id
-    submissions.value = allSubmissions.filter(
-      (sub) => Number(sub.problemId) === Number(problemId.value) && Number(sub.userId) === Number(currentUserId)
-    ).slice(0, 10)
+    const res = await fetchSubmissions({
+      problemId: problemId.value,
+      mine: true
+    })
+    submissions.value = res.slice(0, 10)
 
     // Auto-update drawer if it's currently showing one of our submissions
     if (drawerVisible.value && selectedSubmission.value) {

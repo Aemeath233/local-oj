@@ -224,16 +224,9 @@ async function load(isSilent: boolean = false) {
       forceUpdateSectionVersion('problems')
     }
     const q = keyword.value.trim()
-    // If keyword matches any tag name, include those tags in the search
-    const matchingTags = q
-      ? allTags.value
-          .filter(t => t.name.toLowerCase().includes(q.toLowerCase()))
-          .map(t => t.name)
-      : []
     const result = await fetchProblems({
       q: q || undefined,
       status: statusFilter.value,
-      tags: matchingTags.length > 0 ? matchingTags.join(',') : undefined,
       page: currentPage.value,
       pageSize: pageSize.value,
       sortBy: sortBy.value

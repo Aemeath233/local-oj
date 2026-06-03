@@ -145,7 +145,8 @@ public class ProblemService {
         List<Submission> submissions = submissionMapper.selectList(new QueryWrapper<Submission>()
                 .select("problem_id", "verdict")
                 .eq("user_id", user.id())
-                .in("problem_id", problemIds));
+                .in("problem_id", problemIds)
+                .isNull("contest_id"));
         for (Submission submission : submissions) {
             String current = statuses.getOrDefault(submission.getProblemId(), "UNATTEMPTED");
             if ("ACCEPTED".equals(current)) {
@@ -343,6 +344,7 @@ public class ProblemService {
         List<Map<String, Object>> totalCounts = submissionMapper.selectMaps(new QueryWrapper<Submission>()
                 .select("problem_id", "COUNT(*) as cnt")
                 .in("problem_id", problemIds)
+                .isNull("contest_id")
                 .groupBy("problem_id"));
         for (Map<String, Object> map : totalCounts) {
             Long problemIdVal = getLongValue(map, "problem_id");
@@ -357,6 +359,7 @@ public class ProblemService {
                 .select("problem_id", "COUNT(*) as cnt")
                 .in("problem_id", problemIds)
                 .eq("verdict", Verdict.AC.name())
+                .isNull("contest_id")
                 .groupBy("problem_id"));
         for (Map<String, Object> map : acCounts) {
             Long problemIdVal = getLongValue(map, "problem_id");
@@ -416,6 +419,7 @@ public class ProblemService {
         String statsJoin = "LEFT JOIN ( " +
                 "    SELECT problem_id, COUNT(*) as submit_cnt, SUM(CASE WHEN verdict = 'AC' THEN 1 ELSE 0 END) as ac_cnt " +
                 "    FROM submissions " +
+                "    WHERE contest_id IS NULL " +
                 "    GROUP BY problem_id " +
                 ") stats ON p.id = stats.problem_id ";
         sql.append(statsJoin);
@@ -426,7 +430,7 @@ public class ProblemService {
             String userJoin = "LEFT JOIN ( " +
                     "    SELECT problem_id, MAX(CASE WHEN verdict = 'AC' THEN 2 ELSE 1 END) as user_status " +
                     "    FROM submissions " +
-                    "    WHERE user_id = ? " +
+                    "    WHERE user_id = ? AND contest_id IS NULL " +
                     "    GROUP BY problem_id " +
                     ") s_user ON p.id = s_user.problem_id ";
             sql.append(userJoin);

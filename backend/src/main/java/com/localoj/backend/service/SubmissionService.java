@@ -96,23 +96,6 @@ public class SubmissionService {
             throw new IllegalArgumentException("Problem not found");
         }
 
-        if (!isAdmin(user)) {
-            String redisKey = "cooldown:problem:" + problemId + ":user:" + user.id();
-            Boolean success = redisTemplate.opsForValue().setIfAbsent(redisKey, "1", java.time.Duration.ofSeconds(5));
-            if (success == null || !success) {
-                throw new IllegalArgumentException("提交过于频繁，该题目每 5 秒仅允许提交或自测一次！");
-            }
-        }
-
-        Submission submission = new Submission();
-        submission.setUserId(user.id());
-        submission.setProblemId(problemId);
-        submission.setLanguage(language);
-        submission.setSourceCode(sourceCode);
-        submission.setStatus(SubmissionStatus.PENDING);
-        submission.setScore(0);
-        submission.setCreatedAt(LocalDateTime.now());
-
         if (contestId != null) {
             Contest contest = contestMapper.selectById(contestId);
             if (contest == null || (!Boolean.TRUE.equals(contest.getVisible()) && user.role() != Role.ADMIN && user.role() != Role.SUPER_ADMIN)) {
@@ -134,6 +117,26 @@ public class SubmissionService {
             if (!isAdmin(user) && !isRegistered(contestId, user.id())) {
                 throw new IllegalArgumentException("请先报名比赛");
             }
+        }
+
+        if (!isAdmin(user)) {
+            String redisKey = "cooldown:problem:" + problemId + ":user:" + user.id();
+            Boolean success = redisTemplate.opsForValue().setIfAbsent(redisKey, "1", java.time.Duration.ofSeconds(5));
+            if (success == null || !success) {
+                throw new IllegalArgumentException("提交过于频繁，该题目每 5 秒仅允许提交或自测一次！");
+            }
+        }
+
+        Submission submission = new Submission();
+        submission.setUserId(user.id());
+        submission.setProblemId(problemId);
+        submission.setLanguage(language);
+        submission.setSourceCode(sourceCode);
+        submission.setStatus(SubmissionStatus.PENDING);
+        submission.setScore(0);
+        submission.setCreatedAt(LocalDateTime.now());
+
+        if (contestId != null) {
             submission.setContestId(contestId);
         }
 
@@ -153,10 +156,20 @@ public class SubmissionService {
     }
 
     public List<Submission> list(CurrentUser user) {
+        return list(user, null, null);
+    }
+
+    public List<Submission> list(CurrentUser user, Long problemId, Boolean mine) {
         QueryWrapper<Submission> query = new QueryWrapper<Submission>()
                 .select("id", "user_id", "problem_id", "language", "status", "verdict", "score", "time_ms", "memory_kb", "created_at", "judged_at", "contest_id")
-                .isNull("contest_id")
-                .orderByDesc("id")
+                .isNull("contest_id");
+        if (Boolean.TRUE.equals(mine)) {
+            query.eq("user_id", user.id());
+        }
+        if (problemId != null) {
+            query.eq("problem_id", problemId);
+        }
+        query.orderByDesc("id")
                 .last("LIMIT 100");
         return submissionMapper.selectList(query);
     }
@@ -164,22 +177,29 @@ public class SubmissionService {
     private static final String SUBMISSIONS_CACHE_KEY = "cache:submissions:latest100";
 
     public List<SubmissionSummary> listSummaries(CurrentUser user) {
-        try {
-            String cachedJson = redisTemplate.opsForValue().get(SUBMISSIONS_CACHE_KEY);
-            if (cachedJson != null && !cachedJson.isBlank()) {
-                List<SubmissionSummary> cachedList = objectMapper.readValue(
-                        cachedJson,
-                        new TypeReference<List<SubmissionSummary>>() {}
-                );
-                if (cachedList != null && !cachedList.isEmpty()) {
-                    return cachedList;
+        return listSummaries(user, null, null);
+    }
+
+    public List<SubmissionSummary> listSummaries(CurrentUser user, Long problemId, Boolean mine) {
+        boolean useCache = (problemId == null && (mine == null || !mine));
+        if (useCache) {
+            try {
+                String cachedJson = redisTemplate.opsForValue().get(SUBMISSIONS_CACHE_KEY);
+                if (cachedJson != null && !cachedJson.isBlank()) {
+                    List<SubmissionSummary> cachedList = objectMapper.readValue(
+                            cachedJson,
+                            new TypeReference<List<SubmissionSummary>>() {}
+                    );
+                    if (cachedList != null && !cachedList.isEmpty()) {
+                        return cachedList;
+                    }
                 }
+            } catch (Exception e) {
+                log.error("Failed to read submissions list from Redis cache", e);
             }
-        } catch (Exception e) {
-            log.error("Failed to read submissions list from Redis cache", e);
         }
 
-        List<Submission> submissions = list(user);
+        List<Submission> submissions = list(user, problemId, mine);
         if (submissions.isEmpty()) {
             return List.of();
         }
@@ -233,7 +253,7 @@ public class SubmissionService {
                 })
                 .toList();
 
-        if (list != null && !list.isEmpty()) {
+        if (useCache && list != null && !list.isEmpty()) {
             try {
                 String json = objectMapper.writeValueAsString(list);
                 redisTemplate.opsForValue().set(SUBMISSIONS_CACHE_KEY, json, 30, TimeUnit.SECONDS);
@@ -427,10 +447,10 @@ public class SubmissionService {
 
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 30000)
     public void recoverPendingSubmissions() {
-        LocalDateTime threshold = LocalDateTime.now().minusMinutes(2);
+        LocalDateTime pendingThreshold = LocalDateTime.now().minusMinutes(2);
         List<Submission> stuckSubmissions = submissionMapper.selectList(new QueryWrapper<Submission>()
                 .eq("status", SubmissionStatus.PENDING)
-                .le("created_at", threshold));
+                .le("created_at", pendingThreshold));
         for (Submission sub : stuckSubmissions) {
             log.warn("Found stuck PENDING submission {}, re-publishing to Redis...", sub.getId());
             try {

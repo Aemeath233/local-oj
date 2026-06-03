@@ -86,6 +86,7 @@ services:
       REDIS_PORT: 6379
       GO_JUDGE_BASE_URL: http://go-judge:5050
       APP_DATA_ROOT: ${APP_DATA_ROOT:-/data}
+      APP_WORKER_ID: ${APP_WORKER_ID:-judge-worker-1}
       JUDGE_QUEUE_KEY: ${JUDGE_QUEUE_KEY:-judge:queue}
       JUDGE_PROCESSING_KEY: ${JUDGE_PROCESSING_KEY:-judge:processing}
       JUDGE_DLQ_KEY: ${JUDGE_DLQ_KEY:-judge:dlq}
@@ -107,5 +108,3 @@ services:
       - "${FRONTEND_PORT:-5173}:80"
     depends_on:
       - backend
-
-

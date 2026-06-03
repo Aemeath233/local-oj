@@ -1,7 +1,7 @@
 <template>
   <el-config-provider :locale="zhCn">
     <!-- If logged in and on a mobile viewport (width <= 768px), intercept and show the premium PC Guidance Page -->
-    <div v-if="isMobile && auth.isLoggedIn && router.currentRoute.value.path !== '/login'" class="mobile-guide-container">
+    <div v-if="isMobile && auth.isLoggedIn && router.currentRoute.value.path.startsWith('/admin')" class="mobile-guide-container">
       <div class="mobile-guide-card">
         <div class="logo-glow-wrapper">
           <img class="mobile-logo" src="/coderush_logo.png" alt="CodeRush Logo" />
@@ -14,7 +14,7 @@
             👋 您好，<strong>{{ auth.user?.displayName || auth.user?.username }}</strong>！
           </p>
           <p class="mobile-text-main">
-            为了确保极致的**代码编辑调试、实时编译沙箱运行**以及**多维度 ICPC/OI 排行榜单**体验，本系统专为**宽屏桌面端浏览器**设计与优化。
+            为了确保极致的<strong>代码编辑调试、实时编译沙箱运行</strong>以及<strong>多维度 ICPC/OI 排行榜单</strong>体验，本系统专为<strong>宽屏桌面端浏览器</strong>设计与优化。
           </p>
           <div class="mobile-tip-bullet">
             <span>💻 <strong>Monaco Editor</strong>：全功能桌面级代码编程器</span>

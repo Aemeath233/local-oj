@@ -14,7 +14,7 @@ CodeRush OJ separates the judging service from the core API backend to ensure as
     ├─► Redis Queue: Backend pushes submission ID to `judge:queue`
     │
   Judge Worker Consumer (asynchronous pool)
-    ├─► Redis Processing: Atomically transfers ID to `judge:processing` via Redis RPOPLPUSH
+    ├─► Redis Processing: Atomically transfers ID to `judge:processing:{APP_WORKER_ID}` via Redis RPOPLPUSH
     ├─► Compilation Check:
     │     ├─► If native (C/C++), compiles inside sandbox first.
     │     └─► If bytecode/source (Java/Python), runs direct compiler or syntax check.
@@ -27,8 +27,17 @@ CodeRush OJ separates the judging service from the core API backend to ensure as
     ├─► Persistence:
     │     ├─► Saves individual case outcomes in `submission_case_result` table.
     │     └─► Commits final aggregate outcome & stats to `submission` table, status set to "FINISHED".
-    └─► Redis Ack: Removes job from `judge:processing` queue.
+    └─► Redis Ack: Removes job from the worker's processing queue.
 ```
+
+---
+
+## Queue Recovery Rules
+
+- Each judge worker must use a stable `APP_WORKER_ID`; this value becomes part of the Redis processing queue name.
+- On startup, a worker drains its own `judge:processing:{APP_WORKER_ID}` list back into `judge:queue` before polling new work.
+- The backend periodically republishes old `PENDING` submissions in case a job was not pushed after database commit.
+- The backend does not automatically reset `RUNNING` submissions by age. That avoids duplicate judging while an active worker is still processing a long job. Admins can use the unfinished-submission requeue action when manual recovery is needed.
 
 ---
 

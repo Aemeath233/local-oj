@@ -92,6 +92,7 @@ public class TestCaseFileStorage {
             Files.createDirectories(tokenDir);
             Set<String> usedStems = new HashSet<>();
             List<ImportedCase> importedCases = new ArrayList<>();
+            int caseIndex = 0;
             for (String caseName : pairedNames) {
                 OutputPart outputPart = outputs.get(caseName);
                 String stem = uniqueStem(sanitizeStem(caseName), usedStems);
@@ -106,9 +107,10 @@ public class TestCaseFileStorage {
                         outputFile,
                         inputSize,
                         outputSize,
-                        100,
+                        distributedScore(caseIndex, pairedNames.size()),
                         false
                 ));
+                caseIndex++;
             }
             return importedCases;
         } catch (IOException ex) {
@@ -453,7 +455,7 @@ public class TestCaseFileStorage {
                         outputFile,
                         Files.size(inputPath),
                         Files.size(outputPath),
-                        caseText.score() == null ? (100 / cases.size()) : caseText.score(),
+                        caseText.score() == null ? distributedScore(index - 1, cases.size()) : caseText.score(),
                         Boolean.TRUE.equals(caseText.sample())
                 ));
                 index++;
@@ -477,5 +479,14 @@ public class TestCaseFileStorage {
         Path resolved = root.resolve(fileName).normalize();
         ensureInside(root, resolved);
         return resolved;
+    }
+
+    private static int distributedScore(int index, int total) {
+        if (total <= 0) {
+            return 0;
+        }
+        int base = 100 / total;
+        int remainder = 100 % total;
+        return base + (index < remainder ? 1 : 0);
     }
 }

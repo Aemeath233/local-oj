@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -58,8 +59,15 @@ public class SubmissionController {
     }
 
     @GetMapping
-    public ApiResponse<List<SubmissionService.SubmissionSummary>> list() {
-        return ApiResponse.ok(submissionService.listSummaries(SecurityUtils.currentUser()));
+    public ApiResponse<List<SubmissionService.SubmissionSummary>> list(
+            @RequestParam(value = "problemId", required = false) Long problemId,
+            @RequestParam(value = "mine", required = false) Boolean mine,
+            @RequestParam(value = "contestId", required = false) Long contestId
+    ) {
+        if (contestId != null) {
+            throw new IllegalArgumentException("Contest submissions must be queried through contest endpoints");
+        }
+        return ApiResponse.ok(submissionService.listSummaries(SecurityUtils.currentUser(), problemId, mine));
     }
 
     @GetMapping("/{id}")

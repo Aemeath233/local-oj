@@ -43,7 +43,8 @@ public class JudgeQueueConsumer {
             WorkerSystemLogService systemLogService,
             @Value("${app.queue.submission-key}") String queueKey,
             @Value("${app.queue.processing-key}") String processingKey,
-            @Value("${app.queue.dlq-key}") String dlqKey
+            @Value("${app.queue.dlq-key}") String dlqKey,
+            @Value("${app.worker.id:}") String configuredWorkerId
     ) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
@@ -54,16 +55,19 @@ public class JudgeQueueConsumer {
         this.processingKey = processingKey;
         this.dlqKey = dlqKey;
 
-        String hostIdent = "worker";
-        try {
-            hostIdent = java.net.InetAddress.getLocalHost().getHostName();
-        } catch (Exception ignored) {
+        String hostIdent = configuredWorkerId;
+        if (hostIdent == null || hostIdent.isBlank()) {
+            hostIdent = "worker";
             try {
-                hostIdent = java.net.InetAddress.getLocalHost().getHostAddress();
-            } catch (Exception e) {
-                String envHost = System.getenv("HOSTNAME");
-                if (envHost != null && !envHost.isBlank()) {
-                    hostIdent = envHost;
+                hostIdent = java.net.InetAddress.getLocalHost().getHostName();
+            } catch (Exception ignored) {
+                try {
+                    hostIdent = java.net.InetAddress.getLocalHost().getHostAddress();
+                } catch (Exception e) {
+                    String envHost = System.getenv("HOSTNAME");
+                    if (envHost != null && !envHost.isBlank()) {
+                        hostIdent = envHost;
+                    }
                 }
             }
         }
