@@ -2,7 +2,7 @@
   <section class="login-page">
     <div class="login-panel">
       <div class="login-brand">
-        <img class="login-logo" src="/coderush_logo.png" alt="CodeRush Logo" />
+        <img class="login-logo" src="/coderush_logo.webp" alt="CodeRush Logo" />
         <h2>CodeRush OJ</h2>
       </div>
 

@@ -4,7 +4,7 @@
     <div v-if="isMobile && auth.isLoggedIn && router.currentRoute.value.path.startsWith('/admin')" class="mobile-guide-container">
       <div class="mobile-guide-card">
         <div class="logo-glow-wrapper">
-          <img class="mobile-logo" src="/coderush_logo.png" alt="CodeRush Logo" />
+          <img class="mobile-logo" src="/coderush_logo.webp" alt="CodeRush Logo" />
         </div>
         <h2 class="mobile-title">CodeRush Online Judge</h2>
         <span class="mobile-badge">移动端工作台提示</span>
@@ -42,7 +42,7 @@
       <el-header class="topbar">
         <div class="topbar-content">
           <RouterLink class="brand" to="/">
-            <img class="brand-logo" src="/coderush_logo.png" alt="CodeRush Logo" />
+            <img class="brand-logo" src="/coderush_logo.webp" alt="CodeRush Logo" />
             <span class="brand-name">CodeRush</span>
           </RouterLink>
           <nav class="nav">
