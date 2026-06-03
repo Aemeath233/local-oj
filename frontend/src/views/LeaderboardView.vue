@@ -60,10 +60,10 @@
           </template>
         </el-table-column>
         <el-table-column label="上周变化" width="100">
-          <template #default="{ row, $index }">
-            <div :class="['rank-change-box', getRankChange(row, $index).type]">
-              <span class="change-icon">{{ getRankChange(row, $index).icon }}</span>
-              <span class="change-text">{{ getRankChange(row, $index).text }}</span>
+          <template #default="{ row }">
+            <div :class="['rank-change-box', getRankChange(row).type]">
+              <span class="change-icon">{{ getRankChange(row).icon }}</span>
+              <span class="change-text">{{ getRankChange(row).text }}</span>
             </div>
           </template>
         </el-table-column>
@@ -186,18 +186,16 @@ function userFallback(row: LeaderboardRow) {
   return (row.displayName || row.username || 'U').slice(0, 1).toUpperCase()
 }
 
-function getRankChange(row: LeaderboardRow, index: number) {
-  const seed = row.userId || 0
-  const typeVal = seed % 3
-  
-  if (typeVal === 0) {
+function getRankChange(row: LeaderboardRow) {
+  if (row.rankChange === undefined || row.rankChange === null) {
     return { type: 'unchanged', icon: '—', text: '不变' }
-  } else if (typeVal === 1) {
-    const amount = (seed % 2) + 1
-    return { type: 'up', icon: '▲', text: `${amount}` }
+  }
+  if (row.rankChange > 0) {
+    return { type: 'up', icon: '▲', text: `${row.rankChange}` }
+  } else if (row.rankChange < 0) {
+    return { type: 'down', icon: '▼', text: `${Math.abs(row.rankChange)}` }
   } else {
-    const amount = (seed % 2) + 1
-    return { type: 'down', icon: '▼', text: `${amount}` }
+    return { type: 'unchanged', icon: '—', text: '不变' }
   }
 }
 </script>

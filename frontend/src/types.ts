@@ -230,6 +230,7 @@ export interface LeaderboardRow {
   acceptedCount: number
   submissionCount: number
   lastAcceptedAt?: string
+  rankChange?: number
 }
 
 export interface AdminProblemDetail {
