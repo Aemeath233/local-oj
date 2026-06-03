@@ -226,8 +226,103 @@ ask_mirror() {
     fi
 }
 
+# 自动检测并迁移旧 Docker 命名卷数据到本地目录
+migrate_named_volumes() {
+    # 仅在交互式终端运行
+    if [ ! -t 0 ]; then
+        return 0
+    fi
+
+    # 检查是否有 docker 命令
+    if ! command -v docker &>/dev/null; then
+        return 0
+    fi
+
+    # 获取所有的 Docker 数据卷名
+    local volumes
+    volumes=$(docker volume ls --format "{{.Name}}" 2>/dev/null || true)
+    if [ -z "$volumes" ]; then
+        return 0
+    fi
+
+    local mysql_vol=""
+    local redis_vol=""
+    local oj_vol=""
+    
+    for vol in $volumes; do
+        if [[ "$vol" =~ mysql-data$ ]]; then
+            mysql_vol="$vol"
+        elif [[ "$vol" =~ redis-data$ ]]; then
+            redis_vol="$vol"
+        elif [[ "$vol" =~ oj-data$ ]]; then
+            oj_vol="$vol"
+        fi
+    done
+
+    # 如果没有任何旧的命名卷，直接跳过
+    if [ -z "$mysql_vol" ] && [ -z "$redis_vol" ] && [ -z "$oj_vol" ]; then
+        return 0
+    fi
+
+    # 如果已经迁移过，跳过
+    if [ -f "./data/.migrated" ]; then
+        return 0
+    fi
+
+    echo ""
+    log_warn "⚠️  检测到系统中存在旧版本的 Docker 命名数据卷（存储了你之前的用户、题目和提交数据）："
+    [ -n "$mysql_vol" ] && echo -e "  - MySQL 数据卷: ${CYAN}$mysql_vol${NC}"
+    [ -n "$redis_vol" ] && echo -e "  - Redis 数据卷: ${CYAN}$redis_vol${NC}"
+    [ -n "$oj_vol" ] && echo -e "  - OJ 文件数据卷: ${CYAN}$oj_vol${NC}"
+    echo ""
+    echo -e "${YELLOW}由于新版本改为了本地 ./data 目录挂载，系统目前读取的是空数据库。${NC}"
+    read -r -p "是否需要自动将这些旧数据卷中的数据迁移导入到本地 ./data 目录中？(Y/n) " migrate_choice
+    migrate_choice=${migrate_choice,,}
+
+    if [[ "$migrate_choice" == "y" || "$migrate_choice" == "yes" || -z "$migrate_choice" ]]; then
+        log_info "正在暂停可能运行中的 Docker 容器以保证数据一致性..."
+        docker compose down || true
+        
+        log_info "正在进行数据迁移准备..."
+        
+        # 如果本地 ./data 已经存在，先重命名备份以防万一
+        if [ -d "./data" ]; then
+            local backup_dir="./data.old_before_migration_$(date +%Y%m%d_%H%M%S)"
+            log_info "发现本地已存在 data 目录，正在安全备份至 $backup_dir ..."
+            mv ./data "$backup_dir"
+        fi
+
+        mkdir -p ./data/mysql ./data/redis ./data/oj
+
+        # 使用已有的 redis:7.4-alpine 镜像把数据物理拷贝过来
+        if [ -n "$mysql_vol" ]; then
+            log_info "正在从命名卷 $mysql_vol 导入数据库文件..."
+            docker run --rm -v "$mysql_vol":/from -v "$(pwd)/data/mysql":/to redis:7.4-alpine cp -a /from/. /to/
+        fi
+
+        if [ -n "$redis_vol" ]; then
+            log_info "正在从命名卷 $redis_vol 导入 Redis 文件..."
+            docker run --rm -v "$redis_vol":/from -v "$(pwd)/data/redis":/to redis:7.4-alpine cp -a /from/. /to/
+        fi
+
+        if [ -n "$oj_vol" ]; then
+            log_info "正在从命名卷 $oj_vol 导入 OJ 题目文件..."
+            docker run --rm -v "$oj_vol":/from -v "$(pwd)/data/oj":/to redis:7.4-alpine cp -a /from/. /to/
+        fi
+
+        touch "./data/.migrated"
+        log_success "🎉 历史数据已全部成功迁移至本地 ./data 目录！"
+        echo ""
+    else
+        log_info "已跳过历史数据迁移。之后如果你需要迁移，可以删除本地 ./data/.migrated 重新运行本脚本。"
+    fi
+}
+
 # 执行 Docker Compose 编译与启动
 build_and_start() {
+    # 自动检测并迁移旧 Docker 命名卷数据到本地目录
+    migrate_named_volumes
+
     echo ""
     echo -e "${BOLD}--- 阶段 4: 开始并行下载、现场编译并拉起服务容器 ---${NC}"
     log_warn "此阶段将拉取基础镜像并进行前后端代码的多阶段分层编译，首次冷构建可能需要 5-10 分钟，请耐心等待..."
@@ -442,6 +537,8 @@ menu() {
                 log_info "系统将直接基于当前本地代码进行重新编译与部署！"
             fi
             log_info "3. 执行多阶段编译升级与容器重建..."
+            # 自动检测并迁移旧 Docker 命名卷数据到本地目录
+            migrate_named_volumes
             log_info "这会自动检测代码变动并重新打包后端与前端镜像，请稍候..."
             docker compose up -d --build
             log_success "系统平滑升级与重建完成！"
