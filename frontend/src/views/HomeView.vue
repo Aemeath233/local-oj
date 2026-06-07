@@ -228,45 +228,49 @@ function handleRankCalculated(rank: string) {
   color: #fff !important;
 }
 
-/* Dark Mode Overrides: Keep the welcome banner as a stunning bright centerpiece card */
+/* Dark Mode Overrides: Styled welcome banner as a sleek dark premium card */
 html.dark .home-hero {
-  background: linear-gradient(135deg, #f0f9ff 0%, #fdf2f8 100%) !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+html.dark .hero-btn {
+  color: #0f172a !important;
 }
 
 html.dark .home-hero::before {
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 60%) !important;
+  background: radial-gradient(circle, rgba(51, 65, 85, 0.4) 0%, transparent 60%) !important;
 }
 
 html.dark .home-hero h1 {
-  color: #0f172a !important;
+  color: #f8fafc !important;
 }
 
 html.dark .hero-streak-text {
-  color: #475569 !important;
-}
-
-html.dark .hero-streak-text strong {
-  color: #ea580c !important;
-}
-
-html.dark .hero-stat-item {
-  color: #64748b !important;
-}
-
-html.dark .hero-stat-item strong {
-  color: #0f172a !important;
-}
-
-html.dark .hero-stat-divider {
   color: #cbd5e1 !important;
 }
 
+html.dark .hero-streak-text strong {
+  color: #ff7a45 !important;
+}
+
+html.dark .hero-stat-item {
+  color: #94a3b8 !important;
+}
+
+html.dark .hero-stat-item strong {
+  color: #f8fafc !important;
+}
+
+html.dark .hero-stat-divider {
+  color: #475569 !important;
+}
+
 html.dark .hero-tag {
-  color: #0284c7 !important;
-  background: rgba(14, 165, 233, 0.08) !important;
-  border-color: rgba(14, 165, 233, 0.18) !important;
+  color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.08) !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
 }
 
 

@@ -93,6 +93,7 @@ const emit = defineEmits<{
 .mini-submissions-list {
   max-height: 280px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 6px;
   box-sizing: border-box;
 }

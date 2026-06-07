@@ -153,10 +153,10 @@ function copyText(text: string) {
 }
 
 .meta-card {
-  background: var(--bg-card, #fafafa);
+  background: var(--bg-muted);
   padding: 1.25rem;
   border-radius: 8px;
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -175,12 +175,12 @@ function copyText(text: string) {
 }
 
 .meta-item .val code {
-  background: var(--bg-muted, #f3f4f6);
+  background: var(--bg-app);
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--border-color);
   font-family: var(--font-mono, monospace);
-  color: var(--primary, #0284c7);
+  color: var(--primary);
 }
 
 .commands-list {
@@ -191,11 +191,11 @@ function copyText(text: string) {
 }
 
 .command-group-card {
-  background: var(--bg-surface, #ffffff);
-  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -212,19 +212,19 @@ function copyText(text: string) {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--text-primary, #111827);
+  color: var(--text-primary);
 }
 
 .group-desc {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--text-secondary, #4b5563);
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
 .command-box {
-  background: var(--bg-muted, #f9fafb);
-  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1.25rem;
   display: flex;
@@ -373,5 +373,43 @@ function copyText(text: string) {
 
 .mt-4 {
   margin-top: 1.5rem;
+}
+
+/* Dark Mode Badge and recommendation overrides */
+html.dark .action-tag.backup {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+html.dark .action-tag.restore {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+html.dark .badge.docker {
+  background: rgba(14, 165, 233, 0.1) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(14, 165, 233, 0.25) !important;
+}
+
+html.dark .badge.host {
+  background: rgba(34, 197, 94, 0.1) !important;
+  color: #4ade80 !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+}
+
+html.dark .maintenance-box {
+  background: rgba(13, 148, 136, 0.08) !important;
+  border-color: rgba(13, 148, 136, 0.25) !important;
+}
+
+html.dark .maintenance-box .section-title {
+  color: #2dd4bf !important;
+}
+
+html.dark .guideline-list .text {
+  color: var(--text-secondary) !important;
 }
 </style>

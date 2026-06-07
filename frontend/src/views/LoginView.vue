@@ -14,6 +14,7 @@
                 v-model="loginForm.username"
                 placeholder="输入用户名或邮箱地址"
                 autocomplete="username"
+                autofocus
                 @input="loginError = ''"
               />
             </el-form-item>
@@ -150,10 +151,18 @@ onBeforeUnmount(() => {
 })
 
 async function submitLogin() {
+  if (!loginForm.username || loginForm.username.trim() === '') {
+    loginError.value = '请输入用户名或邮箱'
+    return
+  }
+  if (!loginForm.password || loginForm.password.trim() === '') {
+    loginError.value = '请输入密码'
+    return
+  }
   loginLoading.value = true
   loginError.value = ''
   try {
-    await auth.login(loginForm.username, loginForm.password)
+    await auth.login(loginForm.username.trim(), loginForm.password)
     router.push(redirectTarget())
   } catch (error: any) {
     loginError.value = error.response?.data?.message
@@ -164,10 +173,14 @@ async function submitLogin() {
 }
 
 async function sendCode() {
+  if (!registerForm.email || registerForm.email.trim() === '') {
+    registerError.value = '请输入邮箱以发送验证码'
+    return
+  }
   codeLoading.value = true
   registerError.value = ''
   try {
-    await requestRegisterCode(registerForm.email)
+    await requestRegisterCode(registerForm.email.trim())
     ElMessage.success('验证码已发送')
     startCountdown()
   } catch (error: any) {
@@ -178,6 +191,22 @@ async function sendCode() {
 }
 
 async function submitRegister() {
+  if (!registerForm.email || registerForm.email.trim() === '') {
+    registerError.value = '请输入邮箱'
+    return
+  }
+  if (!registerForm.code || registerForm.code.trim() === '') {
+    registerError.value = '请输入验证码'
+    return
+  }
+  if (!registerForm.username || registerForm.username.trim() === '') {
+    registerError.value = '请输入用户名'
+    return
+  }
+  if (!registerForm.password || registerForm.password.trim() === '') {
+    registerError.value = '请输入密码'
+    return
+  }
   if (registerForm.password !== registerForm.confirmPassword) {
     registerError.value = '两次输入的密码不一致'
     return
@@ -186,10 +215,10 @@ async function submitRegister() {
   registerError.value = ''
   try {
     await auth.register({
-      email: registerForm.email,
-      code: registerForm.code,
-      username: registerForm.username,
-      displayName: registerForm.displayName,
+      email: registerForm.email.trim(),
+      code: registerForm.code.trim(),
+      username: registerForm.username.trim(),
+      displayName: registerForm.displayName.trim(),
       password: registerForm.password
     })
     router.push(redirectTarget())

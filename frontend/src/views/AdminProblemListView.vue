@@ -600,24 +600,24 @@ onMounted(load)
 .zip-drop :deep(.el-upload-dragger) {
   padding: 30px 18px;
   border-radius: 8px;
-  background: #fbfcfd;
+  background: var(--bg-muted);
 }
 
 .zip-drop-icon {
   margin-bottom: 10px;
-  color: #0f766e;
+  color: var(--primary);
   font-size: 42px;
 }
 
 .zip-drop-title {
-  color: #1f2937;
+  color: var(--text-primary);
   font-weight: 650;
 }
 
 .zip-drop-subtitle,
 .zip-upload-tip {
   margin-top: 6px;
-  color: #667085;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -627,15 +627,15 @@ onMounted(load)
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-surface);
 }
 
 .zip-selected-files-list {
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-surface);
   padding: 16px;
   display: grid;
   gap: 12px;
@@ -651,7 +651,7 @@ onMounted(load)
   margin: 0;
   font-size: 15px;
   font-weight: 650;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 
 .selected-files-container {
@@ -667,10 +667,10 @@ onMounted(load)
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f8fafc;
+  background: var(--bg-app);
   padding: 10px 14px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
 }
 
 .file-meta {
@@ -683,7 +683,7 @@ onMounted(load)
 .batch-file-row .file-name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -692,7 +692,7 @@ onMounted(load)
 
 .batch-file-row .file-size {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .file-status-group {
@@ -721,9 +721,9 @@ onMounted(load)
   display: grid;
   gap: 14px;
   padding: 16px;
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-surface);
 }
 
 .zip-preview-heading {
@@ -743,7 +743,7 @@ onMounted(load)
 .zip-preview-heading p,
 .zip-format-copy p {
   margin: 5px 0 0;
-  color: #667085;
+  color: var(--text-muted);
 }
 
 .zip-summary-grid {
@@ -757,13 +757,13 @@ onMounted(load)
   gap: 5px;
   min-height: 72px;
   padding: 11px;
-  border: 1px solid #e1e7ef;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #fbfcfd;
+  background: var(--bg-muted);
 }
 
 .zip-summary-grid span {
-  color: #667085;
+  color: var(--text-muted);
   font-size: 12px;
 }
 

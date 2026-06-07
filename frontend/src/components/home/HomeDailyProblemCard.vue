@@ -313,6 +313,21 @@ function calculateAcRate(problem: ProblemSummary) {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3);
 }
 
+html.dark .start-btn {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.dark .start-btn:hover {
+  background: #f1f5f9 !important;
+}
+
+html.dark .daily-icon {
+  background: rgba(22, 163, 74, 0.1) !important;
+  color: #4ade80 !important;
+  border-color: rgba(22, 163, 74, 0.2) !important;
+}
+
 .empty-state {
   display: flex;
   align-items: center;

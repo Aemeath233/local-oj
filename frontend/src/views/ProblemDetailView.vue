@@ -400,6 +400,10 @@ async function openSubmissionDetail(row: SubmissionSummary) {
 }
 
 async function submit() {
+  if (!sourceCode.value || sourceCode.value.trim() === '') {
+    ElMessage.warning('代码不能为空')
+    return
+  }
   submitting.value = true
   message.value = ''
   try {
@@ -419,6 +423,10 @@ async function submit() {
 }
 
 async function runCustomTest() {
+  if (!sourceCode.value || sourceCode.value.trim() === '') {
+    ElMessage.warning('代码不能为空')
+    return
+  }
   selfTesting.value = true
   selfTestError.value = ''
   selfTestResult.value = null
@@ -511,6 +519,7 @@ function templateFor(value: Language) {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   box-sizing: border-box;
 }
 

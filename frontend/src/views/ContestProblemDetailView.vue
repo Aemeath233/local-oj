@@ -2,7 +2,7 @@
   <div class="problem-page-container" v-loading="loading">
     <div class="workspace-header panel">
       <div class="header-left">
-        <el-button size="small" @click="router.push(`/contests/${contestId}`)">⬅️ 返回比赛控制台</el-button>
+        <el-button size="small" :icon="ArrowLeft" @click="router.push(`/contests/${contestId}`)">返回比赛控制台</el-button>
         <span class="header-divider">/</span>
         <span class="contest-title" v-if="problem">{{ problemCode }} - {{ problem.title }}</span>
       </div>
@@ -99,7 +99,7 @@
         <!-- Editor Header -->
         <div class="editor-bar panel">
           <div class="bar-left">
-            <span class="editor-title">✏️ 编写代码</span>
+            <span class="editor-title">编写代码</span>
             <el-select v-model="language" size="small" style="width: 140px;">
               <el-option label="C17 (O2)" value="C" />
               <el-option label="C++20 (O2)" value="CPP" />
@@ -137,7 +137,8 @@
         <section class="console-panel panel" :class="{ expanded: consoleExpanded }">
           <div class="console-header" @click="consoleExpanded = !consoleExpanded">
             <div class="header-title">
-              <span>🛠️ 控制台</span>
+              <el-icon><Cpu /></el-icon>
+              <span>控制台</span>
               <el-tag v-if="selfTestResult" size="small" type="info">已运行</el-tag>
             </div>
             <el-button :icon="consoleExpanded ? ArrowDown : ArrowUp" link size="small" />
@@ -229,7 +230,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Upload, VideoPlay, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading, Brush, Monitor } from '@element-plus/icons-vue'
+import { Upload, VideoPlay, ArrowLeft, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading, Brush, Monitor } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CodeEditor from '../components/CodeEditor.vue'
 import MarkdownView from '../components/MarkdownView.vue'
@@ -558,6 +559,10 @@ async function openSubmissionDetail(row: SubmissionSummary) {
 }
 
 async function submit() {
+  if (!sourceCode.value || sourceCode.value.trim() === '') {
+    ElMessage.warning('代码不能为空')
+    return
+  }
   submitting.value = true
   message.value = ''
   try {
@@ -577,6 +582,10 @@ async function submit() {
 }
 
 async function runCustomTest() {
+  if (!sourceCode.value || sourceCode.value.trim() === '') {
+    ElMessage.warning('代码不能为空')
+    return
+  }
   consoleExpanded.value = true
   activeConsoleTab.value = 'result'
   selfTesting.value = true
@@ -704,6 +713,7 @@ function templateFor(value: Language) {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .editor-bar {
   padding: 10px 16px;
@@ -915,6 +925,7 @@ function templateFor(value: Language) {
   gap: 8px;
   max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .mini-submission-item {
   display: flex;

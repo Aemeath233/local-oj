@@ -1,13 +1,16 @@
 package com.localoj.backend.api;
 
 import com.localoj.backend.service.SystemLogService;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -22,9 +25,27 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ApiError(ex.getMessage()));
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
-    ResponseEntity<ApiError> validation(Exception ex) {
-        return ResponseEntity.badRequest().body(new ApiError("Invalid request"));
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ResponseEntity<ApiError> validation(MethodArgumentNotValidException ex) {
+        String msg = ex.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .findFirst()
+                .orElse("Invalid request");
+        return ResponseEntity.badRequest().body(new ApiError(msg));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<ApiError> constraint(ConstraintViolationException ex) {
+        String msg = ex.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .findFirst()
+                .orElse("Invalid request");
+        return ResponseEntity.badRequest().body(new ApiError(msg));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiError> maxSizeExceeded(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.badRequest().body(new ApiError("上传文件大小超出系统限制"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

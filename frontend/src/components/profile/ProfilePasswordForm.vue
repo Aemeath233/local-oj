@@ -66,6 +66,14 @@ async function sendCode() {
 }
 
 async function submitPassword() {
+  if (!passwordForm.code || passwordForm.code.trim() === '') {
+    ElMessage.warning('验证码不能为空')
+    return
+  }
+  if (!passwordForm.newPassword || passwordForm.newPassword.trim() === '') {
+    ElMessage.warning('新密码不能为空')
+    return
+  }
   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
     ElMessage.warning('两次输入的新密码不一致')
     return

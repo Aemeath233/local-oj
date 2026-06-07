@@ -113,6 +113,110 @@ html.dark {
   --el-border-color-light: #27272a;
 }
 
+/* Element Plus Dark Mode UX Overrides */
+html.dark .el-button--primary:not(.is-link):not(.is-text) {
+  --el-button-bg-color: var(--primary) !important;
+  --el-button-hover-bg-color: var(--primary-hover) !important;
+  --el-button-active-bg-color: var(--primary-dark) !important;
+  --el-button-border-color: var(--primary) !important;
+  --el-button-hover-border-color: var(--primary-hover) !important;
+  --el-button-active-border-color: var(--primary-dark) !important;
+  --el-button-text-color: #09090b !important;
+  --el-button-hover-text-color: #09090b !important;
+  --el-button-active-text-color: #09090b !important;
+}
+html.dark .el-button--primary:not(.is-link):not(.is-text) i,
+html.dark .el-button--primary:not(.is-link):not(.is-text) span,
+html.dark .el-button--primary:not(.is-link):not(.is-text) .el-icon {
+  color: #09090b !important;
+}
+html.dark .el-button--primary.is-disabled {
+  opacity: 0.5 !important;
+  --el-button-text-color: #09090b !important;
+}
+
+html.dark .el-switch {
+  --el-switch-on-color: var(--success) !important;
+  --el-switch-off-color: var(--bg-muted) !important;
+  --el-switch-border-color: var(--border-color) !important;
+}
+html.dark .el-switch__core {
+  background: var(--bg-muted) !important;
+  border-color: var(--border-color) !important;
+}
+html.dark .el-switch.is-checked .el-switch__core {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+}
+
+html.dark .el-segmented {
+  --el-segmented-item-selected-color: #09090b !important;
+}
+
+html.dark .el-pagination.is-background .el-pager li.is-active {
+  color: #09090b !important;
+}
+
+/* Difficulty Badges Dark Mode Overrides */
+html.dark .difficulty-badge.easy {
+  background-color: rgba(56, 189, 248, 0.08) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
+}
+html.dark .difficulty-badge.medium {
+  background-color: rgba(251, 191, 36, 0.08) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(251, 191, 36, 0.2) !important;
+}
+html.dark .difficulty-badge.hard {
+  background-color: rgba(244, 63, 94, 0.08) !important;
+  color: #f43f5e !important;
+  border-color: rgba(244, 63, 94, 0.2) !important;
+}
+
+/* Status Badges Dark Mode Overrides */
+html.dark .status-badge.accepted {
+  background-color: rgba(52, 211, 153, 0.08) !important;
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.2) !important;
+}
+html.dark .status-badge.attempted {
+  background-color: rgba(251, 191, 36, 0.08) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(251, 191, 36, 0.2) !important;
+}
+html.dark .status-badge.unattempted {
+  background-color: var(--bg-muted) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Markdown Text Dark Mode Overrides */
+html.dark .markdown-body {
+  color: var(--text-secondary) !important;
+}
+html.dark .markdown-body code {
+  background: var(--bg-muted) !important;
+  color: var(--text-primary) !important;
+}
+html.dark .markdown-body blockquote {
+  border-left-color: var(--border-color) !important;
+  background: var(--bg-muted) !important;
+  color: var(--text-muted) !important;
+}
+html.dark .markdown-body th {
+  background: var(--bg-muted) !important;
+  color: var(--text-primary) !important;
+}
+html.dark .markdown-body td,
+html.dark .markdown-body th {
+  border-color: var(--border-color) !important;
+}
+html.dark .markdown-body a {
+  color: #38bdf8 !important;
+}
+
+
 * {
   box-sizing: border-box;
 }
@@ -529,7 +633,7 @@ a {
   justify-content: space-between;
   min-height: 34px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .problem-title {

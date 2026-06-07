@@ -185,10 +185,10 @@ async function triggerCleanup() {
 }
 
 .cleanup-form-layout {
-  background: var(--bg-card, #fafafa);
+  background: var(--bg-muted);
   padding: 1.5rem;
   border-radius: 8px;
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--border-color);
 }
 
 .form-grid {
@@ -207,8 +207,13 @@ async function triggerCleanup() {
   margin-top: 2rem;
   padding: 1.25rem;
   border-radius: 6px;
-  background: rgba(245, 108, 108, 0.03);
-  border: 1px solid rgba(245, 108, 108, 0.2);
+  background: rgba(239, 68, 68, 0.03);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+html.dark .security-lock-panel {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
 }
 
 .lock-header {

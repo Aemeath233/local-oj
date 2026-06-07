@@ -323,10 +323,10 @@ onMounted(load)
 
 .logs-card {
   padding: 24px;
-  background: #ffffff;
-  border: 1px solid #e8ecf1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
 }
@@ -347,12 +347,12 @@ onMounted(load)
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 
 .card-desc {
   font-size: 0.88rem;
-  color: #64748b;
+  color: var(--text-muted);
   line-height: 1.6;
   margin: 0 0 24px 0;
   flex: 1;
@@ -361,16 +361,16 @@ onMounted(load)
 .switch-container {
   display: flex;
   align-items: center;
-  background: #f8fafc;
+  background: var(--bg-app);
   padding: 16px 20px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
 }
 
 .switch-label {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #334155;
+  color: var(--text-secondary);
   margin-right: 12px;
 }
 
@@ -384,16 +384,16 @@ onMounted(load)
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f8fafc;
+  background: var(--bg-app);
   padding: 16px 20px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   transition: all 0.2s ease;
 }
 
 .log-file-row:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-color: var(--primary-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .file-info {
@@ -406,7 +406,7 @@ onMounted(load)
 .file-name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   font-family: var(--font-mono), monospace;
 }
 
@@ -426,6 +426,16 @@ onMounted(load)
 .worker-badge {
   background: #fef3c7;
   color: #b45309;
+}
+
+html.dark .backend-badge {
+  background: rgba(3, 105, 161, 0.15) !important;
+  color: #38bdf8 !important;
+}
+
+html.dark .worker-badge {
+  background: rgba(180, 83, 9, 0.15) !important;
+  color: #fbbf24 !important;
 }
 
 .actions {

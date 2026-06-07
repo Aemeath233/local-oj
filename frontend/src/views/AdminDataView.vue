@@ -50,8 +50,9 @@ const activeTab = ref('users')
 .data-panel {
   margin-top: 1rem;
   padding: 1.5rem;
-  background: var(--bg-panel, #ffffff);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
 }
 </style>

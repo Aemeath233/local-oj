@@ -324,7 +324,7 @@ async function saveUser() {
 <style scoped>
 .toolbar-panel {
   padding: 14px;
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--border-color);
   margin-bottom: 2px;
 }
 .search-box {

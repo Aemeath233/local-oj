@@ -184,14 +184,14 @@ function copyText(text: string) {
   margin-bottom: 2rem;
 }
 :deep(.el-upload-dragger) {
-  background: var(--bg-card, #fafafa);
-  border: 2px dashed var(--el-border-color-light);
+  background: var(--bg-muted);
+  border: 2px dashed var(--border-color);
   border-radius: 8px;
   transition: all 0.3s;
 }
 :deep(.el-upload-dragger:hover) {
-  border-color: var(--el-color-primary);
-  background: rgba(64, 158, 255, 0.02);
+  border-color: var(--primary);
+  background: var(--primary-light);
 }
 
 .import-result-section {
@@ -207,8 +207,8 @@ function copyText(text: string) {
   padding: 1.5rem;
   border-radius: 10px;
   text-align: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 .stat-card.total {
   background: rgba(64, 158, 255, 0.04);
@@ -248,11 +248,11 @@ function copyText(text: string) {
 .password-code {
   font-family: var(--font-mono, monospace);
   font-size: 0.9rem;
-  background: var(--bg-card, #f4f4f5);
+  background: var(--bg-muted);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
-  color: #d03050;
-  border: 1px solid var(--el-border-color-light);
+  color: var(--error);
+  border: 1px solid var(--border-color);
 }
 
 @keyframes fadeIn {

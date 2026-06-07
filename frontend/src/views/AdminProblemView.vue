@@ -126,7 +126,7 @@
                 </el-form-item>
               </el-tab-pane>
               <el-tab-pane label="实时预览" name="preview">
-                <div class="statement-preview" style="border: 1px solid #d8dee6; padding: 20px; border-radius: 6px; background: #fafbfc; min-height: 320px; max-height: 520px; overflow-y: auto;">
+                <div class="statement-preview" style="border: 1px solid var(--border-color); padding: 20px; border-radius: 6px; background: var(--bg-muted); min-height: 320px; max-height: 520px; overflow-y: auto;">
                   <MarkdownView :source="form.description || '*暂无预览内容，请点击编辑标签页输入题面 Markdown。*'" />
                 </div>
               </el-tab-pane>
@@ -152,9 +152,9 @@
               </div>
             </div>
 
-            <div v-if="form.testCases.length === 0" class="empty-state" style="border: 1px dashed #cbd5e1; padding: 48px 0; text-align: center; border-radius: 8px; margin-top: 14px;">
-              <p style="color: #64748b; font-weight: 550; margin-bottom: 8px;">暂无测试点数据</p>
-              <p style="font-size: 13px; color: #94a3b8; max-width: 500px; margin: 0 auto;">
+            <div v-if="form.testCases.length === 0" class="empty-state" style="border: 1px dashed var(--border-color); padding: 48px 0; text-align: center; border-radius: 8px; margin-top: 14px;">
+              <p style="color: var(--text-muted); font-weight: 550; margin-bottom: 8px;">暂无测试点数据</p>
+              <p style="font-size: 13px; color: var(--text-disabled); max-width: 500px; margin: 0 auto;">
                 支持一次多选并上传您的评测输入文件（如 <code>1.in</code>）与对应的预期输出文件（如 <code>1.out</code> 或 <code>1.ans</code>）。系统会自动配对并在此生成测试点表格。
               </p>
             </div>
@@ -202,7 +202,7 @@
           </div>
 
           <!-- Step Navigation Button Bar -->
-          <div class="form-actions" style="margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 18px; display: flex; justify-content: space-between;">
+          <div class="form-actions" style="margin-top: 24px; border-top: 1px solid var(--border-light); padding-top: 18px; display: flex; justify-content: space-between;">
             <div>
               <el-button v-if="activeStep > 0" @click="prevStep">上一步</el-button>
             </div>
@@ -527,8 +527,8 @@ function removeTag(tag: string) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  border: 1px solid #d8dee6;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
   position: sticky;
@@ -537,14 +537,14 @@ function removeTag(tag: string) {
 
 .sidebar-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #eef2f6;
-  background: #fafbfc;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-muted);
 }
 
 .sidebar-header h3 {
   margin: 0;
   font-size: 15px;
-  color: #1f2937;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -561,7 +561,7 @@ function removeTag(tag: string) {
   gap: 12px;
   padding: 12px 16px;
   border-radius: 6px;
-  color: #4b5563;
+  color: var(--text-secondary);
   font-weight: 550;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -569,13 +569,13 @@ function removeTag(tag: string) {
 }
 
 .sidebar-item:hover {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: var(--bg-muted);
+  color: var(--text-primary);
 }
 
 .sidebar-item.active {
-  background: #e7f5f2;
-  color: #0f766e;
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .sidebar-item .el-icon {
@@ -584,8 +584,8 @@ function removeTag(tag: string) {
 
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid #eef2f6;
-  background: #fafbfc;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-muted);
 }
 
 .sidebar-save-btn {
@@ -612,7 +612,7 @@ function removeTag(tag: string) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
   padding-bottom: 12px;
 }
 
@@ -620,11 +620,11 @@ function removeTag(tag: string) {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .case-table {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -635,8 +635,8 @@ function removeTag(tag: string) {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .case-row:last-child {
@@ -644,8 +644,8 @@ function removeTag(tag: string) {
 }
 
 .case-row-header {
-  background: #f8fafc;
-  color: #475569;
+  background: var(--bg-muted);
+  color: var(--text-secondary);
   font-weight: 600;
   font-size: 13px;
 }

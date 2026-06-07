@@ -639,9 +639,9 @@ async function moveProblem(index: number, direction: number) {
 }
 .markdown-preview {
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: #fafbfc;
+  background: var(--bg-muted);
   min-height: 140px;
   max-height: 320px;
   overflow-y: auto;
@@ -658,7 +658,7 @@ async function moveProblem(index: number, direction: number) {
 }
 .problem-title {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 .problem-checkbox-group {
   display: flex;
@@ -666,15 +666,15 @@ async function moveProblem(index: number, direction: number) {
   gap: 10px;
 }
 .problem-checkbox-item {
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--border-light);
   border-radius: 8px;
   padding: 10px 14px;
-  background: #f8fafc;
+  background: var(--bg-app);
   transition: all 0.2s ease;
 }
 .problem-checkbox-item:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--bg-muted);
+  border-color: var(--primary-hover);
 }
 .problem-checkbox-item :deep(.el-checkbox) {
   display: flex;
@@ -692,7 +692,7 @@ async function moveProblem(index: number, direction: number) {
 .lib-id {
   font-family: monospace;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted);
   width: 40px;
 }
 .lib-meta {
@@ -703,7 +703,7 @@ async function moveProblem(index: number, direction: number) {
 }
 .lib-title {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 .lib-tags {
   display: flex;
@@ -732,7 +732,7 @@ async function moveProblem(index: number, direction: number) {
 .selected-count {
   float: left;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
   margin-top: 8px;
 }
 
@@ -744,27 +744,27 @@ async function moveProblem(index: number, direction: number) {
 .zip-drop :deep(.el-upload-dragger) {
   padding: 30px 18px;
   border-radius: 8px;
-  background: #fbfcfd;
+  background: var(--bg-muted);
 }
 .zip-drop-icon {
   margin-bottom: 10px;
-  color: #0f766e;
+  color: var(--primary);
   font-size: 42px;
 }
 .zip-drop-title {
-  color: #1f2937;
+  color: var(--text-primary);
   font-weight: 650;
 }
 .zip-drop-subtitle,
 .zip-upload-tip {
   margin-top: 6px;
-  color: #667085;
+  color: var(--text-muted);
   font-size: 13px;
 }
 .zip-selected-files-list {
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-surface);
   padding: 16px;
   display: grid;
   gap: 12px;
@@ -778,7 +778,7 @@ async function moveProblem(index: number, direction: number) {
   margin: 0;
   font-size: 15px;
   font-weight: 650;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 .selected-files-container {
   display: flex;
@@ -792,10 +792,10 @@ async function moveProblem(index: number, direction: number) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f8fafc;
+  background: var(--bg-app);
   padding: 10px 14px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
 }
 .file-meta {
   display: flex;
@@ -806,7 +806,7 @@ async function moveProblem(index: number, direction: number) {
 .batch-file-row .file-name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -814,7 +814,7 @@ async function moveProblem(index: number, direction: number) {
 }
 .batch-file-row .file-size {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 .file-status-group {
   display: flex;
@@ -839,9 +839,9 @@ async function moveProblem(index: number, direction: number) {
   display: grid;
   gap: 14px;
   padding: 16px;
-  border: 1px solid #d8dee6;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--bg-surface);
 }
 .zip-preview-heading h3,
 .zip-format-copy h3 {
@@ -852,7 +852,7 @@ async function moveProblem(index: number, direction: number) {
 .zip-preview-heading p,
 .zip-format-copy p {
   margin: 5px 0 0;
-  color: #667085;
+  color: var(--text-muted);
 }
 .zip-tree {
   min-height: auto;

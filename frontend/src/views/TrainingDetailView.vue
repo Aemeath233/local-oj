@@ -186,7 +186,7 @@ function formatDate(dateStr?: string) {
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  background: #ffffff;
+  background: var(--bg-surface);
 }
 .header-main {
   flex: 1;
@@ -196,12 +196,12 @@ function formatDate(dateStr?: string) {
   margin: 0 0 10px 0;
   font-size: 24px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 .header-desc {
   margin: 0;
   font-size: 14px;
-  color: #64748b;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 .header-meta-row {
@@ -215,23 +215,23 @@ function formatDate(dateStr?: string) {
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 .meta-icon {
   font-size: 14px;
 }
 .author-name {
-  color: #1e293b;
+  color: var(--text-primary);
   font-weight: 600;
 }
 .header-stats {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #f8fafc;
+  background: var(--bg-app);
   border-radius: 12px;
   padding: 16px 20px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 .stat-circle {
@@ -244,13 +244,13 @@ function formatDate(dateStr?: string) {
 .stat-num {
   font-size: 24px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .stat-label {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-muted);
   margin-top: 4px;
   font-weight: 500;
 }
@@ -268,7 +268,7 @@ function formatDate(dateStr?: string) {
 }
 .problem-title {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 @media (max-width: 768px) {
   .training-header {

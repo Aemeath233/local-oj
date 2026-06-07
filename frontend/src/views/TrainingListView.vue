@@ -158,8 +158,8 @@ function formatDate(dateStr: string) {
   gap: 20px;
 }
 .training-card {
-  background: #ffffff;
-  border: 1px solid #e8ecf1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -169,7 +169,7 @@ function formatDate(dateStr: string) {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 .training-card:hover {
-  border-color: #c7d2fe;
+  border-color: var(--el-color-primary-light-7);
   box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
   transform: translateY(-2px);
 }
@@ -184,7 +184,7 @@ function formatDate(dateStr: string) {
   margin: 0;
   font-size: 16px;
   font-weight: 650;
-  color: #1e293b;
+  color: var(--text-primary);
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -192,8 +192,8 @@ function formatDate(dateStr: string) {
 }
 .problem-count {
   font-size: 12px;
-  color: #475569;
-  background: #f1f5f9;
+  color: var(--text-secondary);
+  background: var(--bg-muted);
   padding: 2px 8px;
   border-radius: 20px;
   font-weight: 600;
@@ -202,7 +202,7 @@ function formatDate(dateStr: string) {
 .card-description {
   margin: 0 0 20px 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
   line-height: 1.5;
   height: 40px;
   overflow: hidden;
@@ -213,21 +213,21 @@ function formatDate(dateStr: string) {
 }
 .card-progress {
   margin-bottom: 20px;
-  background: #f8fafc;
+  background: var(--bg-app);
   border-radius: 8px;
   padding: 12px;
-  border: 1px dashed #e2e8f0;
+  border: 1px dashed var(--border-color);
 }
 .progress-labels {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 6px;
   font-weight: 500;
 }
 .progress-ratio {
-  color: #1e293b;
+  color: var(--text-primary);
   font-weight: 600;
 }
 .card-footer {
@@ -235,7 +235,7 @@ function formatDate(dateStr: string) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--border-light);
   padding-top: 12px;
 }
 .card-meta {
@@ -246,7 +246,7 @@ function formatDate(dateStr: string) {
 .card-author {
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -256,7 +256,7 @@ function formatDate(dateStr: string) {
 }
 .card-time {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 .enter-btn {
   font-size: 13px;

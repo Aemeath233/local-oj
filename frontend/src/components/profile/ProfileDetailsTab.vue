@@ -106,16 +106,24 @@ watch(() => props.form, (newVal) => {
 }, { deep: true })
 
 async function saveProfile() {
+  if (!localForm.displayName || localForm.displayName.trim() === '') {
+    ElMessage.warning('昵称不能为空')
+    return
+  }
+  if (!localForm.username || localForm.username.trim() === '') {
+    ElMessage.warning('用户名不能为空')
+    return
+  }
   saving.value = true
   try {
     const payload: any = {
-      displayName: localForm.displayName,
-      studentNo: localForm.studentNo || undefined,
-      major: localForm.major || undefined
+      displayName: localForm.displayName.trim(),
+      studentNo: localForm.studentNo?.trim() || undefined,
+      major: localForm.major?.trim() || undefined
     }
     // Only send username if changed
-    if (localForm.username !== props.form.username) {
-      payload.username = localForm.username
+    if (localForm.username.trim() !== props.form.username) {
+      payload.username = localForm.username.trim()
     }
     const profile = await updateProfile(payload)
     emit('profile-updated', profile)

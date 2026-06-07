@@ -157,10 +157,10 @@ function formatBytes(bytes: number) {
 }
 
 .storage-card {
-  background: var(--bg-card, #fafafa);
+  background: var(--bg-muted);
   padding: 1.5rem;
   border-radius: 10px;
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--border-color);
 }
 
 .storage-card.gauge {
@@ -217,13 +217,23 @@ function formatBytes(bytes: number) {
   margin-top: 1rem;
   padding: 1rem;
   border-radius: 6px;
-  background: rgba(103, 194, 58, 0.03);
-  border: 1px solid rgba(103, 194, 58, 0.2);
+  background: rgba(16, 185, 129, 0.03);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .orphaned-warning-box.has-orphans {
-  background: rgba(245, 108, 108, 0.03);
-  border: 1px solid rgba(245, 108, 108, 0.2);
+  background: rgba(239, 68, 68, 0.03);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+html.dark .orphaned-warning-box {
+  background: rgba(16, 185, 129, 0.08) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+html.dark .orphaned-warning-box.has-orphans {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
 }
 
 .warning-title {
@@ -247,7 +257,7 @@ function formatBytes(bytes: number) {
 }
 
 .problems-storage-table {
-  background: var(--bg-card, #ffffff);
+  background: transparent;
   border-radius: 8px;
   overflow: hidden;
 }
