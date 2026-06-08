@@ -152,10 +152,9 @@ function fillSelfTest(text: string) {
   justify-content: space-between;
   align-items: flex-start;
   border-bottom: 1px solid var(--border-light);
-  padding-bottom: 16px;
-  margin-bottom: 20px;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
 }
-
 .statement-header h1 {
   font-size: 1.6rem;
   font-weight: 800;
@@ -210,6 +209,7 @@ function fillSelfTest(text: string) {
 }
 
 .statement-body {
+  margin-top: 0 !important;
   line-height: 1.65;
   color: var(--text-secondary);
   margin-bottom: 30px;
