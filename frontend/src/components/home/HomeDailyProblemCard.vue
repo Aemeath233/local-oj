@@ -50,8 +50,13 @@
       
       <div class="card-footer">
         <RouterLink :to="`/problems/${dailyProblem.id}`">
-          <el-button type="primary" size="large" class="start-btn" :icon="ArrowRight">
-            开始挑战
+          <el-button
+            :type="dailyProblem.solveStatus === 'ACCEPTED' ? 'success' : dailyProblem.solveStatus === 'ATTEMPTED' ? 'warning' : 'primary'"
+            size="large"
+            :class="['start-btn', dailyProblem.solveStatus === 'ACCEPTED' ? 'ac-btn' : dailyProblem.solveStatus === 'ATTEMPTED' ? 'attempted-btn' : '']"
+            :icon="dailyProblem.solveStatus === 'ACCEPTED' ? Check : ArrowRight"
+          >
+            {{ dailyProblem.solveStatus === 'ACCEPTED' ? '已完成挑战' : dailyProblem.solveStatus === 'ATTEMPTED' ? '继续挑战' : '开始挑战' }}
           </el-button>
         </RouterLink>
       </div>
@@ -65,7 +70,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Calendar, ArrowRight } from '@element-plus/icons-vue'
+import { Calendar, ArrowRight, Check } from '@element-plus/icons-vue'
 import { fetchDailyProblem } from '../../api/http'
 import { getTagColor } from '../../utils/tag'
 import type { ProblemSummary } from '../../types'
@@ -313,12 +318,32 @@ function calculateAcRate(problem: ProblemSummary) {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3);
 }
 
-html.dark .start-btn {
+.start-btn.ac-btn {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+}
+.start-btn.ac-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3) !important;
+}
+
+.start-btn.attempted-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2) !important;
+}
+.start-btn.attempted-btn:hover {
+  background: linear-gradient(135deg, #d97706, #b45309) !important;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.3) !important;
+}
+
+html.dark .start-btn:not(.ac-btn):not(.attempted-btn) {
   background: #f8fafc !important;
   color: #0f172a !important;
 }
 
-html.dark .start-btn:hover {
+html.dark .start-btn:not(.ac-btn):not(.attempted-btn):hover {
   background: #f1f5f9 !important;
 }
 
