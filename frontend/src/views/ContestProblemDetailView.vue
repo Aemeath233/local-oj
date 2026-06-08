@@ -14,88 +14,101 @@
 
     <section class="problem-layout" ref="problemLayoutRef">
       <!-- Left side: Statement -->
-      <article v-if="problem" class="statement panel" :style="leftStyle">
-        <section class="statement-body" :style="{ fontSize: readerFontSize + 'px', fontFamily: readerFontFamily }">
-          <MarkdownView :source="statementMarkdown" />
-        </section>
+      <article v-if="problem" class="statement panel" style="display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 24px 8px 24px 24px;" :style="leftStyle">
+        <!-- Maximize Button -->
+        <el-tooltip v-if="!isMobile" :content="isMaximized ? '还原布局' : '放大题面'" placement="top">
+          <el-button
+            class="maximize-btn"
+            circle
+            :icon="isMaximized ? ScaleToOriginal : FullScreen"
+            @click="toggleMaximize"
+            size="small"
+          />
+        </el-tooltip>
 
-        <!-- If mobile, show a nice info block about writing code on PC -->
-        <el-card v-if="isMobile" class="mobile-warning-card" style="margin-top: 20px; margin-bottom: 15px;">
-          <div style="display: flex; gap: 15px; align-items: flex-start;">
-            <el-icon style="font-size: 24px; color: var(--el-color-warning); margin-top: 2px;"><Monitor /></el-icon>
-            <div>
-              <h3 style="margin: 0 0 8px 0; font-size: 16px;">建议使用电脑端</h3>
-              <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--el-text-color-secondary); line-height: 1.5;">
-                本系统支持在电脑端进行代码编写、调试与提交。建议在电脑浏览器打开当前链接以获得最佳答题体验。
-              </p>
-              <el-button type="primary" size="small" @click="copyLink">复制题目链接</el-button>
-            </div>
-          </div>
-        </el-card>
+        <div class="statement-scroll-area">
+          <section class="statement-body" :style="{ fontSize: readerFontSize + 'px', fontFamily: readerFontFamily }">
+            <MarkdownView :source="statementMarkdown" />
+          </section>
 
-        <section v-if="sampleCases.length > 0" class="sample-list">
-          <h2>样例</h2>
-          <div v-for="(sample, index) in sampleCases" :key="index" class="sample-block">
-            <h3>样例 {{ index + 1 }}</h3>
-            <div class="sample-grid">
+          <!-- If mobile, show a nice info block about writing code on PC -->
+          <el-card v-if="isMobile" class="mobile-warning-card" style="margin-top: 20px; margin-bottom: 15px;">
+            <div style="display: flex; gap: 15px; align-items: flex-start;">
+              <el-icon style="font-size: 24px; color: var(--el-color-warning); margin-top: 2px;"><Monitor /></el-icon>
               <div>
-                <div class="sample-header-row">
-                  <h4>输入</h4>
-                  <div class="sample-actions">
-                    <el-button
-                      v-if="sample.inputText"
-                      type="primary"
-                      link
-                      size="small"
-                      :icon="DocumentCopy"
-                      @click="copyText(sample.inputText, '输入已复制')"
-                    >
-                      复制
-                    </el-button>
-                    <el-button
-                      v-if="sample.inputText && !isMobile"
-                      type="success"
-                      link
-                      size="small"
-                      :icon="VideoPlay"
-                      @click="fillSelfTest(sample.inputText)"
-                    >
-                      填入自测
-                    </el-button>
-                  </div>
-                </div>
-                <pre :class="{ empty: !sample.inputText }">{{ sample.inputText || '无输入' }}</pre>
-              </div>
-              <div>
-                <div class="sample-header-row">
-                  <h4>输出</h4>
-                  <div class="sample-actions">
-                    <el-button
-                      v-if="sample.expectedOutput"
-                      type="primary"
-                      link
-                      size="small"
-                      :icon="DocumentCopy"
-                      @click="copyText(sample.expectedOutput, '输出已复制')"
-                    >
-                      复制
-                    </el-button>
-                  </div>
-                </div>
-                <pre :class="{ empty: !sample.expectedOutput }">{{ sample.expectedOutput || '无输出' }}</pre>
+                <h3 style="margin: 0 0 8px 0; font-size: 16px;">建议使用电脑端</h3>
+                <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--el-text-color-secondary); line-height: 1.5;">
+                  本系统支持在电脑端进行代码编写、调试与提交。建议在电脑浏览器打开当前链接以获得最佳答题体验。
+                </p>
+                <el-button type="primary" size="small" @click="copyLink">复制题目链接</el-button>
               </div>
             </div>
-          </div>
-        </section>
+          </el-card>
+
+          <section v-if="sampleCases.length > 0" class="sample-list">
+            <h2>样例</h2>
+            <div v-for="(sample, index) in sampleCases" :key="index" class="sample-block">
+              <h3>样例 {{ index + 1 }}</h3>
+              <div class="sample-grid">
+                <div>
+                  <div class="sample-header-row">
+                    <h4>输入</h4>
+                    <div class="sample-actions">
+                      <el-button
+                        v-if="sample.inputText"
+                        type="primary"
+                        link
+                        size="small"
+                        :icon="DocumentCopy"
+                        @click="copyText(sample.inputText, '输入已复制')"
+                      >
+                        复制
+                      </el-button>
+                      <el-button
+                        v-if="sample.inputText && !isMobile"
+                        type="success"
+                        link
+                        size="small"
+                        :icon="VideoPlay"
+                        @click="fillSelfTest(sample.inputText)"
+                      >
+                        填入自测
+                      </el-button>
+                    </div>
+                  </div>
+                  <pre :class="{ empty: !sample.inputText }">{{ sample.inputText || '无输入' }}</pre>
+                </div>
+                <div>
+                  <div class="sample-header-row">
+                    <h4>输出</h4>
+                    <div class="sample-actions">
+                      <el-button
+                        v-if="sample.expectedOutput"
+                        type="primary"
+                        link
+                        size="small"
+                        :icon="DocumentCopy"
+                        @click="copyText(sample.expectedOutput, '输出已复制')"
+                      >
+                        复制
+                      </el-button>
+                    </div>
+                  </div>
+                  <pre :class="{ empty: !sample.expectedOutput }">{{ sample.expectedOutput || '无输出' }}</pre>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
       </article>
 
       <!-- Drag Resizable Divider -->
-      <div v-if="problem && !isMobile" class="resize-divider" @mousedown="startDrag">
+      <div v-if="problem && !isMobile && !isMaximized" class="resize-divider" @mousedown="startDrag">
         <div class="resize-divider-line"></div>
       </div>
 
       <!-- Right side: Code Editor & Submissions & Custom Stdin Test Console -->
-      <aside v-if="!isMobile" class="sidebar" :style="rightStyle">
+      <aside v-if="!isMobile" v-show="!isMaximized" class="sidebar" :style="rightStyle">
         <!-- Editor Header -->
         <div class="editor-bar panel">
           <div class="bar-left">
@@ -230,7 +243,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Upload, VideoPlay, ArrowLeft, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading, Brush, Monitor } from '@element-plus/icons-vue'
+import { Upload, VideoPlay, ArrowLeft, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading, Brush, Monitor, FullScreen, ScaleToOriginal } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CodeEditor from '../components/CodeEditor.vue'
 import MarkdownView from '../components/MarkdownView.vue'
@@ -263,12 +276,27 @@ let startWidthPercent = 0
 // Check if mobile or desktop split screen is active
 const isWideScreen = ref(window.innerWidth >= 1041)
 const isMobile = ref(window.innerWidth <= 768)
+const isMaximized = ref(false)
+
 function handleResize() {
   isWideScreen.value = window.innerWidth >= 1041
   isMobile.value = window.innerWidth <= 768
 }
 
+function toggleMaximize() {
+  isMaximized.value = !isMaximized.value
+  setTimeout(() => {
+    window.dispatchEvent(new Event('resize'))
+  }, 100)
+}
+
 const leftStyle = computed(() => {
+  if (isMaximized.value) {
+    return {
+      width: '100%',
+      flex: '0 0 100%'
+    }
+  }
   if (!isWideScreen.value || isMobile.value) return {}
   return {
     width: `${leftWidthPercent.value}%`,
@@ -277,6 +305,11 @@ const leftStyle = computed(() => {
 })
 
 const rightStyle = computed(() => {
+  if (isMaximized.value) {
+    return {
+      display: 'none'
+    }
+  }
   if (!isWideScreen.value || isMobile.value) return {}
   return {
     width: `${100 - leftWidthPercent.value}%`,
@@ -700,13 +733,55 @@ function templateFor(value: Language) {
 }
 @media (min-width: 1041px) {
   .problem-layout {
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    gap: 0px;
+    align-items: stretch;
   }
 }
 .statement {
-  overflow-y: auto;
-  padding: 24px;
+  overflow: hidden;
+  padding: 24px 8px 24px 24px;
   border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+.statement-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 16px;
+}
+.maximize-btn {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 10;
+}
+/* Resize Divider rules */
+.resize-divider {
+  width: 14px;
+  cursor: col-resize;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+.resize-divider:hover,
+.resize-divider:active {
+  background-color: var(--border-light);
+}
+.resize-divider-line {
+  width: 2px;
+  height: 40px;
+  background: var(--border-color);
+  border-radius: 1px;
+}
+.resize-divider:hover .resize-divider-line,
+.resize-divider:active .resize-divider-line {
+  background: var(--el-color-primary);
 }
 .sidebar {
   display: flex;

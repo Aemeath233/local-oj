@@ -6,7 +6,17 @@
       </el-empty>
     </div>
     <section v-else-if="problem" class="problem-layout" ref="problemLayoutRef">
-      <article class="statement panel" style="display: flex; flex-direction: column;" :style="leftStyle">
+      <article class="statement panel" style="display: flex; flex-direction: column; position: relative;" :style="leftStyle">
+        <!-- Maximize Button -->
+        <el-tooltip v-if="!isMobile" :content="isMaximized ? '还原布局' : '放大题面'" placement="top">
+          <el-button
+            class="maximize-btn"
+            circle
+            :icon="isMaximized ? ScaleToOriginal : FullScreen"
+            @click="toggleMaximize"
+            size="small"
+          />
+        </el-tooltip>
         <el-tabs v-model="activeLeftTab" class="statement-tabs" style="flex: 1; display: flex; flex-direction: column;">
           <!-- Tab 1: Problem Description -->
           <el-tab-pane label="题目描述" name="statement" style="padding-top: 10px;">
@@ -40,11 +50,11 @@
       </article>
 
       <!-- Drag Resizable Divider -->
-      <div v-if="!isMobile" class="resize-divider" @mousedown="startDrag">
+      <div v-if="!isMobile && !isMaximized" class="resize-divider" @mousedown="startDrag">
         <div class="resize-divider-line"></div>
       </div>
 
-      <aside v-if="!isMobile" class="submit-panel panel" :style="rightStyle">
+      <aside v-if="!isMobile" v-show="!isMaximized" class="submit-panel panel" :style="rightStyle">
         <div class="submit-toolbar">
           <el-select v-model="language" class="language-select">
             <el-option label="C++20 (O2)" value="CPP" />
@@ -102,7 +112,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Upload, VideoPlay, Brush, Monitor } from '@element-plus/icons-vue'
+import { Upload, VideoPlay, Brush, Monitor, FullScreen, ScaleToOriginal } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CodeEditor from '../components/CodeEditor.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
@@ -134,13 +144,27 @@ let startWidthPercent = 0
 // Check if mobile or desktop split screen is active
 const isWideScreen = ref(window.innerWidth >= 1041)
 const isMobile = ref(window.innerWidth <= 768)
+const isMaximized = ref(false)
 
 function handleResize() {
   isWideScreen.value = window.innerWidth >= 1041
   isMobile.value = window.innerWidth <= 768
 }
 
+function toggleMaximize() {
+  isMaximized.value = !isMaximized.value
+  setTimeout(() => {
+    window.dispatchEvent(new Event('resize'))
+  }, 100)
+}
+
 const leftStyle = computed(() => {
+  if (isMaximized.value) {
+    return {
+      width: '100%',
+      flex: '0 0 100%'
+    }
+  }
   if (!isWideScreen.value || isMobile.value) return {}
   return {
     width: `${leftWidthPercent.value}%`,
@@ -149,6 +173,11 @@ const leftStyle = computed(() => {
 })
 
 const rightStyle = computed(() => {
+  if (isMaximized.value) {
+    return {
+      display: 'none'
+    }
+  }
   if (!isWideScreen.value || isMobile.value) return {}
   return {
     width: `${100 - leftWidthPercent.value}%`,
@@ -487,6 +516,14 @@ function templateFor(value: Language) {
   padding: 20px;
   overflow-y: hidden;
   box-sizing: border-box;
+  position: relative;
+}
+
+.maximize-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  z-index: 10;
 }
 
 .statement-tabs :deep(.el-tabs__header) {
