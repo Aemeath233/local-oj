@@ -559,17 +559,31 @@ async function connectSse() {
           if (existingIndex !== -1) {
             submissions.value[existingIndex].status = status as any
             submissions.value[existingIndex].verdict = verdict as any
+          }
 
-            // Auto-update drawer if it's currently showing one of our submissions
-            if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
-              fetchSubmission(subId).then(detail => {
+          // Auto-update drawer if it's currently showing one of our submissions
+          if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
+            fetchSubmission(subId).then(detail => {
+              if (selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
+                const curStatus = selectedSubmission.value.submission.status
+                const curCaseCount = selectedSubmission.value.cases?.length || 0
+                const newStatus = detail.submission.status
+                const newCaseCount = detail.cases?.length || 0
+
+                // Guard: Do not overwrite with older state (e.g. finished -> running, or fewer cases)
+                if (curStatus === 'FINISHED' && newStatus !== 'FINISHED') {
+                  return
+                }
+                if (newCaseCount < curCaseCount) {
+                  return
+                }
                 selectedSubmission.value = detail
-              }).catch(console.error)
-            }
+              }
+            }).catch(console.error)
+          }
 
-            if (status === 'FINISHED') {
-              loadSubmissions(true)
-            }
+          if (status === 'FINISHED') {
+            loadSubmissions(true)
           }
         }
       } catch (err) {
@@ -683,6 +697,13 @@ async function submit() {
     message.value = `提交 #${submission.id} 已入队`
     ElMessage.success(`提交 #${submission.id} 已入队`)
     startCooldown()
+
+    // Automatically fetch details and open the submission details drawer for immediate real-time updates
+    fetchSubmission(submission.id).then(detail => {
+      selectedSubmission.value = detail
+      drawerVisible.value = true
+    }).catch(console.error)
+
     await loadSubmissions()
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '提交失败')

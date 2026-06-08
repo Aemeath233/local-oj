@@ -206,15 +206,29 @@ async function connectSse() {
           if (existing) {
             existing.status = status
             existing.verdict = verdict
-
-            if (drawerVisible.value && selected.value && selected.value.submission.id === subId) {
-              fetchSubmission(subId).then(detail => {
-                selected.value = detail
-              }).catch(console.error)
-            }
           } else {
             // New submission not in current feed, trigger reload to pull it in
             load(true)
+          }
+
+          if (drawerVisible.value && selected.value && selected.value.submission.id === subId) {
+            fetchSubmission(subId).then(detail => {
+              if (selected.value && selected.value.submission.id === subId) {
+                const curStatus = selected.value.submission.status
+                const curCaseCount = selected.value.cases?.length || 0
+                const newStatus = detail.submission.status
+                const newCaseCount = detail.cases?.length || 0
+
+                // Guard: Do not overwrite with older state
+                if (curStatus === 'FINISHED' && newStatus !== 'FINISHED') {
+                  return
+                }
+                if (newCaseCount < curCaseCount) {
+                  return
+                }
+                selected.value = detail
+              }
+            }).catch(console.error)
           }
 
           if (status === 'FINISHED') {
