@@ -698,12 +698,6 @@ async function submit() {
     ElMessage.success(`提交 #${submission.id} 已入队`)
     startCooldown()
 
-    // Automatically fetch details and open the submission details drawer for immediate real-time updates
-    fetchSubmission(submission.id).then(detail => {
-      selectedSubmission.value = detail
-      drawerVisible.value = true
-    }).catch(console.error)
-
     await loadSubmissions()
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '提交失败')
