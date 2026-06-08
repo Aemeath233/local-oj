@@ -25,6 +25,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class JudgeService {
@@ -152,35 +155,87 @@ public class JudgeService {
         SandboxSettingsProvider.Settings settings = sandboxSettingsProvider.current();
         CompiledArtifact artifact = compileIfNeeded(submission, settings);
         try {
-            int score = 0;
-            long maxTimeMs = 0;
-            long maxMemoryKb = 0;
-            Verdict finalVerdict = Verdict.AC;
-            String finalMessage = null;
+            int concurrency = settings.caseConcurrentRuns();
+            if (concurrency <= 1) {
+                // Sequential execution (fallback/default)
+                int score = 0;
+                long maxTimeMs = 0;
+                long maxMemoryKb = 0;
+                Verdict finalVerdict = Verdict.AC;
+                String finalMessage = null;
 
-            for (int i = 0; i < testCases.size(); i++) {
-                TestCase testCase = testCases.get(i);
-                String stdin = testCaseDataReader.readInput(testCase);
-                String expectedOutput = testCaseDataReader.readExpectedOutput(testCase);
-                CaseRun caseRun = runCase(submission, problem, artifact, stdin, settings);
-                Verdict verdict = caseRun.verdict();
-                if (verdict == Verdict.AC && outputComparator.matches(caseRun.stdout(), expectedOutput)) {
-                    score += testCase.getScore() == null ? 0 : testCase.getScore();
-                } else if (verdict == Verdict.AC) {
-                    verdict = Verdict.WA;
+                for (int i = 0; i < testCases.size(); i++) {
+                    TestCase testCase = testCases.get(i);
+                    String stdin = testCaseDataReader.readInput(testCase);
+                    String expectedOutput = testCaseDataReader.readExpectedOutput(testCase);
+                    CaseRun caseRun = runCase(submission, problem, artifact, stdin, settings);
+                    Verdict verdict = caseRun.verdict();
+                    if (verdict == Verdict.AC && outputComparator.matches(caseRun.stdout(), expectedOutput)) {
+                        score += testCase.getScore() == null ? 0 : testCase.getScore();
+                    } else if (verdict == Verdict.AC) {
+                        verdict = Verdict.WA;
+                    }
+
+                    maxTimeMs = Math.max(maxTimeMs, caseRun.timeMs());
+                    maxMemoryKb = Math.max(maxMemoryKb, caseRun.memoryKb());
+                    insertCaseResult(submission.getId(), testCase, i + 1, verdict, caseRun);
+
+                    if (verdict != Verdict.AC && finalVerdict == Verdict.AC) {
+                        finalVerdict = verdict;
+                        finalMessage = caseRun.message();
+                    }
                 }
 
-                maxTimeMs = Math.max(maxTimeMs, caseRun.timeMs());
-                maxMemoryKb = Math.max(maxMemoryKb, caseRun.memoryKb());
-                insertCaseResult(submission.getId(), testCase, i + 1, verdict, caseRun);
+                return new JudgeOutcome(finalVerdict, finalVerdict == Verdict.AC ? 100 : score, maxTimeMs, maxMemoryKb, finalMessage);
+            } else {
+                // Parallel execution using CompletableFuture and thread pool
+                record CaseResult(int caseIndex, TestCase testCase, CaseRun caseRun, Verdict verdict, int score) {}
+                List<CompletableFuture<CaseResult>> futures = new ArrayList<>();
 
-                if (verdict != Verdict.AC && finalVerdict == Verdict.AC) {
-                    finalVerdict = verdict;
-                    finalMessage = caseRun.message();
+                try (ExecutorService executor = Executors.newFixedThreadPool(concurrency)) {
+                    for (int i = 0; i < testCases.size(); i++) {
+                        final int index = i;
+                        final TestCase testCase = testCases.get(i);
+                        futures.add(CompletableFuture.supplyAsync(() -> {
+                            String stdin = testCaseDataReader.readInput(testCase);
+                            String expectedOutput = testCaseDataReader.readExpectedOutput(testCase);
+                            CaseRun caseRun = runCase(submission, problem, artifact, stdin, settings);
+                            Verdict verdict = caseRun.verdict();
+                            int scoreVal = 0;
+                            if (verdict == Verdict.AC && outputComparator.matches(caseRun.stdout(), expectedOutput)) {
+                                scoreVal = testCase.getScore() == null ? 0 : testCase.getScore();
+                            } else if (verdict == Verdict.AC) {
+                                verdict = Verdict.WA;
+                            }
+                            return new CaseResult(index + 1, testCase, caseRun, verdict, scoreVal);
+                        }, executor));
+                    }
+
+                    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
                 }
+
+                int score = 0;
+                long maxTimeMs = 0;
+                long maxMemoryKb = 0;
+                Verdict finalVerdict = Verdict.AC;
+                String finalMessage = null;
+
+                for (CompletableFuture<CaseResult> future : futures) {
+                    CaseResult res = future.join();
+                    score += res.score();
+                    maxTimeMs = Math.max(maxTimeMs, res.caseRun().timeMs());
+                    maxMemoryKb = Math.max(maxMemoryKb, res.caseRun().memoryKb());
+                    
+                    insertCaseResult(submission.getId(), res.testCase(), res.caseIndex(), res.verdict(), res.caseRun());
+
+                    if (res.verdict() != Verdict.AC && finalVerdict == Verdict.AC) {
+                        finalVerdict = res.verdict();
+                        finalMessage = res.caseRun().message();
+                    }
+                }
+
+                return new JudgeOutcome(finalVerdict, finalVerdict == Verdict.AC ? 100 : score, maxTimeMs, maxMemoryKb, finalMessage);
             }
-
-            return new JudgeOutcome(finalVerdict, finalVerdict == Verdict.AC ? 100 : score, maxTimeMs, maxMemoryKb, finalMessage);
         } finally {
             artifact.cachedFileIds().forEach(goJudgeClient::deleteFile);
         }

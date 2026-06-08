@@ -39,6 +39,7 @@ public class SandboxSettingsService {
         setting.setCompileTimeoutMs(clamp(command.compileTimeoutMs(), 1000, 120000, 10000));
         setting.setDefaultOutputLimitKb(clamp(command.defaultOutputLimitKb(), 64, 262144, 1024));
         setting.setMaxProcessCount(clamp(command.maxProcessCount(), 1, 256, 50));
+        setting.setCaseConcurrentRuns(clamp(command.caseConcurrentRuns(), 1, 32, 1));
         setting.setUpdatedAt(LocalDateTime.now());
         sandboxSettingMapper.updateById(setting);
         return SandboxSettingsView.from(setting);
@@ -53,6 +54,7 @@ public class SandboxSettingsService {
         setting.setCompileTimeoutMs(10000);
         setting.setDefaultOutputLimitKb(1024);
         setting.setMaxProcessCount(50);
+        setting.setCaseConcurrentRuns(1);
         setting.setCreatedAt(now);
         setting.setUpdatedAt(now);
         return setting;
@@ -68,7 +70,8 @@ public class SandboxSettingsService {
             Integer maxConcurrentRuns,
             Integer compileTimeoutMs,
             Integer defaultOutputLimitKb,
-            Integer maxProcessCount
+            Integer maxProcessCount,
+            Integer caseConcurrentRuns
     ) {
     }
 
@@ -77,7 +80,8 @@ public class SandboxSettingsService {
             Integer maxConcurrentRuns,
             Integer compileTimeoutMs,
             Integer defaultOutputLimitKb,
-            Integer maxProcessCount
+            Integer maxProcessCount,
+            Integer caseConcurrentRuns
     ) {
         static SandboxSettingsView from(SandboxSetting setting) {
             return new SandboxSettingsView(
@@ -85,7 +89,8 @@ public class SandboxSettingsService {
                     setting.getMaxConcurrentRuns(),
                     setting.getCompileTimeoutMs(),
                     setting.getDefaultOutputLimitKb(),
-                    setting.getMaxProcessCount()
+                    setting.getMaxProcessCount(),
+                    setting.getCaseConcurrentRuns()
             );
         }
     }

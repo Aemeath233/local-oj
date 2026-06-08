@@ -92,7 +92,8 @@ public class AdminSettingsController {
             @Min(1) Integer maxConcurrentRuns,
             @Min(1000) Integer compileTimeoutMs,
             @Min(64) Integer defaultOutputLimitKb,
-            @Min(1) Integer maxProcessCount
+            @Min(1) Integer maxProcessCount,
+            @Min(1) Integer caseConcurrentRuns
     ) {
         SandboxSettingsService.UpdateSandboxSettingsCommand toCommand() {
             return new SandboxSettingsService.UpdateSandboxSettingsCommand(
@@ -100,7 +101,8 @@ public class AdminSettingsController {
                     maxConcurrentRuns,
                     compileTimeoutMs,
                     defaultOutputLimitKb,
-                    maxProcessCount
+                    maxProcessCount,
+                    caseConcurrentRuns
             );
         }
     }

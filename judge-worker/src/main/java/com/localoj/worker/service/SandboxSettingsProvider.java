@@ -53,7 +53,8 @@ public class SandboxSettingsProvider {
             int maxConcurrentRuns,
             int compileTimeoutMs,
             int defaultOutputLimitKb,
-            int maxProcessCount
+            int maxProcessCount,
+            int caseConcurrentRuns
     ) {
         static Settings from(SandboxSetting setting) {
             return new Settings(
@@ -61,12 +62,13 @@ public class SandboxSettingsProvider {
                     clamp(setting.getMaxConcurrentRuns(), 1, 32, 1),
                     clamp(setting.getCompileTimeoutMs(), 1000, 120000, 10000),
                     clamp(setting.getDefaultOutputLimitKb(), 64, 262144, 1024),
-                    clamp(setting.getMaxProcessCount(), 1, 256, 50)
+                    clamp(setting.getMaxProcessCount(), 1, 256, 50),
+                    clamp(setting.getCaseConcurrentRuns(), 1, 32, 1)
             );
         }
 
         static Settings defaults() {
-            return new Settings(1, 1, 10000, 1024, 50);
+            return new Settings(1, 1, 10000, 1024, 50, 1);
         }
 
         public int effectiveConcurrentJobs() {

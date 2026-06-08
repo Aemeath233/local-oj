@@ -15,6 +15,7 @@ public class SandboxSetting {
     private Integer compileTimeoutMs;
     private Integer defaultOutputLimitKb;
     private Integer maxProcessCount;
+    private Integer caseConcurrentRuns;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -64,6 +65,14 @@ public class SandboxSetting {
 
     public void setMaxProcessCount(Integer maxProcessCount) {
         this.maxProcessCount = maxProcessCount;
+    }
+
+    public Integer getCaseConcurrentRuns() {
+        return caseConcurrentRuns;
+    }
+
+    public void setCaseConcurrentRuns(Integer caseConcurrentRuns) {
+        this.caseConcurrentRuns = caseConcurrentRuns;
     }
 
     public LocalDateTime getCreatedAt() {

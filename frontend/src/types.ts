@@ -217,6 +217,7 @@ export interface SandboxSettings {
   compileTimeoutMs: number
   defaultOutputLimitKb: number
   maxProcessCount: number
+  caseConcurrentRuns: number
 }
 
 export interface LeaderboardRow {

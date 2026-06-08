@@ -71,6 +71,9 @@
               <el-form-item label="单任务进程数限制 (maxProcessCount)">
                 <el-input-number v-model="sandboxForm.maxProcessCount" :min="1" />
               </el-form-item>
+              <el-form-item label="单任务测试点并发运行数 (caseConcurrentRuns)">
+                <el-input-number v-model="sandboxForm.caseConcurrentRuns" :min="1" />
+              </el-form-item>
             </div>
             <div class="form-actions">
               <el-button type="primary" :icon="Check" :loading="savingSandbox" @click="saveSandbox">保存沙箱设置</el-button>
@@ -162,7 +165,8 @@ const sandboxForm = reactive({
   maxConcurrentRuns: 4,
   compileTimeoutMs: 5000,
   defaultOutputLimitKb: 65536,
-  maxProcessCount: 128
+  maxProcessCount: 128,
+  caseConcurrentRuns: 1
 })
 
 const originsList = ref<string[]>([''])
@@ -195,6 +199,7 @@ async function load() {
     sandboxForm.compileTimeoutMs = sandbox.compileTimeoutMs
     sandboxForm.defaultOutputLimitKb = sandbox.defaultOutputLimitKb
     sandboxForm.maxProcessCount = sandbox.maxProcessCount
+    sandboxForm.caseConcurrentRuns = sandbox.caseConcurrentRuns
 
     const originsStr = system.allowedOrigins || ''
     if (originsStr.trim() === '') {
@@ -254,7 +259,8 @@ async function saveSandbox() {
       maxConcurrentRuns: sandboxForm.maxConcurrentRuns,
       compileTimeoutMs: sandboxForm.compileTimeoutMs,
       defaultOutputLimitKb: sandboxForm.defaultOutputLimitKb,
-      maxProcessCount: sandboxForm.maxProcessCount
+      maxProcessCount: sandboxForm.maxProcessCount,
+      caseConcurrentRuns: sandboxForm.caseConcurrentRuns
     })
     ElMessage.success('沙箱设置已保存')
   } catch (error: any) {
