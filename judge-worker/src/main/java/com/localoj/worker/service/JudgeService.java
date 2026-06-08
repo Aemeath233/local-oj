@@ -179,6 +179,7 @@ public class JudgeService {
                     maxTimeMs = Math.max(maxTimeMs, caseRun.timeMs());
                     maxMemoryKb = Math.max(maxMemoryKb, caseRun.memoryKb());
                     insertCaseResult(submission.getId(), testCase, i + 1, verdict, caseRun);
+                    publishStatusUpdate(submission.getId(), SubmissionStatus.RUNNING, null);
 
                     if (verdict != Verdict.AC && finalVerdict == Verdict.AC) {
                         finalVerdict = verdict;
@@ -207,6 +208,8 @@ public class JudgeService {
                             } else if (verdict == Verdict.AC) {
                                 verdict = Verdict.WA;
                             }
+                            insertCaseResult(submission.getId(), testCase, index + 1, verdict, caseRun);
+                            publishStatusUpdate(submission.getId(), SubmissionStatus.RUNNING, null);
                             return new CaseResult(index + 1, testCase, caseRun, verdict, scoreVal);
                         }, executor));
                     }
@@ -225,8 +228,6 @@ public class JudgeService {
                     score += res.score();
                     maxTimeMs = Math.max(maxTimeMs, res.caseRun().timeMs());
                     maxMemoryKb = Math.max(maxMemoryKb, res.caseRun().memoryKb());
-                    
-                    insertCaseResult(submission.getId(), res.testCase(), res.caseIndex(), res.verdict(), res.caseRun());
 
                     if (res.verdict() != Verdict.AC && finalVerdict == Verdict.AC) {
                         finalVerdict = res.verdict();

@@ -152,8 +152,6 @@ public class ProblemService {
                 .in("problem_id", problemIds);
         if (contestId != null) {
             query.eq("contest_id", contestId);
-        } else {
-            query.isNull("contest_id");
         }
         List<Submission> submissions = submissionMapper.selectList(query);
         for (Submission submission : submissions) {
@@ -442,7 +440,7 @@ public class ProblemService {
             String userJoin = "LEFT JOIN ( " +
                     "    SELECT problem_id, MAX(CASE WHEN verdict = 'AC' THEN 2 ELSE 1 END) as user_status " +
                     "    FROM submissions " +
-                    "    WHERE user_id = ? AND contest_id IS NULL " +
+                    "    WHERE user_id = ? " +
                     "    GROUP BY problem_id " +
                     ") s_user ON p.id = s_user.problem_id ";
             sql.append(userJoin);

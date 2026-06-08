@@ -157,7 +157,7 @@ public class LeaderboardService {
                     MAX(CASE WHEN s.verdict = 'AC' THEN COALESCE(s.judged_at, s.created_at) END) AS last_accepted_at,
                     urs.prev_rank
                 FROM users u
-                LEFT JOIN submissions s ON s.user_id = u.id AND s.contest_id IS NULL
+                LEFT JOIN submissions s ON s.user_id = u.id
                 LEFT JOIN user_rank_snapshots urs ON urs.user_id = u.id
                 WHERE u.enabled = 1
                 GROUP BY u.id, u.username, u.email, u.display_name, u.avatar_url, u.student_no, u.major, urs.prev_rank
