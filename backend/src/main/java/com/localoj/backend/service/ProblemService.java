@@ -411,6 +411,9 @@ public class ProblemService {
         sql.append("COALESCE(stats.submit_cnt, 0) as submit_cnt, ");
         sql.append("COALESCE(stats.ac_cnt, 0) as ac_cnt, ");
         sql.append("(CAST(COALESCE(stats.ac_cnt, 0) AS DOUBLE) / CASE WHEN COALESCE(stats.submit_cnt, 0) > 0 THEN stats.submit_cnt ELSE 1 END) as ac_rate ");
+        if (user != null) {
+            sql.append(", s_user.user_status as user_status ");
+        }
         sql.append("FROM problems p ");
 
         countSql.append("FROM problems p ");
