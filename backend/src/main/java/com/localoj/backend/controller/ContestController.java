@@ -81,7 +81,7 @@ public class ContestController {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         Problem problem = contestService.getContestProblemDetail(id, problemId, user);
 
-        String solveStatus = problemService.solveStatuses(user, List.of(problemId))
+        String solveStatus = problemService.solveStatuses(user, List.of(problemId), id)
                 .getOrDefault(problemId, "UNATTEMPTED");
         long updateEpoch = problem.getUpdatedAt() != null
                 ? problem.getUpdatedAt().toEpochSecond(java.time.ZoneOffset.UTC) : 0;

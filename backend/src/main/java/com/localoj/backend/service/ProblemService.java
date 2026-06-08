@@ -135,6 +135,10 @@ public class ProblemService {
     }
 
     public Map<Long, String> solveStatuses(CurrentUser user, List<Long> problemIds) {
+        return solveStatuses(user, problemIds, null);
+    }
+
+    public Map<Long, String> solveStatuses(CurrentUser user, List<Long> problemIds, Long contestId) {
         Map<Long, String> statuses = new HashMap<>();
         for (Long problemId : problemIds) {
             statuses.put(problemId, "UNATTEMPTED");
@@ -142,11 +146,16 @@ public class ProblemService {
         if (user == null || problemIds.isEmpty()) {
             return statuses;
         }
-        List<Submission> submissions = submissionMapper.selectList(new QueryWrapper<Submission>()
+        QueryWrapper<Submission> query = new QueryWrapper<Submission>()
                 .select("problem_id", "verdict")
                 .eq("user_id", user.id())
-                .in("problem_id", problemIds)
-                .isNull("contest_id"));
+                .in("problem_id", problemIds);
+        if (contestId != null) {
+            query.eq("contest_id", contestId);
+        } else {
+            query.isNull("contest_id");
+        }
+        List<Submission> submissions = submissionMapper.selectList(query);
         for (Submission submission : submissions) {
             String current = statuses.getOrDefault(submission.getProblemId(), "UNATTEMPTED");
             if ("ACCEPTED".equals(current)) {
