@@ -258,7 +258,8 @@ import {
   fetchSubmission,
   fetchContestSubmissions,
   fetchContestRegistration,
-  formatCode
+  formatCode,
+  requestSseTicket
 } from '../api/http'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import { useAuthStore } from '../stores/auth'
@@ -530,9 +531,87 @@ async function initProblem() {
   }
 }
 
+let eventSource: EventSource | null = null
+let reconnectTimeout: any = null
+let isConnecting = false
+
+async function connectSse() {
+  if (eventSource || isConnecting) return
+  if (!authStore.token) return
+
+  isConnecting = true
+  try {
+    const ticket = await requestSseTicket()
+    if (!isConnecting || eventSource) return
+
+    const sseUrl = `/api/submissions/live?ticket=${encodeURIComponent(ticket)}`
+    eventSource = new EventSource(sseUrl)
+
+    eventSource.addEventListener('update', (event) => {
+      try {
+        const parts = event.data.split(',')
+        if (parts.length >= 2) {
+          const subId = Number(parts[0])
+          const status = parts[1]
+          const verdict = parts[2] || null
+
+          const existingIndex = submissions.value.findIndex(s => s.id === subId)
+          if (existingIndex !== -1) {
+            submissions.value[existingIndex].status = status as any
+            submissions.value[existingIndex].verdict = verdict as any
+
+            // Auto-update drawer if it's currently showing one of our submissions
+            if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
+              fetchSubmission(subId).then(detail => {
+                selectedSubmission.value = detail
+              }).catch(console.error)
+            }
+
+            if (status === 'FINISHED') {
+              loadSubmissions(true)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to handle SSE message', err)
+      }
+    })
+
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error, scheduled reconnect in 1s:', err)
+      disconnectSse()
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      reconnectTimeout = setTimeout(() => {
+        connectSse()
+      }, 1000)
+    }
+  } catch (error) {
+    console.error('Failed to fetch SSE ticket, scheduled reconnect in 1s:', error)
+    if (reconnectTimeout) clearTimeout(reconnectTimeout)
+    reconnectTimeout = setTimeout(() => {
+      connectSse()
+    }, 1000)
+  } finally {
+    isConnecting = false
+  }
+}
+
+function disconnectSse() {
+  isConnecting = false
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout)
+    reconnectTimeout = null
+  }
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
+  }
+}
+
 onMounted(async () => {
   window.addEventListener('resize', handleResize)
   await initProblem()
+  connectSse()
   // Auto-refresh submissions status every 3 seconds to track pending runs!
   submissionsTimerId = window.setInterval(async () => {
     const hasPending = submissions.value.some(s => s.status === 'PENDING' || s.status === 'RUNNING')
@@ -544,6 +623,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  disconnectSse()
   if (submissionsTimerId) {
     window.clearInterval(submissionsTimerId)
   }
