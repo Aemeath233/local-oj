@@ -286,29 +286,37 @@ watch(sourceCode, (newCode) => {
 
 const hasError = ref(false)
 
-async function initProblem() {
-  loading.value = true
-  hasError.value = false
+async function initProblem(isSilent = false) {
+  if (!isSilent) {
+    loading.value = true
+    hasError.value = false
+  }
   try {
     problem.value = await fetchProblem(problemId.value)
-    clearSelfTest()
-    
-    // Auto populate the first sample case input if available
-    if (problem.value?.samples && problem.value.samples.length > 0) {
-      selfTestInput.value = problem.value.samples[0].inputText
-    } else {
-      selfTestInput.value = ''
+    if (!isSilent) {
+      clearSelfTest()
+      
+      // Auto populate the first sample case input if available
+      if (problem.value?.samples && problem.value.samples.length > 0) {
+        selfTestInput.value = problem.value.samples[0].inputText
+      } else {
+        selfTestInput.value = ''
+      }
     }
   } catch (error) {
     console.error('Failed to initialize problem details', error)
-    hasError.value = true
+    if (!isSilent) {
+      hasError.value = true
+    }
   } finally {
-    loading.value = false
+    if (!isSilent) {
+      loading.value = false
+    }
   }
 
   // Load submissions in the background without blocking the main page display
   if (!hasError.value) {
-    loadSubmissions()
+    loadSubmissions(isSilent)
   }
 }
 
@@ -393,7 +401,7 @@ watch(
       sub => runningIds.has(sub.id) && sub.status === 'FINISHED'
     )
     if (justFinished) {
-      await initProblem()
+      await initProblem(true)
     }
   },
   { deep: true }

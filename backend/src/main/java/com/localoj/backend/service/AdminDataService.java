@@ -9,6 +9,7 @@ import com.localoj.common.model.Problem;
 import com.localoj.common.model.Submission;
 import com.localoj.common.model.User;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,10 +31,13 @@ import java.util.*;
 
 @Service
 public class AdminDataService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AdminDataService.class);
+
     private final UserMapper userMapper;
     private final SubmissionMapper submissionMapper;
     private final ProblemMapper problemMapper;
     private final PasswordEncoder passwordEncoder;
+    private final TestCaseFileStorage testCaseFileStorage;
     private final Path dataRoot;
 
     public AdminDataService(
@@ -41,13 +45,25 @@ public class AdminDataService {
             SubmissionMapper submissionMapper,
             ProblemMapper problemMapper,
             PasswordEncoder passwordEncoder,
+            TestCaseFileStorage testCaseFileStorage,
             @Value("${app.data-root:/data}") String dataRootStr
     ) {
         this.userMapper = userMapper;
         this.submissionMapper = submissionMapper;
         this.problemMapper = problemMapper;
         this.passwordEncoder = passwordEncoder;
+        this.testCaseFileStorage = testCaseFileStorage;
         this.dataRoot = Paths.get(dataRootStr).toAbsolutePath().normalize();
+    }
+
+    @Scheduled(cron = "0 0 2 * * *")
+    public void scheduledCleanExpiredUploads() {
+        try {
+            log.info("Running scheduled cleanup for expired test cases uploads...");
+            testCaseFileStorage.cleanExpiredUploads();
+        } catch (Exception e) {
+            log.error("Scheduled uploads cleanup failed", e);
+        }
     }
 
     // ================= 1. USER BULK IMPORT =================
@@ -98,16 +114,8 @@ public class AdminDataService {
             throw new IllegalArgumentException("上传的文件不能为空");
         }
 
-        List<List<String>> rows = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) {
-                    continue;
-                }
-                rows.add(parseCsvLine(line));
-            }
-        }
+        String content = new String(file.getBytes(), StandardCharsets.UTF_8);
+        List<List<String>> rows = parseCsv(content);
 
         if (rows.isEmpty()) {
             throw new IllegalArgumentException("未读取到任何有效数据");
@@ -272,26 +280,46 @@ public class AdminDataService {
         return result;
     }
 
-    private List<String> parseCsvLine(String line) {
-        List<String> result = new ArrayList<>();
-        if (line == null) {
-            return result;
-        }
-        StringBuilder sb = new StringBuilder();
+    private List<List<String>> parseCsv(String content) {
+        List<List<String>> rows = new ArrayList<>();
+        List<String> currentRow = new ArrayList<>();
+        StringBuilder cell = new StringBuilder();
         boolean inQuotes = false;
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
+        int len = content.length();
+        for (int i = 0; i < len; i++) {
+            char c = content.charAt(i);
             if (c == '"') {
-                inQuotes = !inQuotes;
+                if (inQuotes && i + 1 < len && content.charAt(i + 1) == '"') {
+                    cell.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
             } else if (c == ',' && !inQuotes) {
-                result.add(sb.toString());
-                sb.setLength(0);
+                currentRow.add(cell.toString());
+                cell.setLength(0);
+            } else if (c == '\r') {
+                if (inQuotes) {
+                    cell.append(c);
+                }
+            } else if (c == '\n' && !inQuotes) {
+                currentRow.add(cell.toString());
+                cell.setLength(0);
+                if (!currentRow.stream().allMatch(String::isBlank)) {
+                    rows.add(new ArrayList<>(currentRow));
+                }
+                currentRow.clear();
             } else {
-                sb.append(c);
+                cell.append(c);
             }
         }
-        result.add(sb.toString());
-        return result;
+        if (cell.length() > 0 || !currentRow.isEmpty()) {
+            currentRow.add(cell.toString());
+            if (!currentRow.stream().allMatch(String::isBlank)) {
+                rows.add(currentRow);
+            }
+        }
+        return rows;
     }
 
     private String getColVal(List<String> row, Integer colIndex) {

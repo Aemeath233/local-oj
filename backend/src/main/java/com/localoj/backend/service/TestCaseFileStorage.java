@@ -1,6 +1,8 @@
 package com.localoj.backend.service;
 
 import com.localoj.common.model.TestCase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,6 +30,8 @@ import java.util.stream.Stream;
 
 @Service
 public class TestCaseFileStorage {
+    private static final Logger log = LoggerFactory.getLogger(TestCaseFileStorage.class);
+
     private static final String INPUT_SUFFIX = ".in";
     private static final String OUTPUT_SUFFIX = ".out";
     private static final String ANSWER_SUFFIX = ".ans";
@@ -521,6 +526,28 @@ public class TestCaseFileStorage {
         Path resolved = root.resolve(fileName).normalize();
         ensureInside(root, resolved);
         return resolved;
+    }
+
+    public void cleanExpiredUploads() {
+        if (!Files.exists(uploadRoot)) {
+            return;
+        }
+        try (Stream<Path> stream = Files.list(uploadRoot)) {
+            stream.filter(Files::isDirectory).forEach(path -> {
+                try {
+                    BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
+                    long ageMs = System.currentTimeMillis() - attrs.lastModifiedTime().toMillis();
+                    if (ageMs > 24L * 3600L * 1000L) { // 24 hours
+                        deleteRecursivelyIfExists(path);
+                        log.info("Cleaned up expired uploads directory: {}", path);
+                    }
+                } catch (IOException e) {
+                    log.warn("Failed to check or delete upload folder: {}", path, e);
+                }
+            });
+        } catch (IOException e) {
+            log.error("Failed to list upload root folder for cleaning: {}", uploadRoot, e);
+        }
     }
 
     private static int distributedScore(int index, int total) {

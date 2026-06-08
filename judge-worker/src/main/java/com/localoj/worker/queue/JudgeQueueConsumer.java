@@ -141,6 +141,11 @@ public class JudgeQueueConsumer {
             redisTemplate.delete(retryKey);
             ackProcessing(payload);
         } catch (Exception ex) {
+            if (Thread.currentThread().isInterrupted() || isInterruption(ex)) {
+                log.warn("Worker is shutting down. Task consumption interrupted for submission {}. Aborting retry/failure handling.", submissionId);
+                Thread.currentThread().interrupt();
+                return;
+            }
             log.error("Failed to judge submission {}: {}", submissionId, ex.getMessage(), ex);
             try {
                 String attemptStr = redisTemplate.opsForValue().get(retryKey);
@@ -157,13 +162,10 @@ public class JudgeQueueConsumer {
                             null,
                             "attempts=" + attempts + "; backoff=" + delayMs + "ms; error=" + ex.getMessage()
                     );
-                    /*
-                     * 架构考量说明 (Architectural Trade-off):
-                     * 这里使用 Thread.sleep() 直接阻塞当前消费线程来实现指数退避重试，而不是使用 Redis ZSET 构建延迟队列。
-                     * 这是因为作为轻量级的内部 OJ 系统，最大重试仅为 3 次，且退避时间极短（1s, 2s, 3s），
-                     * 使用线程休眠可以保持代码极度精简，且不破坏现有的 RightPopAndLeftPush (可靠队列) 的语义和 DLQ 逻辑。
-                     * 如果后续并发量显著增大导致线程池 (32 线程) 被重试任务占满，可考虑引入专用的延迟中间件如 RabbitMQ 或重构为 ZSET。
-                     */
+                    if (Thread.currentThread().isInterrupted()) {
+                        log.warn("Worker is shutting down. Skipping retry backoff sleep for submission {}.", submissionId);
+                        return;
+                    }
                     Thread.sleep(delayMs);
                     redisTemplate.opsForValue().increment(retryKey);
                     redisTemplate.expire(retryKey, Duration.ofHours(1));
@@ -185,6 +187,11 @@ public class JudgeQueueConsumer {
                     ackProcessing(payload);
                 }
             } catch (Exception redisEx) {
+                if (Thread.currentThread().isInterrupted() || isInterruption(redisEx)) {
+                    log.warn("Worker is shutting down. Interrupted during retry backoff sleep for submission {}.", submissionId);
+                    Thread.currentThread().interrupt();
+                    return;
+                }
                 log.error("Failed in retry/dlq processing for submission {}", submissionId, redisEx);
             }
         } finally {
@@ -198,6 +205,20 @@ public class JudgeQueueConsumer {
         } catch (Exception ex) {
             log.warn("Failed to ack judge job from processing queue {}", uniqueProcessingKey, ex);
         }
+    }
+
+    private boolean isInterruption(Throwable ex) {
+        Throwable cause = ex;
+        while (cause != null) {
+            if (cause instanceof InterruptedException || cause instanceof java.io.InterruptedIOException) {
+                return true;
+            }
+            if (cause.getMessage() != null && (cause.getMessage().contains("interrupted") || cause.getMessage().contains("InterruptedException"))) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
 

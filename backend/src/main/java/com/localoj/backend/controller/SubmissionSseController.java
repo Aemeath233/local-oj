@@ -53,15 +53,6 @@ public class SubmissionSseController {
             if (message != null) {
                 // Clear submission list cache FIRST so that clients get fresh data when they refresh
                 submissionService.evictLatestSubmissionsCache();
-
-                String[] parts = message.split(",");
-                if (parts.length >= 3) {
-                    String status = parts[1];
-                    String verdict = parts[2];
-                    if ("FINISHED".equalsIgnoreCase(status) && "AC".equalsIgnoreCase(verdict)) {
-                        leaderboardService.evictCache();
-                    }
-                }
             }
         } catch (Exception ex) {
             log.warn("Failed to process pubsub submission status", ex);

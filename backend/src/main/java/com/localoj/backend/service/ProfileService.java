@@ -472,6 +472,7 @@ public class ProfileService {
 
         // 2. Count user's unique solved problems (verdict = AC)
         List<Submission> acSubmissions = submissionMapper.selectList(new QueryWrapper<Submission>()
+                .select("problem_id")
                 .eq("user_id", userId)
                 .eq("verdict", com.localoj.common.enums.Verdict.AC));
         Set<Long> solvedProblemIds = acSubmissions.stream()
@@ -503,6 +504,7 @@ public class ProfileService {
         // 3. Get submissions in the last 365 days for the heatmap
         LocalDateTime oneYearAgo = LocalDateTime.now().minusYears(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
         List<Submission> recentSubmissions = submissionMapper.selectList(new QueryWrapper<Submission>()
+                .select("created_at", "verdict")
                 .eq("user_id", userId)
                 .ge("created_at", oneYearAgo));
 
