@@ -123,7 +123,7 @@
             </el-select>
           </div>
           <div class="bar-right">
-            <el-button :icon="Brush" :loading="formatting" size="small" @click="handleFormat">格式化</el-button>
+            <el-button :icon="Brush" :loading="formatting" size="small" @click="handleFormat">简单整理</el-button>
             <el-button :loading="selfTesting" :disabled="cooldownSeconds > 0" size="small" @click="runCustomTest">
               <template #icon>
                 <span v-if="cooldownSeconds > 0" class="cooldown-num-icon">{{ cooldownSeconds }}</span>
@@ -263,6 +263,7 @@ import {
 } from '../api/http'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import { useAuthStore } from '../stores/auth'
+import { parseSubmissionUpdate } from '../utils/submissionEvents'
 import type { Language, ProblemDetail, SelfTestResult, SubmissionDetail, SubmissionSummary } from '../types'
 
 const route = useRoute()
@@ -387,9 +388,9 @@ async function handleFormat() {
     } else {
       sourceCode.value = formatted
     }
-    ElMessage.success('代码格式化成功')
+    ElMessage.success('代码整理成功')
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '格式化失败')
+    ElMessage.error(error.response?.data?.message || '整理失败')
   } finally {
     formatting.value = false
   }
@@ -416,12 +417,12 @@ const selfTestResult = ref<SelfTestResult | null>(null)
 const problem = ref<ProblemDetail | null>(null)
 const problemCode = ref('')
 
-const language = ref<Language>((localStorage.getItem('localoj.editor.defaultLanguage') as Language) || 'CPP')
+const language = ref<Language>((localStorage.getItem('coderushoj.editor.defaultLanguage') as Language) || 'CPP')
 const sourceCode = ref(templateFor(language.value))
 
 // Reader Typography Configuration States
-const readerFontSize = ref(Number(localStorage.getItem('localoj.reader.fontSize')) || 15)
-const readerFontFamily = ref(localStorage.getItem('localoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif")
+const readerFontSize = ref(Number(localStorage.getItem('coderushoj.reader.fontSize')) || 15)
+const readerFontFamily = ref(localStorage.getItem('coderushoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif")
 
 const statementMarkdown = computed(() => {
   return problem.value?.description || ''
@@ -471,7 +472,7 @@ const isSwitchingLanguage = ref(false)
 
 watch(language, (newLang, oldLang) => {
   if (oldLang && problemId.value && contestId.value) {
-    localStorage.setItem(`localoj.draft.contest.${contestId.value}.${problemId.value}.${oldLang}`, sourceCode.value)
+    localStorage.setItem(`coderushoj.draft.contest.${contestId.value}.${problemId.value}.${oldLang}`, sourceCode.value)
   }
   isSwitchingLanguage.value = true
   sourceCode.value = templateFor(newLang)
@@ -481,7 +482,7 @@ watch(language, (newLang, oldLang) => {
 watch(sourceCode, (newCode) => {
   if (isSwitchingLanguage.value) return
   if (problemId.value && contestId.value) {
-    localStorage.setItem(`localoj.draft.contest.${contestId.value}.${problemId.value}.${language.value}`, newCode)
+    localStorage.setItem(`coderushoj.draft.contest.${contestId.value}.${problemId.value}.${language.value}`, newCode)
   }
 })
 
@@ -549,11 +550,13 @@ async function connectSse() {
 
     eventSource.addEventListener('update', (event) => {
       try {
-        const parts = event.data.split(',')
-        if (parts.length >= 2) {
-          const subId = Number(parts[0])
-          const status = parts[1]
-          const verdict = parts[2] || null
+        const update = parseSubmissionUpdate(event.data)
+        if (update) {
+          if (update.problemId !== undefined && update.problemId !== problemId.value) return
+          if (update.contestId !== undefined && update.contestId !== null && update.contestId !== contestId.value) return
+          const subId = update.submissionId
+          const status = update.status
+          const verdict = update.verdict || null
 
           const existingIndex = submissions.value.findIndex(s => s.id === subId)
           if (existingIndex !== -1) {
@@ -766,7 +769,7 @@ function fillSelfTest(text: string) {
 }
 
 function templateFor(value: Language) {
-  const draft = localStorage.getItem(`localoj.draft.contest.${contestId.value}.${problemId.value}.${value}`)
+  const draft = localStorage.getItem(`coderushoj.draft.contest.${contestId.value}.${problemId.value}.${value}`)
   if (draft !== null) {
     return draft
   }

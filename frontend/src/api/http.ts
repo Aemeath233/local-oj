@@ -42,7 +42,7 @@ export const http = axios.create({
   timeout: 15000
 })
 
-export const SESSION_EXPIRED_EVENT = 'localoj:session-expired'
+export const SESSION_EXPIRED_EVENT = 'coderushoj:session-expired'
 
 const publicAuthPaths = [
   '/auth/login',
@@ -53,7 +53,7 @@ const publicAuthPaths = [
 ]
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('localoj.token')
+  const token = localStorage.getItem('coderushoj.token')
   if (token && !publicAuthPaths.includes(config.url || '')) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -66,8 +66,8 @@ http.interceptors.response.use(
     const status = error.response?.status
     const url = error.config?.url || ''
     if (status === 401 && !publicAuthPaths.includes(url)) {
-      localStorage.removeItem('localoj.token')
-      localStorage.removeItem('localoj.user')
+      localStorage.removeItem('coderushoj.token')
+      localStorage.removeItem('coderushoj.user')
       window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, {
         detail: error.response?.data?.message || '登录已过期，请重新登录'
       }))

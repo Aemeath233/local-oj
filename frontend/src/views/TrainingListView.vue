@@ -77,7 +77,7 @@ import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versio
 interface TrainingSetDto {
   id: number
   title: string
-  description: string
+  description?: string | null
   visible: boolean
   totalProblems: number
   solvedProblems: number
@@ -95,7 +95,7 @@ const filteredSets = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return sets.value
   return sets.value.filter(
-    s => s.title.toLowerCase().includes(query) || s.description.toLowerCase().includes(query)
+    s => s.title.toLowerCase().includes(query) || (s.description || '').toLowerCase().includes(query)
   )
 })
 

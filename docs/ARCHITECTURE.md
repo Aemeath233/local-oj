@@ -6,16 +6,16 @@
 
 ## 1. 系统架构概览
 
-CodeRush OJ 采用 **前后端分离 + 判题微服务** 的架构，共由 6 个 Docker 容器组成：
+CodeRush OJ 采用 **前后端分离架构**，由以下 6 个核心服务/组件组成：
 
-| 服务 | 容器名 | 技术 | 职责 |
+| 服务/组件 | 默认名称/端口 | 技术 | 职责 |
 |------|--------|------|------|
-| **frontend** | localoj-frontend | Nginx + Vue 3 SPA | 静态资源服务 + API 反向代理 |
-| **backend** | localoj-backend | Spring Boot 3.5 (Java 21) | REST API、业务逻辑、认证授权 |
-| **judge-worker** | localoj-judge-worker | Spring Boot 3.5 (Java 21) | 判题队列消费者，调用沙箱执行评测 |
-| **go-judge** | localoj-go-judge | go-judge v1.12 | 安全沙箱，编译运行用户代码 |
-| **mysql** | localoj-mysql | MySQL 8.4 | 关系型数据持久化 |
-| **redis** | localoj-redis | Redis 7.4 Alpine | 判题任务队列 + SSE 结果推送 |
+| **frontend** | Nginx (:80) | Nginx + Vue 3 SPA | 静态资源服务 + API 反向代理 |
+| **backend** | coderushoj-backend (:8080) | Spring Boot 3.5 (Java 21) | REST API、业务逻辑、认证授权 |
+| **judge-worker** | coderushoj-worker | Spring Boot 3.5 (Java 21) | 判题队列消费者，调用沙箱执行评测 |
+| **go-judge** | go-judge (:5050) | go-judge v1.12 | 安全沙箱，编译运行用户代码 |
+| **mysql** | mysql (:3306) | MySQL 8.4 | 关系型数据持久化 |
+| **redis** | redis (:6379) | Redis 7.4 | 判题任务队列 + SSE 结果推送 |
 
 ### 服务依赖关系
 
@@ -40,7 +40,7 @@ graph TD
 项目采用 Maven 多模块 (Multi-Module) 组织后端 Java 代码：
 
 ```
-local-oj (parent pom)
+coderush-oj (parent pom)
 ├── common       → 共享实体、Mapper 接口、枚举、消息体
 ├── backend      → REST API 服务 (依赖 common)
 └── judge-worker → 判题消费者服务 (依赖 common)
@@ -71,9 +71,11 @@ sequenceDiagram
     B->>R: LPUSH judge:queue {submissionId}
     B-->>U: 返回 submissionId
 
-    U->>B: GET /api/submissions/{id}/events (SSE 长连接)
+    U->>B: POST /api/submissions/sse-ticket
+    U->>B: GET /api/submissions/live?ticket=... (SSE 长连接)
 
     W->>R: BRPOPLPUSH judge:queue → judge:processing
+    W->>W: 原子更新 Submission PENDING → RUNNING，避免重复判题
     W->>W: 读取 Submission + TestCase 数据
     W->>G: POST /run (编译源代码)
     G-->>W: 编译结果
@@ -86,9 +88,9 @@ sequenceDiagram
     end
 
     W->>W: 汇总结果 → 更新 Submission (status=FINISHED, verdict, score)
-    W->>R: PUBLISH submission:result:{id}
+    W->>R: PUBLISH pubsub:submission-updates (JSON)
     R-->>B: 收到 SUBSCRIBE 消息
-    B-->>U: SSE 推送判题完成事件
+    B-->>U: SSE 推送 update/heartbeat 事件
 ```
 
 ### 3.2 评测结果判定 (Verdict)
@@ -108,7 +110,7 @@ sequenceDiagram
 
 ## 4. 数据库模型
 
-数据库使用 Flyway 管理迁移 (V1 ~ V26)，核心表结构如下：
+数据库使用 Flyway 管理迁移 (V1 ~ V28)，核心表结构如下：
 
 ### 4.1 ER 关系图
 
@@ -139,6 +141,7 @@ erDiagram
         varchar major
         enum role
         boolean enabled
+        int auth_token_version
     }
 
     Problem {
@@ -198,26 +201,26 @@ erDiagram
 
 | 表名 | 说明 |
 |------|------|
-| `user` | 用户表 (username, email, role, password_hash 等) |
-| `problem` | 题目表 (slug, title, description, limits, difficulty) |
-| `test_case` | 测试用例表 (关联 problem，输入/输出文件路径) |
-| `submission` | 提交记录表 (user, problem, language, verdict, score) |
-| `submission_case_result` | 每个测试点的评测结果 |
-| `contest` | 竞赛表 (ACM/OI 赛制, 时间, 封榜) |
-| `contest_problem` | 竞赛-题目关联表 (含题目序号) |
-| `contest_registration` | 竞赛报名表 |
-| `contest_problem_visibility_lock` | 竞赛题目可见性锁定 |
-| `training_set` | 训练集表 |
-| `training_problem_relation` | 训练集-题目关联表 |
-| `problem_tag` | 标签表 |
-| `problem_tag_relation` | 题目-标签关联表 |
-| `problem_solution` | 题解表 |
-| `smtp_setting` | SMTP 邮件配置表 |
-| `sandbox_setting` | 沙箱参数配置表 |
-| `system_setting` | 系统全局配置表 |
-| `system_log` | 系统操作日志表 |
-| `email_verification_code` | 邮箱验证码表 |
-| `user_rank_snapshot` | 用户排名快照表 |
+| `users` | 用户表 (username, email, role, password_hash, auth_token_version 等) |
+| `problems` | 题目表 (slug, title, description, limits, difficulty) |
+| `test_cases` | 测试用例表 (关联 problem，输入/输出文件路径) |
+| `submissions` | 提交记录表 (user, problem, contest, language, verdict, score) |
+| `submission_case_results` | 每个测试点的评测结果 |
+| `contests` | 竞赛表 (ACM/OI 赛制, 时间, 封榜) |
+| `contest_problems` | 竞赛-题目关联表 (含题目序号) |
+| `contest_registrations` | 竞赛报名表 |
+| `contest_problem_visibility_locks` | 竞赛题目可见性锁定 |
+| `training_sets` | 训练集表 |
+| `training_problem_relations` | 训练集-题目关联表 |
+| `problem_tags` | 标签表 |
+| `problem_tag_relations` | 题目-标签关联表 |
+| `problem_solutions` | 题解表 |
+| `smtp_settings` | SMTP 邮件配置表 |
+| `sandbox_settings` | 沙箱参数配置表 |
+| `system_settings` | 系统全局配置表 |
+| `system_logs` | 系统操作日志表 |
+| `email_verification_codes` | 邮箱验证码表 |
+| `user_rank_snapshots` | 用户排名快照表 |
 
 ---
 
@@ -231,15 +234,17 @@ sequenceDiagram
     participant B as Backend
 
     C->>B: POST /api/auth/login {username, password}
-    B->>B: 校验密码 → 生成 JWT (含 userId, role)
+    B->>B: 校验密码 → 生成 JWT (含 userId, role, tokenVersion)
     B-->>C: {token, user}
 
     Note over C: 存储 token 到 localStorage
 
     C->>B: GET /api/problems (Header: Authorization: Bearer <token>)
-    B->>B: JwtAuthenticationFilter 解析验证 token
+    B->>B: JwtAuthenticationFilter 解析 token，并比对用户状态、角色和 tokenVersion
     B-->>C: 返回数据
 ```
+
+用户修改密码、重置密码或管理员重置用户密码时，会递增 `users.auth_token_version`。旧 JWT 中的版本号不再匹配数据库，后续请求会被视为登录过期。
 
 ### 5.2 权限体系
 
@@ -271,7 +276,7 @@ sequenceDiagram
 
 ### 6.2 go-judge 沙箱
 
-go-judge 容器以 **privileged 模式** 运行，内置以下编译运行环境：
+go-judge 原生沙箱内置以下编译运行环境（在 Linux 上运行需以 root 运行或具备 CAP_SYS_ADMIN 权限以启用强沙箱隔离隔离机制）：
 
 - GCC / G++ (C/C++ 编译)
 - OpenJDK 21 (Java 编译运行)
@@ -289,10 +294,12 @@ go-judge 容器以 **privileged 模式** 运行，内置以下编译运行环境
 
 用户提交代码后，前端通过 **Server-Sent Events (SSE)** 长连接监听判题结果：
 
-1. Backend 订阅 Redis 频道 `submission:result:{submissionId}`
-2. Judge Worker 评测完成后 `PUBLISH` 到该频道
-3. Backend 收到消息后通过 SSE 推送给前端
-4. 前端实时更新 verdict、耗时、内存等信息
+1. 前端先调用 `POST /api/submissions/sse-ticket` 获取短期 ticket
+2. 前端通过 `GET /api/submissions/live?ticket=...` 建立 SSE 连接
+3. Backend 订阅 Redis 频道 `pubsub:submission-updates`
+4. Judge Worker 在提交开始、测试点更新和完成时发布 JSON 更新
+5. Backend 将更新广播为 SSE `update` 事件，并每 30 秒发送 `heartbeat`
+6. 前端按 `problemId` / `contestId` 过滤事件，避免练习和比赛页面互相串状态
 
 ---
 
@@ -324,18 +331,17 @@ go-judge 容器以 **privileged 模式** 运行，内置以下编译运行环境
 
 ## 8. 数据存储
 
-所有运行时数据挂载到项目根目录的 `./data/` 下：
+在本地开发模式下，为了方便管理，测试数据文件和应用日志保存在项目根目录的 `./data/oj/` 目录下；在生产部署中，可以通过 `APP_DATA_ROOT` 环境变量配置为系统特定目录（例如 `/var/lib/coderush_oj`）。
 
+本地开发数据目录：
 ```
 data/
-├── mysql/       # MySQL 数据文件 (InnoDB 表空间)
-├── redis/       # Redis RDB/AOF 持久化文件
 └── oj/
     ├── testcases/   # 题目测试数据文件 (输入/输出)
     └── logs/        # 后端应用日志
 ```
 
-这种本地目录挂载方式（相比 Docker 命名卷）的优势：
-- 备份简单：直接压缩 `data/` 目录即可
-- 可视化：方便在宿主机上直接查看数据文件
-- 迁移方便：整个项目目录打包即包含完整数据
+这种集中存储的设计优势：
+- 备份简单：全站备份功能或系统备份直接打包该目录与数据库 SQL 即可
+- 可视化：方便在宿主机上直接查看和管理测试数据文件
+- 迁移方便：整个数据目录打包后即可在另一台机器上完整恢复

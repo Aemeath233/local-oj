@@ -2,7 +2,7 @@
 
 **局域网轻量化在线评测系统 (Online Judge)**
 
-CodeRush OJ 是一套面向教学场景的轻量化在线评测系统，支持题目管理、在线编程、自动判题、竞赛模式和排行榜等核心功能。系统采用前后端分离 + 微服务架构，通过 Docker Compose 一键部署，特别适合校内局域网环境使用。
+CodeRush OJ 是一套面向教学场景的轻量化在线评测系统，支持题目管理、在线编程、自动判题、竞赛模式和排行榜等核心功能。系统采用前后端分离架构，提供一键启动脚本并支持原生 Linux 服务托管部署，特别适合校内局域网环境使用。
 
 ---
 
@@ -33,7 +33,7 @@ CodeRush OJ 是一套面向教学场景的轻量化在线评测系统，支持�
 | **缓存/队列** | Redis 7.4 (判题任务队列 + SSE 结果推送) |
 | **评测沙箱** | go-judge v1.12 (支持 C/C++/Java/Python/PyPy3) |
 | **认证** | JWT (Spring Security) |
-| **部署** | Docker Compose，Nginx 反向代理 |
+| **部署** | Nginx 反向代理，Systemd 进程守护 |
 
 ---
 
@@ -47,13 +47,13 @@ CodeRush OJ 是一套面向教学场景的轻量化在线评测系统，支持�
                          ▼
 ┌────────────────────────────────────────────────────────────┐
 │               Nginx (前端静态资源 + API 反向代理)              │
-│               容器: localoj-frontend :80                    │
+│               服务端口: :80                                 │
 └────────────────────────┬───────────────────────────────────┘
                          │ /api/*
                          ▼
 ┌────────────────────────────────────────────────────────────┐
 │              Spring Boot 后端 (REST API)                    │
-│              容器: localoj-backend :8080                    │
+│              服务端口: :8080                                │
 │  ┌──────┐  ┌──────────┐  ┌────────┐  ┌─────────────────┐  │
 │  │ Auth │  │ Problem  │  │Contest │  │  Submission/SSE  │  │
 │  │(JWT) │  │ Service  │  │Service │  │     Service      │  │
@@ -75,9 +75,9 @@ CodeRush OJ 是一套面向教学场景的轻量化在线评测系统，支持�
                                                 │ HTTP REST
                                                 ▼
                                    ┌──────────────────────┐
-                                   │   go-judge 沙箱       │
+                                   │   go-judge 原生沙箱   │
                                    │   编译 + 运行 + 资源限制 │
-                                   │   (privileged 容器)    │
+                                   │   (Linux Cgroup/NS 隔离) │
                                    └──────────────────────┘
 ```
 
@@ -87,59 +87,38 @@ CodeRush OJ 是一套面向教学场景的轻量化在线评测系统，支持�
 
 ### 前置要求
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/macOS) 或 Docker Engine (Linux)
-- Docker Compose v2+
-- Git
+- **JDK 21+** (后端运行依赖)
+- **Node.js 20+** (前端开发运行依赖)
+- **MySQL 8.0+** & **Redis** (本地运行并处于启动状态)
+- **Python 3.10+** (运行管理脚本依赖)
+- **Git**
 
-### Windows / macOS 快速启动
+### 本地快速启动
 
-```bash
-# 1. 克隆项目
-git clone <repository-url>
-cd coderush_oj
+1. **克隆项目并进入目录**：
+   ```bash
+   git clone <repository-url>
+   cd coderush_oj
+   ```
 
-# 2. 启动交互式控制台
-python start.py
-```
+2. **运行启动控制台**：
+   ```bash
+   python start.py
+   ```
+   *该脚本会自动检测环境、创建本地 `.env` 配置文件、自动从 GitHub 下载适合当前系统的原生 `go-judge` 沙箱并并发启动所有服务进程。*
 
-在控制台中选择 **[1] 一键启动整个系统** 即可自动完成环境初始化、镜像构建和服务拉起。
+### 生产部署
 
-### Linux 生产部署
-
-```bash
-# 1. 克隆项目
-git clone <repository-url>
-cd coderush_oj
-
-# 2. 运行一键部署脚本 (会自动安装 Docker、配置环境变量、构建并启动)
-sudo ./deploy.sh
-```
-
-### 手动启动
-
-```bash
-# 复制环境变量模板
-cp .env.example .env
-
-# 编辑 .env (按需修改密码、端口等)
-
-# 构建并启动所有服务
-docker compose up -d --build
-
-# 查看运行状态
-docker compose ps
-```
+请参考详细文档 [docs/NATIVE_DEPLOYMENT.md](file:///d:/Code/coderush_oj/docs/NATIVE_DEPLOYMENT.md) 进行原生 Linux 生产环境配置（基于 Nginx 反向代理与 Systemd 进程托管守护）。
 
 ### 访问系统
 
 | 地址 | 说明 |
 |------|------|
 | `http://localhost:5173` | 前端界面 |
-| `http://localhost:8080/api/` | 后端 API |
+| `http://localhost:8080/api/` | 后端 API 接口 |
 
-默认管理员账号: `admin` / `admin123`
-
-> **首次登录后请务必修改默认管理员密码！**
+开发模式默认管理员账号：`admin` / `admin123` (首次启动后会由 Flyway 自动导入并在启动日志中打印管理员初始凭证，首次登录后请务必修改密码)。
 
 ---
 
@@ -148,26 +127,24 @@ docker compose ps
 ```
 coderush_oj/
 ├── backend/                  # Spring Boot 后端 API 服务
-│   ├── Dockerfile
 │   ├── pom.xml
 │   └── src/main/
-│       ├── java/com/localoj/backend/
+│       ├── java/com/coderushoj/backend/
 │       │   ├── BackendApplication.java
 │       │   ├── api/              # 统一响应封装 & 全局异常处理
 │       │   ├── config/           # Redis Pub/Sub 等配置
-│       │   ├── controller/       # REST 控制器 (23 个)
+│       │   ├── controller/       # REST 控制器
 │       │   ├── gojudge/          # go-judge HTTP 客户端
 │       │   ├── security/         # JWT 认证 & Spring Security
 │       │   ├── seed/             # 数据初始化 (管理员账号)
-│       │   └── service/          # 业务服务层 (21 个)
+│       │   └── service/          # 业务服务层
 │       └── resources/
 │           ├── application.yml   # Spring Boot 配置
-│           └── db/migration/     # Flyway 数据库迁移 (V1~V26)
+│           └── db/migration/     # Flyway 数据库迁移 (V1~V28)
 │
 ├── judge-worker/             # 评测判题消费者服务
-│   ├── Dockerfile
 │   ├── pom.xml
-│   └── src/main/java/com/localoj/worker/
+│   └── src/main/java/com/coderushoj/worker/
 │       ├── JudgeWorkerApplication.java
 │       ├── gojudge/              # go-judge HTTP 客户端
 │       ├── queue/                # Redis 队列消费者
@@ -175,14 +152,13 @@ coderush_oj/
 │
 ├── common/                   # 共享模块 (实体 & Mapper)
 │   ├── pom.xml
-│   └── src/main/java/com/localoj/common/
+│   └── src/main/java/com/coderushoj/common/
 │       ├── enums/                # 枚举: Language, Role, Verdict 等
-│       ├── mapper/               # MyBatis-Plus Mapper 接口 (19 个)
-│       ├── model/                # 数据库实体类 (19 个)
+│       ├── mapper/               # MyBatis-Plus Mapper 接口
+│       ├── model/                # 数据库实体类
 │       └── queue/                # 判题任务消息体
 │
 ├── frontend/                 # Vue 3 前端 SPA
-│   ├── Dockerfile
 │   ├── nginx.conf                # Nginx 反向代理配置
 │   ├── package.json
 │   ├── vite.config.ts
@@ -200,7 +176,7 @@ coderush_oj/
 │       │   ├── VerdictTag.vue        # 评测结果标签
 │       │   ├── SubmissionDetailDrawer.vue  # 提交详情抽屉
 │       │   └── ...
-│       ├── views/                # 页面视图 (26 个)
+│       ├── views/                # 页面视图
 │       │   ├── HomeView.vue          # 首页
 │       │   ├── LoginView.vue         # 登录/注册
 │       │   ├── ProblemListView.vue    # 题目列表
@@ -213,26 +189,23 @@ coderush_oj/
 │       │   └── ...
 │       └── utils/                # 工具函数
 │
-├── docker/                   # Docker 构建上下文
-│   └── go-judge/
-│       └── Dockerfile            # go-judge 沙箱 (含 GCC/Java/Python/PyPy3)
-│
 ├── data/                     # 运行时数据 (git-ignored)
-│   ├── mysql/                    # MySQL 数据文件
-│   ├── redis/                    # Redis 持久化文件
 │   └── oj/                      # 测试数据文件 & 后端日志
 │
 ├── .mvn/
-│   └── settings-cn.xml          # 阿里云 Maven 镜像源配置
+│   ├── settings-cn.xml          # 阿里云 Maven 镜像源配置
+│   └── wrapper/                 # Maven Wrapper 配置
+├── scratch/                  # 本地临时缓存 (Maven wrapper / repo / tmp，git-ignored)
 │
-├── docker-compose.yml        # 服务编排 (6 个容器)
 ├── .env.example              # 环境变量模板
 ├── .env                      # 本地环境变量 (git-ignored)
 ├── pom.xml                   # Maven 多模块根 POM
-├── deploy.sh                 # Linux 一键部署脚本
+├── mvnw / mvnw.cmd           # 项目内 Maven Wrapper，不依赖全局 Maven
 ├── start.py                  # Windows/macOS 交互式控制台
 └── README.md                 # 本文档
 ```
+
+本地开发和测试优先使用 `./mvnw` 或 `.\mvnw.cmd`。Wrapper 会把 Maven 发行版、依赖仓库和临时目录放到项目内 `scratch/`，不会写入用户全局 `~/.m2`。
 
 ---
 
@@ -242,7 +215,7 @@ coderush_oj/
 |------|------|
 | [架构设计](docs/ARCHITECTURE.md) | 系统架构、数据流、数据库模型、判题流程详解 |
 | [开发指南](docs/DEVELOPMENT.md) | 本地开发环境搭建、项目构建、前后端联调、代码规范 |
-| [部署指南](docs/DEPLOYMENT.md) | 生产环境部署、环境变量配置、运维管理、备份恢复 |
+| [部署指南](docs/NATIVE_DEPLOYMENT.md) | 原生生产环境部署、环境变量配置、运维管理、备份恢复 |
 | [API 参考](docs/API.md) | 后端 REST API 接口文档 |
 
 ---

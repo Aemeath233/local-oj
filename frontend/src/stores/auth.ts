@@ -9,7 +9,7 @@ interface AuthState {
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
-    token: localStorage.getItem('localoj.token') ?? '',
+    token: localStorage.getItem('coderushoj.token') ?? '',
     user: readUser()
   }),
   getters: {
@@ -29,24 +29,24 @@ export const useAuthStore = defineStore('auth', {
     applySession(token: string, user: User) {
       this.token = token
       this.user = user
-      localStorage.setItem('localoj.token', token)
-      localStorage.setItem('localoj.user', JSON.stringify(user))
+      localStorage.setItem('coderushoj.token', token)
+      localStorage.setItem('coderushoj.user', JSON.stringify(user))
     },
     setUser(user: User) {
       this.user = user
-      localStorage.setItem('localoj.user', JSON.stringify(user))
+      localStorage.setItem('coderushoj.user', JSON.stringify(user))
     },
     logout() {
       this.token = ''
       this.user = null
-      localStorage.removeItem('localoj.token')
-      localStorage.removeItem('localoj.user')
+      localStorage.removeItem('coderushoj.token')
+      localStorage.removeItem('coderushoj.user')
     }
   }
 })
 
 function readUser(): User | null {
-  const raw = localStorage.getItem('localoj.user')
+  const raw = localStorage.getItem('coderushoj.user')
   if (!raw) {
     return null
   }

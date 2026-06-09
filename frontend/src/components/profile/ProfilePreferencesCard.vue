@@ -112,24 +112,24 @@ const readerFontFamilies = [
   { label: '仿宋 / 华文仿宋', value: "'FangSong', 'STFangsong', serif" }
 ]
 
-const prefLanguage = ref(localStorage.getItem('localoj.editor.defaultLanguage') || 'CPP')
-const prefFontSize = ref(Number(localStorage.getItem('localoj.editor.fontSize')) || 14)
-const prefFontFamily = ref(localStorage.getItem('localoj.editor.fontFamily') || "'JetBrains Mono', 'Cascadia Code', Consolas, monospace")
+const prefLanguage = ref(localStorage.getItem('coderushoj.editor.defaultLanguage') || 'CPP')
+const prefFontSize = ref(Number(localStorage.getItem('coderushoj.editor.fontSize')) || 14)
+const prefFontFamily = ref(localStorage.getItem('coderushoj.editor.fontFamily') || "'JetBrains Mono', 'Cascadia Code', Consolas, monospace")
 
-const prefReaderFontSize = ref(Number(localStorage.getItem('localoj.reader.fontSize')) || 15)
-const prefReaderFontFamily = ref(localStorage.getItem('localoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif")
+const prefReaderFontSize = ref(Number(localStorage.getItem('coderushoj.reader.fontSize')) || 15)
+const prefReaderFontFamily = ref(localStorage.getItem('coderushoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif")
 
 function savePreferences() {
-  localStorage.setItem('localoj.editor.defaultLanguage', prefLanguage.value)
-  localStorage.setItem('localoj.editor.fontSize', String(prefFontSize.value))
-  localStorage.setItem('localoj.editor.fontFamily', prefFontFamily.value)
-  localStorage.setItem('localoj.reader.fontSize', String(prefReaderFontSize.value))
-  localStorage.setItem('localoj.reader.fontFamily', prefReaderFontFamily.value)
+  localStorage.setItem('coderushoj.editor.defaultLanguage', prefLanguage.value)
+  localStorage.setItem('coderushoj.editor.fontSize', String(prefFontSize.value))
+  localStorage.setItem('coderushoj.editor.fontFamily', prefFontFamily.value)
+  localStorage.setItem('coderushoj.reader.fontSize', String(prefReaderFontSize.value))
+  localStorage.setItem('coderushoj.reader.fontFamily', prefReaderFontFamily.value)
 
   ElMessage.success('偏好设置已成功保存！')
 
   // Dispatch active event to notify reader fonts updates locally in current app views
-  window.dispatchEvent(new Event('localoj-preferences-saved'))
+  window.dispatchEvent(new Event('coderushoj-preferences-saved'))
 }
 </script>
 

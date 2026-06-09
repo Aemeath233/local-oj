@@ -40,11 +40,11 @@ export async function shouldRefreshSection(key: string): Promise<boolean> {
     if (!versions || !versions[key]) return true
 
     const serverVersion = versions[key]
-    const localVersionStr = sessionStorage.getItem(`localoj:version:${key}`)
+    const localVersionStr = sessionStorage.getItem(`coderushoj:version:${key}`)
     const localVersion = localVersionStr ? parseInt(localVersionStr, 10) : 0
 
     if (serverVersion > localVersion) {
-      sessionStorage.setItem(`localoj:version:${key}`, serverVersion.toString())
+      sessionStorage.setItem(`coderushoj:version:${key}`, serverVersion.toString())
       return true
     }
     return false
@@ -60,7 +60,7 @@ export async function shouldRefreshSection(key: string): Promise<boolean> {
 export function forceUpdateSectionVersion(key: string) {
   getVersions().then(versions => {
     if (versions && versions[key]) {
-      sessionStorage.setItem(`localoj:version:${key}`, versions[key].toString())
+      sessionStorage.setItem(`coderushoj:version:${key}`, versions[key].toString())
     }
   }).catch(() => {})
 }

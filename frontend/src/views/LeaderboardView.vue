@@ -127,8 +127,10 @@ import { Refresh } from '@element-plus/icons-vue'
 import { fetchLeaderboard, fetchMyRank } from '../api/http'
 import { formatDateTime } from '../utils/time'
 import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
+import { useAuthStore } from '../stores/auth'
 import type { LeaderboardRow } from '../types'
 
+const auth = useAuthStore()
 const loading = ref(false)
 const rows = ref<LeaderboardRow[]>([])
 const myRankRow = ref<LeaderboardRow | null>(null)
@@ -174,7 +176,7 @@ async function load(isSilent: boolean = false) {
       forceUpdateSectionVersion('leaderboard')
     }
     rows.value = await fetchLeaderboard()
-    myRankRow.value = await fetchMyRank()
+    myRankRow.value = auth.isLoggedIn ? await fetchMyRank() : null
   } catch (err) {
     console.error(err)
   } finally {

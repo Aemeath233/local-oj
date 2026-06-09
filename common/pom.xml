@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.localoj</groupId>
-        <artifactId>local-oj</artifactId>
+        <groupId>com.coderushoj</groupId>
+        <artifactId>coderush-oj</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 

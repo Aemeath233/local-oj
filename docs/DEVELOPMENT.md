@@ -11,11 +11,15 @@
 | 工具 | 版本要求 | 用途 |
 |------|---------|------|
 | **JDK** | 21+ | 后端 Java 编译运行 |
-| **Maven** | 3.9+ | 后端依赖管理和构建 |
-| **Node.js** | 20+ | 前端构建 |
-| **npm** | 9+ | 前端包管理 |
-| **Docker & Docker Compose** | v2+ | 基础设施服务 (MySQL, Redis, go-judge) |
+| **Maven Wrapper** | 项目已内置 | 后端依赖管理和构建，不要求全局安装 Maven |
+| **Node.js** | 20+ | 前端构建与运行 |
+| **MySQL** | 8.0+ | 本地数据库存储 |
+| **Redis** | 5.0+ | 本地缓存与判题任务队列 |
+| **GCC & G++** | 建议安装 | 本地编译 C/C++ 提交代码所需 |
+| **Python** | 3.10+ | 本地运行 Python 提交代码及启动脚本所需 |
 | **Git** | 任意 | 版本管理 |
+
+本地 Java 构建统一使用项目根目录的 `mvnw` / `mvnw.cmd`。Wrapper 默认使用 `.mvn/settings-cn.xml`，并把 Maven 发行版、依赖仓库和临时目录放在 `scratch/` 下，避免写入用户全局 `~/.m2`。
 
 ### 推荐 IDE
 
@@ -24,63 +28,45 @@
 
 ---
 
-## 2. 本地开发环境搭建
+## 2. 本地开发环境一键运行
 
-### 2.1 启动基础设施服务
+你可以通过项目根目录下的 [start.py](file:///d:/Code/coderush_oj/start.py) 脚本一键拉起本地全部服务。
 
-开发时只需启动 MySQL、Redis 和 go-judge 三个基础设施容器，后端和前端直接在本地运行以便热重载调试。
+### 2.1 启动本地 MySQL 和 Redis
+在运行脚本之前，请确保你本地 of MySQL 和 Redis 服务已启动。
+* **MySQL**：默认监听端口为 `3306`（如使用其他端口或密码，请在本地复制 `.env` 并在其中修改 `DB_URL` 等连接属性）。
+* **Redis**：默认监听端口为 `6379`。
 
+### 2.2 一键启动服务进程
+在项目根目录下，直接运行一键启动脚本：
 ```bash
-# 在项目根目录执行
-docker compose up -d mysql redis go-judge
+python start.py
 ```
+该脚本将按顺序自动执行以下操作：
+1. **配置文件生成**：若没有 `.env`，会根据 `.env.example` 自动拷贝生成。
+2. **前置环境检测**：校验本地 Java (21+)、Node.js 运行时，以及 MySQL 和 Redis 的 TCP 端口连通性。如果本地检测不到 C++ 或 Python 编译器，会发出友情警告。
+3. **沙箱自动下载**：自动为您的平台（Windows/Linux/macOS）下载对应版本的原生 `go-judge` 二进制文件至 `scratch/bin/`。
+4. **并发拉起进程**：在后台并发启动沙箱、后端服务（Maven）、判题机（Maven）以及前端开发服务器（Vite），并以不同颜色标记输出合并后的日志。
+5. **优雅关机**：在终端按下 `Ctrl+C` 即可优雅关闭所有后台子进程（脚本会自动终止 Windows 下的 Java 进程树，防止端口残留占用）。
 
-等待 MySQL 和 Redis 健康检查通过：
+### 2.3 手动单独运行（可选）
+如果你希望使用 IDE (如 IntelliJ IDEA 或 VS Code) 单独断点调试后端或前端，可以这样手工运行：
+* **沙箱服务**：直接运行 `scratch/bin/go-judge -addr :5050`
+* **后端 API**：在根目录下运行 `.\mvnw.cmd -pl backend -am spring-boot:run` 或在 IDEA 中运行 `BackendApplication.java`。
+* **判题 Worker**：在根目录下运行 `.\mvnw.cmd -pl judge-worker -am spring-boot:run` 或在 IDEA 中运行 `JudgeWorkerApplication.java`。
+* **前端开发**：`cd frontend && npm install && npm run dev`
 
-```bash
-docker compose ps
-# 确认 mysql 和 redis 状态为 healthy
-```
+### 2.4 目录约定
 
-### 2.2 启动后端
+| 路径 | 说明 |
+|------|------|
+| `backend/`, `common/`, `judge-worker/` | Java 多模块源码 |
+| `frontend/` | 前端源码和前端唯一的 `package.json` |
+| `data/` | 本地测试数据和系统日志存储路径，git-ignored |
+| `scratch/` | Maven Wrapper、本地 Maven 仓库、原生 go-judge 运行目录，git-ignored |
+| `frontend/dist/`, `frontend/node_modules/` | 前端构建产物 and 依赖，git-ignored |
 
-```bash
-# 方式一: 使用 Maven 命令行
-cd backend
-mvn spring-boot:run -pl backend -am
-
-# 方式二: 在 IDEA 中直接运行
-# 打开根目录 pom.xml 作为 Maven 项目
-# 运行 backend/src/.../BackendApplication.java 的 main 方法
-```
-
-后端启动后默认监听 `http://localhost:8080`。
-
-> **首次启动**会自动执行 Flyway 数据库迁移和管理员账号初始化。
-
-### 2.3 启动前端
-
-```bash
-cd frontend
-npm install        # 首次需要安装依赖
-npm run dev        # 启动 Vite 开发服务器
-```
-
-前端开发服务器默认监听 `http://localhost:5173`，Vite 已配置 API 代理：
-
-```typescript
-// vite.config.ts
-server: {
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8080',  // 代理到本地后端
-      changeOrigin: true
-    }
-  }
-}
-```
-
-访问 `http://localhost:5173` 即可进入系统，前端代码修改后自动热重载。
+根目录不再维护 Node 包配置；前端依赖安装和构建都在 `frontend/` 下执行。
 
 ---
 
@@ -89,7 +75,7 @@ server: {
 ### 3.1 模块结构
 
 ```
-backend/src/main/java/com/localoj/backend/
+backend/src/main/java/com/coderushoj/backend/
 ├── BackendApplication.java        # Spring Boot 入口
 ├── api/
 │   ├── ApiResponse.java           # 统一响应封装 record
@@ -107,7 +93,7 @@ backend/src/main/java/com/localoj/backend/
 │   ├── TrainingController.java        # 训练集
 │   ├── SelfTestController.java        # 自测运行
 │   ├── ProfileController.java         # 用户资料
-│   ├── Admin*Controller.java          # 管理后台系列 (11 个)
+│   ├── Admin*Controller.java          # 管理后台系列
 │   └── ...
 ├── security/
 │   ├── SecurityConfig.java        # Spring Security 配置
@@ -121,7 +107,7 @@ backend/src/main/java/com/localoj/backend/
 │   ├── GoJudgeClient.java         # go-judge HTTP 客户端
 │   ├── GoJudgeResult.java         # 运行结果模型
 │   └── GoJudgeFileError.java      # 文件错误模型
-└── service/                       # 业务逻辑层 (21 个 Service)
+└── service/                       # 业务逻辑层
 ```
 
 ### 3.2 添加新的 API 接口
@@ -149,14 +135,14 @@ backend/src/main/resources/db/migration/
 ├── V1__init.sql                           # 初始化表结构
 ├── V2__smtp_registration.sql              # SMTP 和注册功能
 ├── ...
-└── V26__add_problem_tag_relation_index.sql  # 最新迁移
+└── V28__add_user_auth_token_version.sql   # 最新迁移
 ```
 
 **添加新迁移**:
 
 ```bash
 # 命名格式: V{序号}__{描述}.sql
-# 例如: V27__add_user_avatar_cropping.sql
+# 例如: V29__add_user_avatar_cropping.sql
 ```
 
 > 注意: Flyway 迁移一旦执行就不可修改。如需调整已有表结构，必须创建新的迁移文件。
@@ -167,18 +153,20 @@ backend/src/main/resources/db/migration/
 
 | 配置项 | 环境变量 | 默认值 | 说明 |
 |--------|---------|--------|------|
-| 数据库 URL | `DB_URL` | `jdbc:mysql://localhost:3306/local_oj...` | JDBC 连接串 |
-| 数据库用户 | `DB_USERNAME` | `localoj` | MySQL 用户名 |
-| 数据库密码 | `DB_PASSWORD` | `localoj_pass` | MySQL 密码 |
+| 数据库 URL | `DB_URL` | `jdbc:mysql://localhost:3306/coderush_oj...` | JDBC 连接串 |
+| 数据库用户 | `DB_USERNAME` | `coderushoj` | MySQL 用户名 |
+| 数据库密码 | `DB_PASSWORD` | `coderushoj_pass` | MySQL 密码 |
 | Redis 地址 | `REDIS_HOST` | `localhost` | Redis 主机 |
 | Redis 端口 | `REDIS_PORT` | `6379` | Redis 端口 |
-| JWT 密钥 | `JWT_SECRET` | `change-this...` | JWT 签名密钥 (生产环境必须修改) |
+| JWT 密钥 | `JWT_SECRET` | `change-this...` | JWT 签名密钥，生产环境必须使用 32 字符以上随机值 |
 | JWT 有效期 | `JWT_TTL_MINUTES` | `10080` (7天) | Token 过期时间 |
 | go-judge 地址 | `GO_JUDGE_BASE_URL` | `http://localhost:5050` | 沙箱 API 地址 |
 | 数据根目录 | `APP_DATA_ROOT` | `/data` | 测试数据和日志存储路径 |
 | CORS 白名单 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,...` | 跨域允许源 |
 | 管理员账号 | `ADMIN_USERNAME` | `admin` | 初始管理员用户名 |
-| 管理员密码 | `ADMIN_PASSWORD` | `admin123` | 初始管理员密码 |
+| 管理员密码 | `ADMIN_PASSWORD` | `admin123` | 初始管理员密码，生产环境必须修改 |
+
+生产模式 (`SPRING_PROFILES_ACTIVE=prod`) 会拒绝默认或占位的 `JWT_SECRET` / `ADMIN_PASSWORD`。本地开发可以使用默认值；生产部署请按 `.env.example` 复制并填写真实密钥。
 
 ---
 
@@ -222,7 +210,7 @@ frontend/src/
 │   ├── AvatarCropperDialog.vue     # 头像裁剪对话框
 │   ├── AdminNav.vue         # 管理后台侧边栏导航
 │   └── ...
-├── views/               # 页面视图 (26 个)
+├── views/               # 页面视图
 │   ├── HomeView.vue         # 首页
 │   ├── LoginView.vue        # 登录/注册
 │   ├── Problem*.vue         # 题目相关
@@ -241,7 +229,7 @@ frontend/src/
 // Axios 实例自动附加 JWT token
 const api = axios.create({ baseURL: '/api' })
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('localoj.token')
+  const token = localStorage.getItem('coderushoj.token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
@@ -286,7 +274,7 @@ npm run build    # 输出到 frontend/dist/
 ### 5.1 核心模块
 
 ```
-judge-worker/src/main/java/com/localoj/worker/
+judge-worker/src/main/java/com/coderushoj/worker/
 ├── JudgeWorkerApplication.java    # Spring Boot 入口
 ├── queue/
 │   └── JudgeQueueConsumer.java    # Redis 队列消费者 (BRPOPLPUSH 循环)
@@ -330,53 +318,45 @@ JudgeQueueConsumer (循环)
 
 ```bash
 # 在项目根目录
-mvn clean package -Dmaven.test.skip=true
+# Windows PowerShell
+.\mvnw.cmd clean package -Dmaven.test.skip=true
+
+# macOS / Linux
+./mvnw clean package -Dmaven.test.skip=true
 ```
 
-### 6.2 使用中国大陆 Maven 镜像
+### 6.2 Maven 镜像与本地缓存
 
-项目已预配置阿里云 Maven 镜像源：
+项目已预配置阿里云 Maven 镜像源，Wrapper 默认会使用该配置。也可以显式指定：
 
 ```bash
-mvn -s .mvn/settings-cn.xml clean package -Dmaven.test.skip=true
+.\mvnw.cmd -s .mvn/settings-cn.xml clean package -Dmaven.test.skip=true
 ```
 
-### 6.3 Docker 构建
-
-```bash
-# 构建并启动所有服务
-docker compose up -d --build
-
-# 仅构建某个服务
-docker compose build backend
-docker compose build judge-worker
-docker compose build frontend
-docker compose build go-judge
-```
-
----
+Wrapper 的 Maven home 和本地仓库位于 `scratch/maven-home/`，可按需删除后重新下载依赖。
 
 ## 7. 常用开发命令速查
 
 ```bash
-# === 基础设施 ===
-docker compose up -d mysql redis go-judge   # 启动开发依赖
-docker compose down                         # 停止所有服务
-docker compose logs -f backend              # 查看后端日志
-docker compose logs -f judge-worker         # 查看判题日志
+# === 一键开发启动 ===
+python start.py                             # 一键启动本地沙箱、后端、Worker和前端
 
-# === 后端 ===
-cd backend && mvn spring-boot:run           # 启动后端 (热加载需 IDEA devtools)
-mvn clean package -Dmaven.test.skip=true    # 构建 JAR
+# === 后端与 Worker ===
+# Windows PowerShell
+.\mvnw.cmd -pl backend -am spring-boot:run       # 启动后端 API
+.\mvnw.cmd -pl judge-worker -am spring-boot:run  # 启动判题 Worker
+.\mvnw.cmd test                                  # 运行单元测试
+
+# macOS / Linux
+./mvnw -pl backend -am spring-boot:run           # 启动后端 API
+./mvnw -pl judge-worker -am spring-boot:run      # 启动判题 Worker
+./mvnw test                                      # 运行单元测试
 
 # === 前端 ===
-cd frontend && npm install                  # 安装依赖
-cd frontend && npm run dev                  # 启动开发服务器 (HMR)
-cd frontend && npm run build                # 构建生产版本
-
-# === Docker 全量 ===
-docker compose up -d --build                # 重新构建并启动
-python start.py                             # 交互式控制台
+cd frontend
+npm install                                      # 安装依赖
+npm run dev                                      # 启动 Vite 开发服务器 (HMR)
+npm run build                                    # 构建生产版本 (输出至 dist/)
 ```
 
 ---

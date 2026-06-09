@@ -128,9 +128,9 @@ async function handleFileChange(uploadFile: any) {
 
 function downloadCsvTemplate() {
   const content = '\uFEFF' + '用户名,邮箱,昵称,班级,专业,密码,角色\n' +
-    'student_test1,test1@localoj.com,李雷,计科2201班,计算机科学与技术,Pass@123,STUDENT\n' +
+    'student_test1,test1@coderushoj.com,李雷,计科2201班,计算机科学与技术,Pass@123,STUDENT\n' +
     'student_test2,,韩梅梅,计科2202班,人工智能,,STUDENT\n' +
-    'admin_import_test,admin_imp@localoj.com,王老师,,控制工程,AdminPass123,ADMIN\n'
+    'admin_import_test,admin_imp@coderushoj.com,王老师,,控制工程,AdminPass123,ADMIN\n'
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

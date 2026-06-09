@@ -59,10 +59,11 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160">
+        <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button :icon="View" circle @click="router.push(`/contests/${row.id}`)" title="查看选手视角" />
             <el-button :icon="Edit" circle type="primary" @click="router.push(`/admin/contests/${row.id}`)" title="编辑" />
+            <el-button :icon="Checked" circle type="warning" @click="router.push(`/admin/contests/${row.id}/plagiarism`)" title="代码查重" />
             <el-button :icon="Delete" circle type="danger" @click="handleDelete(row)" title="删除" />
           </template>
         </el-table-column>
@@ -75,7 +76,7 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Plus, Refresh, View, Delete } from '@element-plus/icons-vue'
+import { Edit, Plus, Refresh, View, Delete, Checked } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
 import { fetchAdminContests, setContestVisibility, deleteContest } from '../api/http'
 import type { AdminContestSummary } from '../types'

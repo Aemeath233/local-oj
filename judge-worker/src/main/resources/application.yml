@@ -1,12 +1,12 @@
 spring:
   application:
-    name: local-oj-judge-worker
+    name: coderush-oj-judge-worker
   main:
     web-application-type: none
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/local_oj?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
-    username: ${DB_USERNAME:localoj}
-    password: ${DB_PASSWORD:localoj_pass}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/coderush_oj?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USERNAME:coderushoj}
+    password: ${DB_PASSWORD:coderushoj_pass}
     hikari:
       maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:30}
       minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:10}

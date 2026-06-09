@@ -5,11 +5,11 @@
       <div class="backup-meta-grid">
         <div class="meta-card">
           <div class="meta-item">
-            <span class="lbl">后端容器内部 Host:</span>
+            <span class="lbl">数据库 Host:</span>
             <span class="val"><code>{{ backupData.host }}</code></span>
           </div>
           <div class="meta-item">
-            <span class="lbl">容器内置 Port:</span>
+            <span class="lbl">数据库 Port:</span>
             <span class="val"><code>{{ backupData.port }}</code></span>
           </div>
         </div>
@@ -27,68 +27,95 @@
 
       <!-- Commands sections grouped by Environment -->
       <div class="commands-list">
-        <!-- Group 1: Docker Compose Container Environment -->
+        <!-- Group 1: Local Server Environment -->
         <div class="command-group-card">
           <div class="group-header">
-            <span class="badge docker">Docker 容器环境</span>
-            <h3>Docker-Compose 容器运行模式 (推荐)</h3>
+            <span class="badge host">本地快捷连接</span>
+            <h3>本机命令行模式 (推荐)</h3>
           </div>
-          <p class="group-desc">最简单的备份恢复模式。直接在运行 Docker 的宿主机终端执行，命令会自动读取容器内部的环境变量密码，安全且无需输入明文：</p>
+          <p class="group-desc">当直接在数据库运行的本机服务器终端执行备份恢复时，可直接省略 Host 和 Port 选项，运行如下简化指令：</p>
           
-          <!-- Docker Backup -->
+          <!-- Local Backup -->
           <div class="command-box">
             <div class="box-header">
               <span class="action-tag backup">一键备份数据库 (Backup)</span>
-              <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.dockerBackupCommand)">复制备份命令</el-button>
+              <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.localBackupCommand)">复制备份命令</el-button>
             </div>
             <div class="code-container">
-              <pre><code>{{ backupData.dockerBackupCommand }}</code></pre>
+              <pre><code>{{ backupData.localBackupCommand }}</code></pre>
             </div>
           </div>
 
-          <!-- Docker Restore -->
+          <!-- Local Restore -->
           <div class="command-box">
             <div class="box-header">
               <span class="action-tag restore">一键恢复数据库 (Restore)</span>
-              <el-button size="small" type="danger" link :icon="DocumentCopy" @click="copyText(backupData.dockerRestoreCommand)">复制恢复命令</el-button>
+              <el-button size="small" type="danger" link :icon="DocumentCopy" @click="copyText(backupData.localRestoreCommand)">复制恢复命令</el-button>
             </div>
             <p class="sub-desc"><span class="warn-label">警告：</span>恢复操作为覆盖写，会覆盖当前同名数据库的数据表，请在恢复前再次确认备份 SQL 的文件名！</p>
             <div class="code-container">
-              <pre><code>{{ backupData.dockerRestoreCommand }}</code></pre>
+              <pre><code>{{ backupData.localRestoreCommand }}</code></pre>
             </div>
           </div>
         </div>
 
-        <!-- Group 2: Exposed Port Local Client Environment -->
+        <!-- Group 2: Remote/Explicit TCP Connection -->
         <div class="command-group-card">
           <div class="group-header">
-            <span class="badge host">宿主机外置端口</span>
-            <h3>物理/外置客户端模式</h3>
+            <span class="badge docker">网络连接模式</span>
+            <h3>TCP/IP 显式连接模式</h3>
           </div>
-          <p class="group-desc">适合本地装有 MySQL/mysqldump 客户端或需要异地/外部服务器备份还原的情景（基于暴露的 3307 映射端口）：</p>
+          <p class="group-desc">适合异地/外部服务器备份还原或需要显式指定 Host 与 Port 参数的本地客户端场景：</p>
 
-          <!-- Native Backup -->
+          <!-- Remote Backup -->
           <div class="command-box">
             <div class="box-header">
-              <span class="action-tag backup">端口备份数据库 (Backup)</span>
-              <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.nativeBackupCommand)">复制备份命令</el-button>
+              <span class="action-tag backup">远程备份数据库 (Backup)</span>
+              <el-button size="small" type="primary" link :icon="DocumentCopy" @click="copyText(backupData.remoteBackupCommand)">复制备份命令</el-button>
             </div>
             <div class="code-container">
-              <pre><code>{{ backupData.nativeBackupCommand }}</code></pre>
+              <pre><code>{{ backupData.remoteBackupCommand }}</code></pre>
             </div>
           </div>
 
-          <!-- Native Restore -->
+          <!-- Remote Restore -->
           <div class="command-box">
             <div class="box-header">
-              <span class="action-tag restore">端口恢复数据库 (Restore)</span>
-              <el-button size="small" type="danger" link :icon="DocumentCopy" @click="copyText(backupData.nativeRestoreCommand)">复制恢复命令</el-button>
+              <span class="action-tag restore">远程恢复数据库 (Restore)</span>
+              <el-button size="small" type="danger" link :icon="DocumentCopy" @click="copyText(backupData.remoteRestoreCommand)">复制恢复命令</el-button>
             </div>
             <p class="sub-desc"><span class="warn-label">警告：</span>数据还原覆盖操作。执行后，终端会提示输入密码，请配合输入数据库管理员密码确认：</p>
             <div class="code-container">
-              <pre><code>{{ backupData.nativeRestoreCommand }}</code></pre>
+              <pre><code>{{ backupData.remoteRestoreCommand }}</code></pre>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Group 3: One-click Full Site Backup & Migration -->
+      <div class="command-group-card">
+        <div class="group-header">
+          <span class="badge host">全站打包备份</span>
+          <h3>全站一键备份与迁移</h3>
+        </div>
+        <p class="group-desc">打包导出当前系统的完整数据包（包含全部数据库结构与内容、题目的评测数据、用户头像等），生成一个 <code>.zip</code> 压缩文件。导入备份时会覆盖当前系统的所有数据，请谨慎操作。</p>
+
+        <div class="backup-actions">
+          <el-button type="primary" :icon="Download" :loading="exporting" @click="handleFullExport">
+            全站数据打包并下载 (Export)
+          </el-button>
+
+          <el-upload
+            action=""
+            :before-upload="beforeFullImport"
+            :show-file-list="false"
+            accept=".zip"
+            style="display: inline-block; margin-left: 12px;"
+          >
+            <el-button type="danger" :icon="Upload" :loading="importing">
+              导入备份还原全站 (Import)
+            </el-button>
+          </el-upload>
         </div>
       </div>
 
@@ -110,11 +137,13 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { DocumentCopy, InfoFilled } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { fetchBackupInfo } from '../../api/http'
+import { DocumentCopy, InfoFilled, Download, Upload } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { fetchBackupInfo, http } from '../../api/http'
 
 const loading = ref(false)
+const exporting = ref(false)
+const importing = ref(false)
 const backupData = ref<any>(null)
 
 onMounted(async () => {
@@ -137,6 +166,77 @@ function copyText(text: string) {
     .catch(() => {
       ElMessage.error('复制失败，请手动选取代码块')
     })
+}
+
+async function handleFullExport() {
+  exporting.value = true
+  try {
+    const token = localStorage.getItem('coderushoj.token')
+    const response = await http.get('/admin/data/backup/export', {
+      responseType: 'blob',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+    
+    const blob = new Blob([response.data], { type: 'application/zip' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    const contentDisposition = response.headers['content-disposition']
+    let filename = 'coderush_oj_backup.zip'
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename=(.+)/)
+      if (match) filename = match[1]
+    }
+    
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    ElMessage.success('全站数据备份导出成功！')
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || '全站数据备份导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
+function beforeFullImport(file: File) {
+  ElMessageBox.confirm(
+    '此操作将彻底删除并覆盖当前系统的所有数据库表、题目测试数据以及用户头像，且不可逆！是否确定导入备份进行还原？',
+    '高危恢复警告',
+    {
+      confirmButtonText: '确定覆盖还原',
+      cancelButtonText: '取消',
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger'
+    }
+  ).then(async () => {
+    importing.value = true
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      await http.post('/admin/data/backup/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      ElMessage({
+        type: 'success',
+        message: '全站数据备份导入成功！数据库与文件已还原，请刷新页面检查。',
+        duration: 5000
+      })
+    } catch (error: any) {
+      ElMessage.error(error.response?.data?.message || '全站数据备份导入失败')
+    } finally {
+      importing.value = false
+    }
+  }).catch(() => {})
+  return false
 }
 </script>
 

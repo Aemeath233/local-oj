@@ -23,8 +23,8 @@ let monaco: typeof MonacoType | null = null
 
 const themeStore = useThemeStore()
 
-const fontSize = ref(Number(localStorage.getItem('localoj.editor.fontSize')) || 14)
-const fontFamily = ref(localStorage.getItem('localoj.editor.fontFamily') || "'JetBrains Mono', 'Cascadia Code', Consolas, monospace")
+const fontSize = ref(Number(localStorage.getItem('coderushoj.editor.fontSize')) || 14)
+const fontFamily = ref(localStorage.getItem('coderushoj.editor.fontFamily') || "'JetBrains Mono', 'Cascadia Code', Consolas, monospace")
 
 onMounted(() => {
   if (!container.value) return

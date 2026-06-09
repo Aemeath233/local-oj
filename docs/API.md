@@ -309,10 +309,29 @@ Token 通过 `/api/auth/login` 或 `/api/auth/register` 获取。
 
 ---
 
-### GET /submissions/{id}/events?ticket=xxx
-`Auth` — SSE 长连接，实时监听评测结果
+### GET /submissions/live?ticket=xxx
+`Auth` — SSE 长连接，实时监听提交状态更新
 
-**事件**: 判题完成时推送 `SubmissionDetail`
+**事件**:
+| 事件名 | data | 说明 |
+|--------|------|------|
+| `init` | `connected` | 连接建立 |
+| `update` | `SubmissionUpdateEvent` JSON | 提交状态更新 |
+| `heartbeat` | `ok` | 保活心跳 |
+
+`SubmissionUpdateEvent`:
+```json
+{
+  "submissionId": 1,
+  "userId": 1,
+  "problemId": 1,
+  "contestId": null,
+  "status": "RUNNING",
+  "verdict": null
+}
+```
+
+ticket 由 `/submissions/sse-ticket` 生成，短期有效且使用后失效。
 
 ---
 
@@ -425,7 +444,7 @@ Token 通过 `/api/auth/login` 或 `/api/auth/register` 获取。
 ---
 
 ### GET /leaderboard/my-rank
-`Auth` — 获取当前用户排名
+`Public` — 获取当前用户排名；未登录时返回 `null`
 
 **响应**: `LeaderboardRow`
 
@@ -434,11 +453,13 @@ Token 通过 `/api/auth/login` 或 `/api/auth/register` 获取。
 ## 9. 其他
 
 ### POST /code/format
-`Auth` — 代码格式化
+`Auth` — 代码简单整理
 
 **请求体**: `{ "language": "CPP", "sourceCode": "..." }`
 
-**响应**: 格式化后的代码 string
+**响应**: 整理后的代码 string
+
+该接口是轻量级缩进/空白整理，不等同于 clang-format、black 等完整语言格式化器。
 
 ---
 

@@ -338,6 +338,7 @@ import {
   requestSseTicket
 } from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { parseSubmissionUpdate } from '../utils/submissionEvents'
 import type {
   Contest,
   ContestProblemDetail,
@@ -486,11 +487,13 @@ async function connectSse() {
 
     eventSource.addEventListener('update', (event) => {
       try {
-        const parts = event.data.split(',')
-        if (parts.length >= 2) {
-          const subId = Number(parts[0])
-          const status = parts[1]
-          const verdict = parts[2] || null
+        const update = parseSubmissionUpdate(event.data)
+        if (update) {
+          if (update.contestId !== undefined && update.contestId !== null && update.contestId !== contestId.value) return
+          if (update.contestId === null) return
+          const subId = update.submissionId
+          const status = update.status
+          const verdict = update.verdict || null
 
           const existing = submissions.value.find(s => s.id === subId)
           if (existing) {

@@ -64,7 +64,7 @@
             <el-option label="PyPy 3" value="PYPY3" />
             <el-option label="Java 21" value="JAVA" />
           </el-select>
-          <el-button :icon="Brush" :loading="formatting" @click="handleFormat">格式化</el-button>
+          <el-button :icon="Brush" :loading="formatting" @click="handleFormat">简单整理</el-button>
           <el-button :loading="selfTesting" :disabled="cooldownSeconds > 0" @click="runCustomTest">
             <template #icon>
               <span v-if="cooldownSeconds > 0" class="cooldown-num-icon">{{ cooldownSeconds }}</span>
@@ -130,6 +130,7 @@ import {
   requestSseTicket
 } from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { parseSubmissionUpdate } from '../utils/submissionEvents'
 import type { Language, ProblemDetail, SelfTestResult, SubmissionSummary, SubmissionDetail } from '../types'
 
 const route = useRoute()
@@ -252,12 +253,12 @@ const selfTestError = ref('')
 const selfTestResult = ref<SelfTestResult | null>(null)
 const problem = ref<ProblemDetail | null>(null)
 const problemId = computed(() => Number(route.params.id))
-const language = ref<Language>((localStorage.getItem('localoj.editor.defaultLanguage') as Language) || 'CPP')
+const language = ref<Language>((localStorage.getItem('coderushoj.editor.defaultLanguage') as Language) || 'CPP')
 const sourceCode = ref(templateFor(language.value))
 
 // Reader Typography Configuration States
-const readerFontSize = ref(Number(localStorage.getItem('localoj.reader.fontSize')) || 15)
-const readerFontFamily = ref(localStorage.getItem('localoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif")
+const readerFontSize = ref(Number(localStorage.getItem('coderushoj.reader.fontSize')) || 15)
+const readerFontFamily = ref(localStorage.getItem('coderushoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif")
 
 // UX & Layout reactive variables
 const activeLeftTab = ref('statement')
@@ -271,7 +272,7 @@ const isSwitchingLanguage = ref(false)
 
 watch(language, (newLang, oldLang) => {
   if (oldLang && problemId.value) {
-    localStorage.setItem(`localoj.draft.${problemId.value}.${oldLang}`, sourceCode.value)
+    localStorage.setItem(`coderushoj.draft.${problemId.value}.${oldLang}`, sourceCode.value)
   }
   isSwitchingLanguage.value = true
   sourceCode.value = templateFor(newLang)
@@ -281,7 +282,7 @@ watch(language, (newLang, oldLang) => {
 watch(sourceCode, (newCode) => {
   if (isSwitchingLanguage.value) return
   if (problemId.value) {
-    localStorage.setItem(`localoj.draft.${problemId.value}.${language.value}`, newCode)
+    localStorage.setItem(`coderushoj.draft.${problemId.value}.${language.value}`, newCode)
   }
 })
 
@@ -344,11 +345,13 @@ async function connectSse() {
 
     eventSource.addEventListener('update', (event) => {
       try {
-        const parts = event.data.split(',')
-        if (parts.length >= 2) {
-          const subId = Number(parts[0])
-          const status = parts[1]
-          const verdict = parts[2] || null
+        const update = parseSubmissionUpdate(event.data)
+        if (update) {
+          if (update.problemId !== undefined && update.problemId !== problemId.value) return
+          if (update.contestId !== undefined && update.contestId !== null) return
+          const subId = update.submissionId
+          const status = update.status
+          const verdict = update.verdict || null
 
           const existingIndex = submissions.value.findIndex(s => s.id === subId)
           if (existingIndex !== -1) {
@@ -422,7 +425,7 @@ function disconnectSse() {
 onMounted(async () => {
   window.addEventListener('resize', handleResize)
   // Listen for editor/reader preference updates locally
-  window.addEventListener('localoj-preferences-saved', handlePrefUpdates)
+  window.addEventListener('coderushoj-preferences-saved', handlePrefUpdates)
   await initProblem()
   connectSse()
 })
@@ -434,7 +437,7 @@ watch(problemId, async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  window.removeEventListener('localoj-preferences-saved', handlePrefUpdates)
+  window.removeEventListener('coderushoj-preferences-saved', handlePrefUpdates)
   disconnectSse()
   if (timer.value) {
     window.clearInterval(timer.value)
@@ -445,8 +448,8 @@ onUnmounted(() => {
 })
 
 function handlePrefUpdates() {
-  readerFontSize.value = Number(localStorage.getItem('localoj.reader.fontSize')) || 15
-  readerFontFamily.value = localStorage.getItem('localoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif"
+  readerFontSize.value = Number(localStorage.getItem('coderushoj.reader.fontSize')) || 15
+  readerFontFamily.value = localStorage.getItem('coderushoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif"
 }
 
 const codeEditorRef = ref<any>(null)
@@ -465,9 +468,9 @@ async function handleFormat() {
     } else {
       sourceCode.value = formatted
     }
-    ElMessage.success('代码格式化成功')
+    ElMessage.success('代码整理成功')
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '格式化失败')
+    ElMessage.error(error.response?.data?.message || '整理失败')
   } finally {
     formatting.value = false
   }
@@ -589,7 +592,7 @@ function fillSelfTest(text: string) {
 }
 
 function templateFor(value: Language) {
-  const draft = localStorage.getItem(`localoj.draft.${problemId.value}.${value}`)
+  const draft = localStorage.getItem(`coderushoj.draft.${problemId.value}.${value}`)
   if (draft !== null) {
     return draft
   }
