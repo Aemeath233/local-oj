@@ -1,6 +1,25 @@
 # Linux 原生部署指南 (Nginx + Systemd + Native Services)
 
-本文档介绍如何在不依赖 Docker 的情况下，将 CodeRush OJ 局域网评测系统原生部署到 Linux 服务器上（以 Ubuntu 22.04 LTS / Debian 12 为例，其他发行版大同小异）。
+本文档介绍将 CodeRush OJ 局域网评测系统原生部署到 Linux 服务器上的方法（支持一键脚本自动部署与手动分步部署，以 Ubuntu 22.04 LTS / Debian 12 为例）。
+
+---
+
+## ⚡ 极速一键部署 (推荐)
+
+我们在项目根目录下提供了一键部署脚本 `deploy.sh`。该脚本会自动完成依赖检测、代码编译、服务发布、Systemd 托管以及 Nginx 反向代理配置。
+
+### 运行一键部署
+在您的 Linux 服务器上，克隆仓库并执行以下命令：
+```bash
+sudo ./deploy.sh
+```
+按照命令行提示，输入您的数据库账号密码、设置管理员密码、设置外网IP即可。
+
+> [!TIP]
+> 部署脚本执行成功后，您可以使用以下命令诊断状态：
+> * **后端日志**: `journalctl -u coderushoj-backend -f`
+> * **评测日志**: `journalctl -u coderushoj-worker -f`
+> * **沙箱日志**: `journalctl -u go-judge -f`
 
 ---
 

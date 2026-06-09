@@ -22,6 +22,7 @@ const AdminContestListView = () => import('../views/AdminContestListView.vue')
 const AdminContestView = () => import('../views/AdminContestView.vue')
 const AdminContestPlagiarismView = () => import('../views/AdminContestPlagiarismView.vue')
 const AdminLogView = () => import('../views/AdminLogView.vue')
+const AdminMonitoringView = () => import('../views/AdminMonitoringView.vue')
 const AdminDataView = () => import('../views/AdminDataView.vue')
 const TrainingListView = () => import('../views/TrainingListView.vue')
 const TrainingDetailView = () => import('../views/TrainingDetailView.vue')
@@ -52,6 +53,7 @@ const router = createRouter({
     { path: '/admin/contests/new', component: AdminContestView, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/contests/:id', component: AdminContestView, props: true, meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/contests/:id/plagiarism', component: AdminContestPlagiarismView, props: true, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/monitoring', component: AdminMonitoringView, meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/admin/data', component: AdminDataView, meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/admin/settings', component: AdminSettingsView, meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/admin/users', component: AdminUserListView, meta: { requiresAuth: true, requiresSuperAdmin: true } },

@@ -15,6 +15,7 @@
         <RouterLink to="/admin/logs">日志</RouterLink>
         <RouterLink to="/admin/users">用户管理</RouterLink>
         <RouterLink to="/admin/data">数据管理</RouterLink>
+        <RouterLink to="/admin/monitoring">系统监控</RouterLink>
         <RouterLink to="/admin/settings">设置</RouterLink>
       </div>
     </template>

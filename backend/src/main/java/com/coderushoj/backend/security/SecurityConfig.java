@@ -86,6 +86,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/users/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/admin/data/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/admin/logs/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/admin/monitoring/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/tags/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/admin/tags/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/admin/tags/**").hasRole("SUPER_ADMIN")
