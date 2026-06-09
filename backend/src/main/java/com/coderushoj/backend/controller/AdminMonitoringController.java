@@ -26,26 +26,27 @@ public class AdminMonitoringController {
     private final DataSource dataSource;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.data-root:/data}")
-    private String appDataRoot;
-
-    @Value("${app.go-judge.base-url}")
-    private String goJudgeBaseUrl;
-
-    @Value("${app.queue.submission-key}")
-    private String submissionQueueKey;
-
-    @Value("${app.queue.dlq-key}")
-    private String dlqKey;
+    private final String appDataRoot;
+    private final String goJudgeBaseUrl;
+    private final String submissionQueueKey;
+    private final String dlqKey;
 
     public AdminMonitoringController(
             StringRedisTemplate redisTemplate,
             DataSource dataSource,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            @Value("${app.data-root:/data}") String appDataRoot,
+            @Value("${app.go-judge.base-url}") String goJudgeBaseUrl,
+            @Value("${app.queue.submission-key}") String submissionQueueKey,
+            @Value("${app.queue.dlq-key}") String dlqKey
     ) {
         this.redisTemplate = redisTemplate;
         this.dataSource = dataSource;
         this.objectMapper = objectMapper;
+        this.appDataRoot = appDataRoot;
+        this.goJudgeBaseUrl = goJudgeBaseUrl;
+        this.submissionQueueKey = submissionQueueKey;
+        this.dlqKey = dlqKey;
     }
 
     @GetMapping("/stats")
