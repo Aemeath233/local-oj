@@ -48,6 +48,15 @@ public class BackupService {
      * Exports a full-site backup zip file containing the DB dump and test cases/avatars.
      */
     public byte[] exportBackup() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        writeBackup(baos);
+        return baos.toByteArray();
+    }
+
+    /**
+     * Streams a full-site backup zip file containing the DB dump and test cases/avatars.
+     */
+    public void writeBackup(OutputStream outputStream) throws IOException {
         Path tempDir = Files.createTempDirectory("oj_backup_export_");
         File sqlFile = tempDir.resolve("db.sql").toFile();
 
@@ -56,8 +65,7 @@ public class BackupService {
             dumpDatabase(sqlFile);
 
             // 2. Prepare Zip
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            try (ZipOutputStream zos = new ZipOutputStream(outputStream)) {
                 // Add db.sql
                 ZipEntry sqlEntry = new ZipEntry("db.sql");
                 zos.putNextEntry(sqlEntry);
@@ -77,8 +85,7 @@ public class BackupService {
                 }
             }
 
-            log.info("Full site backup zip created successfully, size: {} bytes", baos.size());
-            return baos.toByteArray();
+            log.info("Full site backup zip streamed successfully.");
 
         } finally {
             // Clean up temp sql file and dir

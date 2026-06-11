@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.security.SecureRandom;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -32,6 +33,7 @@ import java.util.*;
 @Service
 public class AdminDataService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AdminDataService.class);
+    private static final SecureRandom PASSWORD_RANDOM = new SecureRandom();
 
     private final UserMapper userMapper;
     private final SubmissionMapper submissionMapper;
@@ -231,7 +233,7 @@ public class AdminDataService {
             // 4. Password validation (At least 6 chars, auto generate if blank)
             String finalPassword;
             if (rawPassword == null || rawPassword.isBlank()) {
-                finalPassword = "OJ@" + (100000 + new Random().nextInt(900000));
+                finalPassword = "OJ@" + (100000 + PASSWORD_RANDOM.nextInt(900000));
             } else {
                 finalPassword = rawPassword.trim();
                 if (finalPassword.length() < 6) {

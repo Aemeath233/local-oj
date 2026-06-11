@@ -27,9 +27,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -160,7 +163,6 @@ public class AdminProblemController {
                     timeLimitMs: 1000
                     memoryLimitKb: 262144
                     visible: true
-                    samples: [sample-1, sample-2]
                     scores:
                       sample-1: 5
                       sample-2: 5
@@ -188,6 +190,40 @@ public class AdminProblemController {
 
                     Output one integer, the sum of all numbers in the list.
 
+                    ## Sample 1
+
+                    :::sample
+                    ```input
+                    3
+                    1 2 3
+                    ```
+
+                    ```output
+                    6
+                    ```
+                    :::
+
+                    ## Sample Explanation 1
+
+                    The sum is $1 + 2 + 3 = 6$.
+
+                    ## Sample 2
+
+                    :::sample
+                    ```input
+                    5
+                    -10 0 10 20 -5
+                    ```
+
+                    ```output
+                    15
+                    ```
+                    :::
+
+                    ## Sample Explanation 2
+
+                    The sum is $-10 + 0 + 10 + 20 - 5 = 15$.
+
                     ## Constraints
 
                     $1 \\le n \\le 50$
@@ -204,7 +240,7 @@ public class AdminProblemController {
 
                     ```text
                     problem-package.zip
-                    ├── config.yml          # 题目元数据、样例测试点、分数分配
+                    ├── config.yml          # 题目元数据、分数分配
                     ├── statement.md        # 单文件 Markdown 题面
                     ├── README.md           # 给人的说明，导入时会被忽略
                     ├── AGENTS.md           # 给 LLM/Agent 的出题说明，导入时会被忽略
@@ -220,13 +256,12 @@ public class AdminProblemController {
                        - `difficulty` 只能使用 `Easy`、`Medium`、`Hard`。
                        - `timeLimitMs` 建议默认 `1000`，最低 `100`。
                        - `memoryLimitKb` 建议默认 `262144`，最低 `16384`。
-                       - `samples` 填写要展示给用户的测试点 basename。
                        - `scores` 可以写成 `case-name=score; other-case=score`，总分必须为 100。
 
                     2. `statement.md`
                        - 题面是一个 Markdown 文件。
                        - 不要在开头重复写一级标题 `# 标题`，系统会自动使用 `config.yml` 里的 `title`。
-                       - 不需要手写“样例输入/输出”板块，系统会根据 `samples` 自动展示样例。
+                       - 公开样例直接写在题面里，并使用 `:::sample` 包裹 `input` / `output` 代码块。
 
                     3. `cases/`
                        - 每个测试点必须有同名的 `.in` 输入文件和 `.out` 或 `.ans` 输出文件。
@@ -277,7 +312,8 @@ public class AdminProblemController {
                     - `statement.md` 使用一个完整的 Markdown 文档描述题目。
                     - 开头不要写一级标题，系统会用 `config.yml` 的 `title` 渲染标题。
                     - 写清楚题意、输入格式、输出格式、约束、说明。
-                    - 样例不必手写在题面里，公开样例由 `config.yml` 的 `samples` 指定。
+                    - 公开样例必须写在题面里，并使用 `:::sample` 包裹 `input` / `output` 代码块。
+                    - 样例说明写在对应样例块后面，保持“样例、样例说明”的阅读顺序。
                     - 数学表达式使用 LaTeX，例如 `$1 \\le n \\le 10^5$`。
 
                     ## 配置要求
@@ -286,7 +322,6 @@ public class AdminProblemController {
                     - `timeLimitMs` 默认 `1000`，除非题目确实需要更高限制。
                     - `memoryLimitKb` 默认 `262144`。
                     - `tags` 使用简短、稳定的标签，不要创造太多近义标签。
-                    - `samples` 只放公开样例测试点，通常 1 到 2 组。
                     - `scores` 显式写出全部测试点分数，总分必须等于 100。
 
                     ## 测试数据设计要求
@@ -314,7 +349,7 @@ public class AdminProblemController {
                     - 所有输出必须由参考解实际计算，不要靠猜。
                     - 检查每个输入都满足题面约束。
                     - 检查 `scores` 引用的测试点都真实存在。
-                    - 检查公开样例 basename 都写进了 `samples`。
+                    - 检查题面中的公开样例也存在于 `cases/` 中，便于评测覆盖。
                     - 检查所有测试点分数总和为 100。
 
                     ## 命名建议
@@ -358,47 +393,47 @@ public class AdminProblemController {
     }
 
     @GetMapping("/export")
-    public ResponseEntity<byte[]> exportProblems(@RequestParam("ids") List<Long> ids) throws IOException {
+    public ResponseEntity<StreamingResponseBody> exportProblems(@RequestParam("ids") List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             throw new IllegalArgumentException("请选择要导出的题目");
         }
 
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
         String filename;
+        StreamingResponseBody body;
 
         if (ids.size() == 1) {
-            // Export single problem
             Problem problem = problemService.requireProblem(ids.get(0));
             filename = problem.getSlug() + ".zip";
-            try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
-                exportProblemToZip(problem, zip);
-            }
-        } else {
-            // Export multiple problems into individual zips inside a parent zip
-            filename = "problems-export-" + System.currentTimeMillis() + ".zip";
-            try (ZipOutputStream parentZip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
-                for (Long id : ids) {
-                    Problem problem = problemService.requireProblem(id);
-                    ByteArrayOutputStream singleOutput = new ByteArrayOutputStream();
-                    try (ZipOutputStream singleZip = new ZipOutputStream(singleOutput, StandardCharsets.UTF_8)) {
-                        exportProblemToZip(problem, singleZip);
-                    }
-                    parentZip.putNextEntry(new ZipEntry(problem.getSlug() + ".zip"));
-                    parentZip.write(singleOutput.toByteArray());
-                    parentZip.closeEntry();
+            body = outputStream -> {
+                try (ZipOutputStream zip = new ZipOutputStream(outputStream, StandardCharsets.UTF_8)) {
+                    exportProblemToZip(problem, zip);
                 }
-            }
+            };
+        } else {
+            List<Problem> problems = ids.stream()
+                    .map(problemService::requireProblem)
+                    .toList();
+            filename = "problems-export-" + System.currentTimeMillis() + ".zip";
+            body = outputStream -> {
+                try (ZipOutputStream parentZip = new ZipOutputStream(outputStream, StandardCharsets.UTF_8)) {
+                    for (Problem problem : problems) {
+                        parentZip.putNextEntry(new ZipEntry(problem.getSlug() + ".zip"));
+                        try (ZipOutputStream singleZip = new ZipOutputStream(new NonClosingOutputStream(parentZip), StandardCharsets.UTF_8)) {
+                            exportProblemToZip(problem, singleZip);
+                        }
+                        parentZip.closeEntry();
+                    }
+                }
+            };
         }
 
-        byte[] bytes = output.toByteArray();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         headers.setContentDispositionFormData("attachment", filename);
-        headers.setContentLength(bytes.length);
 
         return ResponseEntity.ok()
                 .headers(headers)
-                .body(bytes);
+                .body(body);
     }
 
     @PostMapping("/batch-visibility")
@@ -459,19 +494,11 @@ public class AdminProblemController {
 
         List<TestCase> cases = problemService.testCases(problem.getId());
 
-        // Extract sample cases
-        List<String> samples = new ArrayList<>();
         List<String> scores = new ArrayList<>();
         for (TestCase c : cases) {
-            if (Boolean.TRUE.equals(c.getSample())) {
-                samples.add(c.getCaseName());
-            }
             scores.add(c.getCaseName() + ":" + (c.getScore() == null ? 0 : c.getScore()));
         }
 
-        if (!samples.isEmpty()) {
-            config.append("samples: ").append(String.join(",", samples)).append("\n");
-        }
         if (!scores.isEmpty()) {
             config.append("scores: ").append(String.join(",", scores)).append("\n");
         }
@@ -519,6 +546,17 @@ public class AdminProblemController {
         zip.closeEntry();
     }
 
+    private static final class NonClosingOutputStream extends FilterOutputStream {
+        private NonClosingOutputStream(OutputStream out) {
+            super(out);
+        }
+
+        @Override
+        public void close() throws IOException {
+            flush();
+        }
+    }
+
     public record AdminProblemDetail(Problem problem, List<TestCase> testCases) {}
 
 
@@ -556,8 +594,7 @@ public class AdminProblemController {
             @NotBlank String outputFile,
             Long inputSize,
             Long outputSize,
-            Integer score,
-            Boolean sample
+            Integer score
     ) {
         ProblemService.TestCaseCommand toCommand() {
             return new ProblemService.TestCaseCommand(
@@ -567,8 +604,7 @@ public class AdminProblemController {
                     outputFile,
                     inputSize,
                     outputSize,
-                    score == null ? 100 : score,
-                    sample
+                    score == null ? 100 : score
             );
         }
 

@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 
@@ -67,13 +68,13 @@ public class AdminDataController {
     }
 
     @GetMapping("/backup/export")
-    public ResponseEntity<byte[]> exportBackup() throws IOException {
-        byte[] zipBytes = backupService.exportBackup();
+    public ResponseEntity<StreamingResponseBody> exportBackup() {
         String filename = "backup_" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".zip";
+        StreamingResponseBody body = outputStream -> backupService.writeBackup(outputStream);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
                 .contentType(MediaType.parseMediaType("application/zip"))
-                .body(zipBytes);
+                .body(body);
     }
 
     @PostMapping("/backup/import")

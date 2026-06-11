@@ -304,12 +304,8 @@ public class SubmissionService {
             return submission;
         }
 
-        // For contest submissions, normal users cannot view other people's submissions
+        // Contest submission details include source code, so only the owner and admins may view them.
         if (submission.getContestId() != null) {
-            Contest contest = contestMapper.selectById(submission.getContestId());
-            if (contest != null && !contest.getEndTime().isAfter(LocalDateTime.now())) {
-                return submission;
-            }
             throw new IllegalArgumentException("Submission not found");
         }
 

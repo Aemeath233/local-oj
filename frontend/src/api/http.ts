@@ -245,7 +245,6 @@ export interface CreateProblemPayload {
     inputSize?: number
     outputSize?: number
     score: number
-    sample?: boolean
   }>
 }
 
@@ -317,7 +316,6 @@ export async function importTestCaseFiles(files: File[]) {
     inputSize: number
     outputSize: number
     score: number
-    sample?: boolean
   }>>>(
     '/admin/problems/import-files',
     formData,
@@ -623,4 +621,3 @@ export async function fetchSystemVersions() {
   const response = await http.get<ApiEnvelope<Record<string, number>>>('/system/versions')
   return response.data.data
 }
-

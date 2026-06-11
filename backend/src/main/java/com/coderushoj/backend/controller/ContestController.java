@@ -5,12 +5,9 @@ import com.coderushoj.backend.security.CurrentUser;
 import com.coderushoj.backend.security.SecurityUtils;
 import com.coderushoj.backend.service.ContestService;
 import com.coderushoj.backend.service.ProblemService;
-import com.coderushoj.backend.service.TestCaseFileStorage;
 import com.coderushoj.backend.service.SubmissionService;
 import com.coderushoj.common.model.Contest;
 import com.coderushoj.common.model.Problem;
-import com.coderushoj.common.model.Submission;
-import com.coderushoj.common.model.TestCase;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,16 +27,13 @@ import java.util.Map;
 public class ContestController {
     private final ContestService contestService;
     private final ProblemService problemService;
-    private final TestCaseFileStorage testCaseFileStorage;
 
     public ContestController(
             ContestService contestService,
-            ProblemService problemService,
-            TestCaseFileStorage testCaseFileStorage
+            ProblemService problemService
     ) {
         this.contestService = contestService;
         this.problemService = problemService;
-        this.testCaseFileStorage = testCaseFileStorage;
     }
 
     @GetMapping
@@ -95,15 +89,12 @@ public class ContestController {
                     .build();
         }
 
-        List<TestCase> samples = problemService.testCases(problemId).stream()
-                .filter(testCase -> Boolean.TRUE.equals(testCase.getSample()))
-                .toList();
         Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(List.of(problemId));
         ProblemService.SubmissionStats pStats = stats.getOrDefault(problemId, new ProblemService.SubmissionStats(0, 0));
         return ResponseEntity.ok()
                 .eTag(etag)
                 .cacheControl(CacheControl.noCache())
-                .body(ApiResponse.ok(ProblemController.ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus, pStats)));
+                .body(ApiResponse.ok(ProblemController.ProblemDetail.from(problem, solveStatus, pStats)));
     }
 
     @GetMapping("/{id}/submissions")

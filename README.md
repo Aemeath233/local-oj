@@ -109,7 +109,16 @@ CodeRush OJ 是一套面向教学场景的轻量化在线评测系统，支持�
 
 ### 生产部署
 
-请参考详细文档 [docs/NATIVE_DEPLOYMENT.md](file:///d:/Code/coderush_oj/docs/NATIVE_DEPLOYMENT.md) 进行原生 Linux 生产环境配置（基于 Nginx 反向代理与 Systemd 进程托管守护）。
+Linux 服务器上可以使用一键部署脚本：
+```bash
+chmod +x deploy.sh
+sudo ./deploy.sh install
+```
+后续更新使用：
+```bash
+sudo ./deploy.sh update
+```
+详细说明见 [docs/NATIVE_DEPLOYMENT.md](docs/NATIVE_DEPLOYMENT.md)。
 
 ### 访问系统
 

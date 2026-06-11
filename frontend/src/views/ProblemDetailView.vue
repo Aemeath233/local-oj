@@ -131,6 +131,7 @@ import {
 } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import { parseSubmissionUpdate } from '../utils/submissionEvents'
+import { firstProblemSampleInput } from '../utils/problemSamples'
 import type { Language, ProblemDetail, SelfTestResult, SubmissionSummary, SubmissionDetail } from '../types'
 
 const route = useRoute()
@@ -298,12 +299,7 @@ async function initProblem(isSilent = false) {
     if (!isSilent) {
       clearSelfTest()
       
-      // Auto populate the first sample case input if available
-      if (problem.value?.samples && problem.value.samples.length > 0) {
-        selfTestInput.value = problem.value.samples[0].inputText
-      } else {
-        selfTestInput.value = ''
-      }
+      selfTestInput.value = firstProblemSampleInput(problem.value?.description)
     }
   } catch (error) {
     console.error('Failed to initialize problem details', error)

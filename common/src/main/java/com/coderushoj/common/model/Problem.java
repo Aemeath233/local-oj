@@ -14,10 +14,6 @@ public class Problem {
     private String slug;
     private String title;
     private String description;
-    private String inputDescription;
-    private String outputDescription;
-    private String sampleInput;
-    private String sampleOutput;
     private Integer timeLimitMs;
     private Integer memoryLimitKb;
     private String difficulty;
@@ -57,38 +53,6 @@ public class Problem {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getInputDescription() {
-        return inputDescription;
-    }
-
-    public void setInputDescription(String inputDescription) {
-        this.inputDescription = inputDescription;
-    }
-
-    public String getOutputDescription() {
-        return outputDescription;
-    }
-
-    public void setOutputDescription(String outputDescription) {
-        this.outputDescription = outputDescription;
-    }
-
-    public String getSampleInput() {
-        return sampleInput;
-    }
-
-    public void setSampleInput(String sampleInput) {
-        this.sampleInput = sampleInput;
-    }
-
-    public String getSampleOutput() {
-        return sampleOutput;
-    }
-
-    public void setSampleOutput(String sampleOutput) {
-        this.sampleOutput = sampleOutput;
     }
 
     public Integer getTimeLimitMs() {

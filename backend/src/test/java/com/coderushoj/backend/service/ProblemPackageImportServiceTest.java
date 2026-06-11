@@ -26,7 +26,6 @@ public class ProblemPackageImportServiceTest {
                 - time_limit_ms: 1500
                 - memory-limit-kb: 131072
                 - visible: hidden
-                - samples: 1, sample-2
                 - scores: 1=20; sample-2=80
                 """);
 
@@ -37,8 +36,6 @@ public class ProblemPackageImportServiceTest {
         assertEquals(1500, config.timeLimitMs());
         assertEquals(131072, config.memoryLimitKb());
         assertFalse(config.visible());
-        assertTrue(config.samples().contains("1"));
-        assertTrue(config.samples().contains("sample-2"));
         assertEquals(20, config.scores().get("1"));
         assertEquals(80, config.scores().get("sample-2"));
     }
@@ -56,7 +53,6 @@ public class ProblemPackageImportServiceTest {
         assertEquals(1000, config.timeLimitMs());
         assertEquals(262144, config.memoryLimitKb());
         assertTrue(config.visible());
-        assertTrue(config.samples().isEmpty());
         assertTrue(config.scores().isEmpty());
     }
 
@@ -79,7 +75,6 @@ public class ProblemPackageImportServiceTest {
         assertEquals(2, preview.cases().size());
         assertEquals("1", preview.cases().get(0).name());
         assertEquals(20, preview.cases().get(0).score());
-        assertTrue(preview.cases().get(0).sample());
         assertEquals(80, preview.cases().get(1).score());
     }
 
@@ -89,7 +84,6 @@ public class ProblemPackageImportServiceTest {
             addEntry(zip, "config.yml", """
                     slug: preview-problem
                     title: Preview Problem
-                    samples: [1]
                     scores: 1=20,2=80
                     """);
             addEntry(zip, "statement.md", "# Preview Problem\n");
@@ -108,4 +102,3 @@ public class ProblemPackageImportServiceTest {
     }
 
 }
-

@@ -27,9 +27,13 @@
         </el-tooltip>
 
         <div class="statement-scroll-area">
-          <section class="statement-body" :style="{ fontSize: readerFontSize + 'px', fontFamily: readerFontFamily }">
-            <MarkdownView :source="statementMarkdown" />
-          </section>
+          <ProblemStatementContent
+            :source="statementMarkdown"
+            :reader-font-size="readerFontSize"
+            :reader-font-family="readerFontFamily"
+            :enable-self-test-fill="!isMobile"
+            @fill-self-test="fillSelfTest"
+          />
 
           <!-- If mobile, show a nice info block about writing code on PC -->
           <el-card v-if="isMobile" class="mobile-warning-card" style="margin-top: 20px; margin-bottom: 15px;">
@@ -45,60 +49,6 @@
             </div>
           </el-card>
 
-          <section v-if="sampleCases.length > 0" class="sample-list">
-            <h2>样例</h2>
-            <div v-for="(sample, index) in sampleCases" :key="index" class="sample-block">
-              <h3>样例 {{ index + 1 }}</h3>
-              <div class="sample-grid">
-                <div>
-                  <div class="sample-header-row">
-                    <h4>输入</h4>
-                    <div class="sample-actions">
-                      <el-button
-                        v-if="sample.inputText"
-                        type="primary"
-                        link
-                        size="small"
-                        :icon="DocumentCopy"
-                        @click="copyText(sample.inputText, '输入已复制')"
-                      >
-                        复制
-                      </el-button>
-                      <el-button
-                        v-if="sample.inputText && !isMobile"
-                        type="success"
-                        link
-                        size="small"
-                        :icon="VideoPlay"
-                        @click="fillSelfTest(sample.inputText)"
-                      >
-                        填入自测
-                      </el-button>
-                    </div>
-                  </div>
-                  <pre :class="{ empty: !sample.inputText }">{{ sample.inputText || '无输入' }}</pre>
-                </div>
-                <div>
-                  <div class="sample-header-row">
-                    <h4>输出</h4>
-                    <div class="sample-actions">
-                      <el-button
-                        v-if="sample.expectedOutput"
-                        type="primary"
-                        link
-                        size="small"
-                        :icon="DocumentCopy"
-                        @click="copyText(sample.expectedOutput, '输出已复制')"
-                      >
-                        复制
-                      </el-button>
-                    </div>
-                  </div>
-                  <pre :class="{ empty: !sample.expectedOutput }">{{ sample.expectedOutput || '无输出' }}</pre>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
       </article>
 
@@ -243,10 +193,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Upload, VideoPlay, ArrowLeft, ArrowUp, ArrowDown, Cpu, DocumentCopy, Refresh, Loading, Brush, Monitor, FullScreen, ScaleToOriginal } from '@element-plus/icons-vue'
+import { Upload, ArrowLeft, ArrowUp, ArrowDown, Cpu, Refresh, Loading, Brush, Monitor, FullScreen, ScaleToOriginal } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CodeEditor from '../components/CodeEditor.vue'
-import MarkdownView from '../components/MarkdownView.vue'
+import ProblemStatementContent from '../components/problem/ProblemStatementContent.vue'
 import VerdictTag from '../components/VerdictTag.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
 import {
@@ -264,6 +214,7 @@ import {
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import { useAuthStore } from '../stores/auth'
 import { parseSubmissionUpdate } from '../utils/submissionEvents'
+import { firstProblemSampleInput } from '../utils/problemSamples'
 import type { Language, ProblemDetail, SelfTestResult, SubmissionDetail, SubmissionSummary } from '../types'
 
 const route = useRoute()
@@ -427,12 +378,6 @@ const readerFontFamily = ref(localStorage.getItem('coderushoj.reader.fontFamily'
 const statementMarkdown = computed(() => {
   return problem.value?.description || ''
 })
-const sampleCases = computed(() => {
-  if (!problem.value) {
-    return []
-  }
-  return problem.value.samples
-})
 const selfTestMessage = computed(() => {
   const result = selfTestResult.value
   if (!result) return ''
@@ -512,12 +457,7 @@ async function initProblem() {
     await loadSubmissions()
     clearSelfTest()
 
-    // Auto populate the first sample case input if available
-    if (problem.value?.samples && problem.value.samples.length > 0) {
-      selfTestInput.value = problem.value.samples[0].inputText
-    } else {
-      selfTestInput.value = ''
-    }
+    selfTestInput.value = firstProblemSampleInput(problem.value?.description)
   } catch (error: any) {
     console.error('Failed to initialize problem details', error)
     const errorMsg = error.response?.data?.message || error.message || ''
@@ -738,27 +678,6 @@ async function runCustomTest() {
 function clearSelfTest() {
   selfTestResult.value = null
   selfTestError.value = ''
-}
-
-async function copyText(text: string, successMsg = '复制成功') {
-  try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success(successMsg)
-  } catch (err) {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.style.position = 'fixed'
-    textarea.style.opacity = '0'
-    document.body.appendChild(textarea)
-    textarea.select()
-    try {
-      document.execCommand('copy')
-      ElMessage.success(successMsg)
-    } catch (fallbackErr) {
-      ElMessage.error('复制失败，请手动复制')
-    }
-    document.body.removeChild(textarea)
-  }
 }
 
 function fillSelfTest(text: string) {
@@ -1008,63 +927,6 @@ function templateFor(value: Language) {
 .case-output-grid pre.empty {
   color: var(--el-text-color-placeholder);
   font-style: italic;
-}
-
-.statement-body {
-  line-height: 1.6;
-}
-.statement-body h1, .statement-body h2, .statement-body h3 {
-  color: var(--el-text-color-primary);
-}
-
-.sample-list {
-  margin-top: 24px;
-  border-top: 1px solid var(--el-border-color-light);
-  padding-top: 20px;
-}
-.sample-list h2 {
-  margin: 0 0 16px 0;
-  font-size: 1.25rem;
-}
-.sample-block {
-  margin-bottom: 20px;
-}
-.sample-block h3 {
-  font-size: 0.95rem;
-  margin: 0 0 8px 0;
-  color: var(--el-text-color-regular);
-}
-.sample-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.sample-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-.sample-header-row h4 {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--el-text-color-secondary);
-}
-.sample-actions {
-  display: flex;
-  gap: 8px;
-}
-.sample-grid pre {
-  margin: 0;
-  padding: 12px;
-  border-radius: 6px;
-  background: var(--el-fill-color-light);
-  font-family: monospace;
-  font-size: 0.9rem;
-  white-space: pre-wrap;
-  border: 1px solid var(--el-border-color-light);
-  min-height: 48px;
-  color: var(--el-text-color-primary);
 }
 
 .mini-submissions-panel {

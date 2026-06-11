@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestCaseFileStorageTest {
@@ -43,7 +42,6 @@ public class TestCaseFileStorageTest {
         assertEquals(6, testCases.get(0).inputSize());
         assertEquals(7, testCases.get(0).outputSize());
         assertEquals(50, testCases.get(0).score());
-        assertFalse(testCases.get(0).sample());
 
         assertEquals("2", testCases.get(1).name());
         assertEquals("2.in", testCases.get(1).inputFile());

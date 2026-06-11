@@ -62,14 +62,8 @@ export interface AdminProblemSummary extends ProblemSummary {
   submissionCount: number
 }
 
-export interface SampleCase {
-  inputText: string
-  expectedOutput: string
-}
-
 export interface ProblemDetail extends ProblemSummary {
   description: string
-  samples: SampleCase[]
 }
 
 export interface Submission {
@@ -185,7 +179,6 @@ export interface TestCase {
   expectedOutput?: string
   score: number
   sortOrder?: number
-  sample?: boolean
 }
 
 export interface SmtpSettings {
@@ -256,7 +249,6 @@ export interface ProblemPackageCasePreview {
   inputSize: number
   outputSize: number
   score: number
-  sample: boolean
 }
 
 export interface ProblemPackagePreview {

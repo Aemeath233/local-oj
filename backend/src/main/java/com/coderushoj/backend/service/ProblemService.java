@@ -333,8 +333,7 @@ public class ProblemService {
             String outputFile,
             Long inputSize,
             Long outputSize,
-            Integer score,
-            Boolean sample
+            Integer score
     ) {
     }
 

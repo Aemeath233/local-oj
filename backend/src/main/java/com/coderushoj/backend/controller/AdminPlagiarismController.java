@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -122,21 +124,27 @@ public class AdminPlagiarismController {
             relativePath = "index.html";
         }
 
-        // Prevent Directory Traversal
-        File baseDir = new File(jplagWorkspace, "contest_" + contestId + "/problem_" + problemId + "/report_" + family);
-        File targetFile = new File(baseDir, relativePath);
+        Path basePath = Path.of(jplagWorkspace, "contest_" + contestId, "problem_" + problemId, "report_" + family)
+                .toAbsolutePath()
+                .normalize();
+        Path targetPath = basePath.resolve(relativePath).normalize();
         try {
-            if (!targetFile.exists() || !targetFile.getCanonicalPath().startsWith(baseDir.getCanonicalPath())) {
+            if (!targetPath.startsWith(basePath) || !Files.isRegularFile(targetPath)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
+            Path realBasePath = basePath.toRealPath();
+            Path realTargetPath = targetPath.toRealPath();
+            if (!realTargetPath.startsWith(realBasePath) || !Files.isRegularFile(realTargetPath)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            Resource resource = new FileSystemResource(realTargetPath);
+            return ResponseEntity.ok()
+                    .contentType(getMediaType(realTargetPath.getFileName().toString()))
+                    .body(resource);
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        Resource resource = new FileSystemResource(targetFile);
-        return ResponseEntity.ok()
-                .contentType(getMediaType(targetFile.getName()))
-                .body(resource);
     }
 
     private MediaType getMediaType(String fileName) {

@@ -117,17 +117,25 @@
             <el-tabs v-model="statementTab" class="statement-tabs">
               <el-tab-pane label="编辑 Markdown" name="edit">
                 <el-form-item label="题面 Markdown" label-position="top">
+                  <div class="statement-editor-toolbar">
+                    <el-button size="small" :icon="Plus" @click="insertSampleTemplate">
+                      插入样例模板
+                    </el-button>
+                  </div>
                   <el-input
                     v-model="form.description"
                     type="textarea"
                     :autosize="{ minRows: 14, maxRows: 30 }"
-                    placeholder="在此输入题目的详细描述。支持标准的 Markdown 格式，您可以直接把题目描述、输入格式、输出格式和样例写成一个完整的 Markdown 文档。"
+                    placeholder="在此输入完整题面 Markdown。样例可使用 :::sample 包裹 input/output 代码块，页面会自动识别复制和填入自测。"
                   />
                 </el-form-item>
               </el-tab-pane>
               <el-tab-pane label="实时预览" name="preview">
                 <div class="statement-preview" style="border: 1px solid var(--border-color); padding: 20px; border-radius: 6px; background: var(--bg-muted); min-height: 320px; max-height: 520px; overflow-y: auto;">
-                  <MarkdownView :source="form.description || '*暂无预览内容，请点击编辑标签页输入题面 Markdown。*'" />
+                  <ProblemStatementContent
+                    :source="form.description || '*暂无预览内容，请点击编辑标签页输入题面 Markdown。*'"
+                    :enable-self-test-fill="false"
+                  />
                 </div>
               </el-tab-pane>
             </el-tabs>
@@ -165,7 +173,6 @@
                 <span>输入文件</span>
                 <span>预期输出</span>
                 <span>分数占比</span>
-                <span>样例标记</span>
                 <span>操作</span>
               </div>
               <div v-for="(testCase, index) in form.testCases" :key="index" class="case-row">
@@ -195,7 +202,6 @@
                   · {{ formatSize(testCase.outputSize) }}
                 </span>
                 <el-input-number v-model="testCase.score" :min="0" :max="100" />
-                <el-switch v-model="testCase.sample" active-text="样例" />
                 <el-button :icon="Delete" circle type="danger" plain @click="removeCase(index)" />
               </div>
             </div>
@@ -244,10 +250,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Check, Delete, Upload, InfoFilled, Document, Files, DocumentCopy } from '@element-plus/icons-vue'
+import { Check, Delete, Upload, InfoFilled, Document, Files, DocumentCopy, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
-import MarkdownView from '../components/MarkdownView.vue'
+import ProblemStatementContent from '../components/problem/ProblemStatementContent.vue'
 import {
   createProblem,
   fetchAdminProblem,
@@ -256,6 +262,7 @@ import {
   fetchTestCaseFileContent
 } from '../api/http'
 import { getTagColor } from '../utils/tag'
+import { countProblemSamples } from '../utils/problemSamples'
 import type { CreateProblemPayload } from '../api/http'
 import type { AdminProblemDetail } from '../types'
 
@@ -268,7 +275,6 @@ interface TestCaseForm {
   inputSize: number
   outputSize: number
   score: number
-  sample: boolean
 }
 
 interface ProblemForm {
@@ -387,8 +393,7 @@ onMounted(async () => {
         outputFile: tc.outputFile || '',
         inputSize: tc.inputSize ?? tc.inputText?.length ?? 0,
         outputSize: tc.outputSize ?? tc.expectedOutput?.length ?? 0,
-        score: tc.score,
-        sample: Boolean(tc.sample)
+        score: tc.score
       }))
     } catch (e) {
       ElMessage.error('获取题目详情失败')
@@ -420,8 +425,7 @@ async function onFilesSelected(event: Event) {
         outputFile: testCase.outputFile,
         inputSize: testCase.inputSize,
         outputSize: testCase.outputSize,
-        score: testCase.score,
-        sample: Boolean(testCase.sample)
+        score: testCase.score
       }))
       ElMessage.success(`成功导入 ${cases.length} 个测试点！`)
     } else {
@@ -484,6 +488,13 @@ function buildPayload(): CreateProblemPayload {
 
 function buildEditableStatement(detail: AdminProblemDetail) {
   return detail.problem.description?.trimEnd() || ''
+}
+
+function insertSampleTemplate() {
+  const nextIndex = countProblemSamples(form.description) + 1
+  const snippet = `\n\n## 样例 ${nextIndex}\n\n:::sample\n\`\`\`input\n\n\`\`\`\n\n\`\`\`output\n\n\`\`\`\n:::\n\n## 样例说明 ${nextIndex}\n\n`
+  form.description = (form.description || '').trimEnd() + snippet
+  statementTab.value = 'edit'
 }
 
 function formatSize(bytes?: number) {
@@ -623,6 +634,13 @@ function removeTag(tag: string) {
   color: var(--text-primary);
 }
 
+.statement-editor-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
 .case-table {
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -631,7 +649,7 @@ function removeTag(tag: string) {
 
 .case-row {
   display: grid;
-  grid-template-columns: 140px minmax(120px, 1fr) minmax(120px, 1fr) 140px 100px 60px;
+  grid-template-columns: 140px minmax(120px, 1fr) minmax(120px, 1fr) 140px 60px;
   align-items: center;
   gap: 12px;
   padding: 10px 16px;

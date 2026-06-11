@@ -58,8 +58,7 @@ public class ProblemPackageImportService {
                     importedCase.outputFile(),
                     importedCase.inputSize(),
                     importedCase.outputSize(),
-                    analysis.scores().getOrDefault(importedCase.name(), 0),
-                    analysis.config().samples().contains(importedCase.name())
+                    analysis.scores().getOrDefault(importedCase.name(), 0)
             ));
         }
 
@@ -85,8 +84,7 @@ public class ProblemPackageImportService {
                         pairedCase.output().simpleName(),
                         (long) pairedCase.input().bytes().length,
                         (long) pairedCase.output().bytes().length,
-                        analysis.scores().getOrDefault(pairedCase.name(), 0),
-                        analysis.config().samples().contains(pairedCase.name())
+                        analysis.scores().getOrDefault(pairedCase.name(), 0)
                 ))
                 .toList();
         return new PackagePreview(
@@ -128,7 +126,6 @@ public class ProblemPackageImportService {
 
         Set<String> importedCaseNames = new HashSet<>();
         pairedCases.forEach(pairedCase -> importedCaseNames.add(pairedCase.name()));
-        validateKnownNames(config.samples(), importedCaseNames, "samples");
         Map<String, Integer> resolvedScores = resolveScores(pairedCases.stream().map(PairedCase::name).toList(), config.scores(), importedCaseNames);
         boolean slugGenerated = config.slug().isBlank();
         String resolvedSlug = slugGenerated ? generatedSlug(originalFilename, config.title()) : config.slug();
@@ -368,39 +365,6 @@ public class ProblemPackageImportService {
         };
     }
 
-    private static Set<String> getYamlListOrSet(Map<String, Object> data, List<String> keys) {
-        Object val = null;
-        for (String key : keys) {
-            val = data.get(canonicalKey(key));
-            if (val != null) {
-                break;
-            }
-        }
-        Set<String> result = new HashSet<>();
-        if (val == null) {
-            return result;
-        }
-        if (val instanceof List<?> list) {
-            for (Object obj : list) {
-                if (obj != null) {
-                    String str = obj.toString().trim();
-                    if (!str.isEmpty()) {
-                        result.add(str);
-                    }
-                }
-            }
-            return result;
-        }
-        // Fallback to comma separated string parsing
-        for (String part : val.toString().replace(';', ',').split(",")) {
-            String name = part.trim();
-            if (!name.isEmpty()) {
-                result.add(name);
-            }
-        }
-        return result;
-    }
-
     private static Map<String, Integer> getYamlScores(Map<String, Object> data, String key) {
         Object val = data.get(canonicalKey(key));
         Map<String, Integer> scores = new HashMap<>();
@@ -476,9 +440,6 @@ public class ProblemPackageImportService {
         int memoryLimitKb = getYamlInt(canonicalData, List.of("memorylimitkb", "memorylimit"), 262144, 16384, "memoryLimitKb");
         boolean visible = getYamlBoolean(canonicalData, "visible", true);
 
-        // Handle samples: could be a string or a list!
-        Set<String> samples = getYamlListOrSet(canonicalData, List.of("samples", "samplecases"));
-
         // Handle scores: could be a string or a map!
         Map<String, Integer> scores = getYamlScores(canonicalData, "scores");
 
@@ -490,7 +451,6 @@ public class ProblemPackageImportService {
                 timeLimitMs,
                 memoryLimitKb,
                 visible,
-                samples,
                 scores
         );
     }
@@ -523,19 +483,12 @@ public class ProblemPackageImportService {
         if (analysis.slugGenerated()) {
             warnings.add("config 中未填写 slug，导入时会自动生成唯一 slug。");
         }
-        if (analysis.config().samples().isEmpty()) {
-            warnings.add("config 中未填写 samples，题目详情页不会自动展示样例。");
-        }
         if (analysis.config().scores().isEmpty()) {
             warnings.add("config 中未填写 scores，系统会把 100 分平均分配给所有测试点。");
         }
         int ignoredCaseFiles = analysis.caseFiles().size() - cases.size() * 2;
         if (ignoredCaseFiles > 0) {
             warnings.add("有 " + ignoredCaseFiles + " 个测试数据文件没有同名配对，导入时会被忽略。");
-        }
-        long sampleCount = cases.stream().filter(PackageCasePreview::sample).count();
-        if (sampleCount > 3) {
-            warnings.add("当前标记了 " + sampleCount + " 个样例，前台题面可能会显得偏长。");
         }
         return warnings;
     }
@@ -589,20 +542,6 @@ public class ProblemPackageImportService {
         return scores;
     }
 
-    private static Set<String> splitNames(String value) {
-        Set<String> names = new HashSet<>();
-        if (value == null || value.isBlank()) {
-            return names;
-        }
-        for (String part : value.replace(';', ',').split(",")) {
-            String name = cleanValue(part);
-            if (!name.isBlank()) {
-                names.add(name);
-            }
-        }
-        return names;
-    }
-
     private static int parseInteger(String value, int defaultValue, int min, String label) {
         if (value == null || value.isBlank()) {
             return defaultValue;
@@ -616,17 +555,6 @@ public class ProblemPackageImportService {
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(label + " 必须是整数");
         }
-    }
-
-    private static boolean parseBoolean(String value, boolean defaultValue) {
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-        return switch (value.trim().toLowerCase(Locale.ROOT)) {
-            case "true", "yes", "1", "on", "visible", "可见" -> true;
-            case "false", "no", "0", "off", "hidden", "隐藏" -> false;
-            default -> throw new IllegalArgumentException("visible 必须是 true/false");
-        };
     }
 
     private static String generatedSlug(String originalFilename, String title) {
@@ -690,34 +618,12 @@ public class ProblemPackageImportService {
                 || lower.endsWith(".statement.md");
     }
 
-    private static String value(Map<String, String> values, String... keys) {
-        for (String key : keys) {
-            String value = values.get(canonicalKey(key));
-            if (value != null) {
-                return value;
-            }
-        }
-        return "";
-    }
-
     private static String defaultValue(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value;
     }
 
     private static String canonicalKey(String value) {
         return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[\\s_-]", "");
-    }
-
-    private static String cleanValue(String value) {
-        String cleaned = value == null ? "" : value.trim();
-        if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
-            cleaned = cleaned.substring(1, cleaned.length() - 1).trim();
-        }
-        if ((cleaned.startsWith("\"") && cleaned.endsWith("\""))
-                || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-            cleaned = cleaned.substring(1, cleaned.length() - 1);
-        }
-        return cleaned.trim();
     }
 
     private record PackageEntry(String path, String simpleName, byte[] bytes) {
@@ -763,8 +669,7 @@ public class ProblemPackageImportService {
             String outputFile,
             Long inputSize,
             Long outputSize,
-            Integer score,
-            Boolean sample
+            Integer score
     ) {
     }
 
@@ -794,7 +699,6 @@ public class ProblemPackageImportService {
             Integer timeLimitMs,
             Integer memoryLimitKb,
             Boolean visible,
-            Set<String> samples,
             Map<String, Integer> scores
     ) {
     }

@@ -4,10 +4,8 @@ import com.coderushoj.backend.api.ApiResponse;
 import com.coderushoj.backend.security.CurrentUser;
 import com.coderushoj.backend.security.SecurityUtils;
 import com.coderushoj.backend.service.ProblemService;
-import com.coderushoj.backend.service.TestCaseFileStorage;
 import com.coderushoj.common.enums.Role;
 import com.coderushoj.common.model.Problem;
-import com.coderushoj.common.model.TestCase;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,11 +24,9 @@ import java.util.Map;
 @RequestMapping("/api/problems")
 public class ProblemController {
     private final ProblemService problemService;
-    private final TestCaseFileStorage testCaseFileStorage;
 
-    public ProblemController(ProblemService problemService, TestCaseFileStorage testCaseFileStorage) {
+    public ProblemController(ProblemService problemService) {
         this.problemService = problemService;
-        this.testCaseFileStorage = testCaseFileStorage;
     }
 
     @GetMapping
@@ -110,15 +106,12 @@ public class ProblemController {
                     .build();
         }
 
-        List<TestCase> samples = problemService.testCases(id).stream()
-                .filter(testCase -> Boolean.TRUE.equals(testCase.getSample()))
-                .toList();
         Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(List.of(id));
         ProblemService.SubmissionStats pStats = stats.getOrDefault(id, new ProblemService.SubmissionStats(0, 0));
         return ResponseEntity.ok()
                 .eTag(etag)
                 .cacheControl(CacheControl.noCache())
-                .body(ApiResponse.ok(ProblemDetail.from(problem, samples, testCaseFileStorage, solveStatus, pStats)));
+                .body(ApiResponse.ok(ProblemDetail.from(problem, solveStatus, pStats)));
     }
 
     public record ProblemSummary(
@@ -158,12 +151,11 @@ public class ProblemController {
             Integer memoryLimitKb,
             String difficulty,
             String tags,
-            List<SampleCase> samples,
             String solveStatus,
             Integer acceptedCount,
             Integer submitCount
     ) {
-        static ProblemDetail from(Problem problem, List<TestCase> samples, TestCaseFileStorage testCaseFileStorage, String solveStatus, ProblemService.SubmissionStats stats) {
+        static ProblemDetail from(Problem problem, String solveStatus, ProblemService.SubmissionStats stats) {
             return new ProblemDetail(
                     problem.getId(),
                     problem.getSlug(),
@@ -173,17 +165,10 @@ public class ProblemController {
                     problem.getMemoryLimitKb(),
                     problem.getDifficulty(),
                     problem.getTags(),
-                    samples.stream().map(testCase -> SampleCase.from(testCase, testCaseFileStorage)).toList(),
                     solveStatus,
                     stats.acceptedCount(),
                     stats.submitCount()
             );
-        }
-    }
-
-    public record SampleCase(String inputText, String expectedOutput) {
-        static SampleCase from(TestCase testCase, TestCaseFileStorage testCaseFileStorage) {
-            return new SampleCase(testCaseFileStorage.readInput(testCase), testCaseFileStorage.readExpectedOutput(testCase));
         }
     }
 

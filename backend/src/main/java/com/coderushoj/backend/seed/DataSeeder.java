@@ -1,6 +1,8 @@
 package com.coderushoj.backend.seed;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.coderushoj.backend.service.ProblemService;
+import com.coderushoj.backend.service.TestCaseFileStorage;
 import com.coderushoj.common.enums.Role;
 import com.coderushoj.common.mapper.ProblemMapper;
 import com.coderushoj.common.mapper.TestCaseMapper;
@@ -14,12 +16,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
     private final UserMapper userMapper;
     private final ProblemMapper problemMapper;
     private final TestCaseMapper testCaseMapper;
+    private final TestCaseFileStorage testCaseFileStorage;
     private final PasswordEncoder passwordEncoder;
     private final String adminUsername;
     private final String adminPassword;
@@ -28,6 +32,7 @@ public class DataSeeder implements CommandLineRunner {
             UserMapper userMapper,
             ProblemMapper problemMapper,
             TestCaseMapper testCaseMapper,
+            TestCaseFileStorage testCaseFileStorage,
             PasswordEncoder passwordEncoder,
             @Value("${app.admin.username}") String adminUsername,
             @Value("${app.admin.password}") String adminPassword
@@ -35,6 +40,7 @@ public class DataSeeder implements CommandLineRunner {
         this.userMapper = userMapper;
         this.problemMapper = problemMapper;
         this.testCaseMapper = testCaseMapper;
+        this.testCaseFileStorage = testCaseFileStorage;
         this.passwordEncoder = passwordEncoder;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
@@ -88,15 +94,27 @@ public class DataSeeder implements CommandLineRunner {
 
                 Print one integer: `a + b`.
 
+                ## Sample 1
+
+                :::sample
+                ```input
+                1 2
+                ```
+
+                ```output
+                3
+                ```
+                :::
+
+                ## Sample Explanation 1
+
+                $1 + 2 = 3$.
+
                 ## Constraints
 
                 - `-10^9 <= a, b <= 10^9`
                 - Use 64-bit integer arithmetic if needed.
                 """);
-        problem.setInputDescription(null);
-        problem.setOutputDescription(null);
-        problem.setSampleInput(null);
-        problem.setSampleOutput(null);
         problem.setTimeLimitMs(1000);
         problem.setMemoryLimitKb(262144);
         problem.setDifficulty("Easy");
@@ -106,19 +124,27 @@ public class DataSeeder implements CommandLineRunner {
         problem.setUpdatedAt(now);
         problemMapper.insert(problem);
 
-        insertCase(problem.getId(), "1 2\n", "3\n", 50, 1, true, now);
-        insertCase(problem.getId(), "100 -7\n", "93\n", 50, 2, false, now);
+        insertCases(problem.getId(), now);
     }
 
-    private void insertCase(Long problemId, String input, String output, Integer score, Integer order, Boolean sample, LocalDateTime now) {
-        TestCase testCase = new TestCase();
-        testCase.setProblemId(problemId);
-        testCase.setInputText(input);
-        testCase.setExpectedOutput(output);
-        testCase.setScore(score);
-        testCase.setSortOrder(order);
-        testCase.setSample(sample);
-        testCase.setCreatedAt(now);
-        testCaseMapper.insert(testCase);
+    private void insertCases(Long problemId, LocalDateTime now) {
+        List<TestCaseFileStorage.ImportedCase> importedCases = testCaseFileStorage.saveTextCases(List.of(
+                new TestCaseFileStorage.TestCaseText("1 2\n", "3\n", 50),
+                new TestCaseFileStorage.TestCaseText("100 -7\n", "93\n", 50)
+        ));
+        List<ProblemService.TestCaseCommand> commands = importedCases.stream()
+                .map(testCase -> new ProblemService.TestCaseCommand(
+                        testCase.uploadToken(),
+                        testCase.name(),
+                        testCase.inputFile(),
+                        testCase.outputFile(),
+                        testCase.inputSize(),
+                        testCase.outputSize(),
+                        testCase.score()
+                ))
+                .toList();
+        for (TestCase testCase : testCaseFileStorage.materializeCases(problemId, commands, now)) {
+            testCaseMapper.insert(testCase);
+        }
     }
 }

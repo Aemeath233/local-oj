@@ -51,7 +51,7 @@ python start.py
 
 ### 2.3 手动单独运行（可选）
 如果你希望使用 IDE (如 IntelliJ IDEA 或 VS Code) 单独断点调试后端或前端，可以这样手工运行：
-* **沙箱服务**：直接运行 `scratch/bin/go-judge -addr :5050`
+* **沙箱服务**：直接运行 `scratch/bin/go-judge -http-addr :5050`
 * **后端 API**：在根目录下运行 `.\mvnw.cmd -pl backend -am spring-boot:run` 或在 IDEA 中运行 `BackendApplication.java`。
 * **判题 Worker**：在根目录下运行 `.\mvnw.cmd -pl judge-worker -am spring-boot:run` 或在 IDEA 中运行 `JudgeWorkerApplication.java`。
 * **前端开发**：`cd frontend && npm install && npm run dev`

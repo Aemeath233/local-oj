@@ -20,7 +20,6 @@ public class TestCase {
     private String expectedOutput;
     private Integer score;
     private Integer sortOrder;
-    private Boolean sample;
     private LocalDateTime createdAt;
 
     public Long getId() {
@@ -109,14 +108,6 @@ public class TestCase {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
-    }
-
-    public Boolean getSample() {
-        return sample;
-    }
-
-    public void setSample(Boolean sample) {
-        this.sample = sample;
     }
 
     public LocalDateTime getCreatedAt() {

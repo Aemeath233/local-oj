@@ -1,299 +1,229 @@
-# Linux 原生部署指南 (Nginx + Systemd + Native Services)
+# Linux 原生部署指南
 
-本文档介绍将 CodeRush OJ 局域网评测系统原生部署到 Linux 服务器上的方法（支持一键脚本自动部署与手动分步部署，以 Ubuntu 22.04 LTS / Debian 12 为例）。
+本文档面向“Windows 开发、Linux 部署”的生产/内网服务器场景。推荐使用项目根目录的 `deploy.sh`，它会完成依赖安装、配置生成、数据库初始化、编译发布、Systemd 托管、Nginx 反向代理、备份和回滚。
 
----
-
-## ⚡ 极速一键部署 (推荐)
-
-我们在项目根目录下提供了一键部署脚本 `deploy.sh`。该脚本会自动完成依赖检测、代码编译、服务发布、Systemd 托管以及 Nginx 反向代理配置。
-
-### 运行一键部署
-在您的 Linux 服务器上，克隆仓库并执行以下命令：
-```bash
-sudo ./deploy.sh
-```
-按照命令行提示，输入您的数据库账号密码、设置管理员密码、设置外网IP即可。
-
-> [!TIP]
-> 部署脚本执行成功后，您可以使用以下命令诊断状态：
-> * **后端日志**: `journalctl -u coderushoj-backend -f`
-> * **评测日志**: `journalctl -u coderushoj-worker -f`
-> * **沙箱日志**: `journalctl -u go-judge -f`
+支持环境以 Ubuntu 22.04/24.04、Debian 12 这类 apt 系 Linux 为主。其他发行版也可以部署，但系统依赖需要手工安装。
 
 ---
 
-## 1. 系统要求与环境依赖
+## 1. 首次一键部署
 
-在部署前，请确保您的服务器已安装并配置好以下基础软件环境。
+在 Linux 服务器上执行：
 
-### 1.1 基础环境与工具链
 ```bash
-sudo apt update
-sudo apt install -y git build-essential gcc g++ python3 openjdk-21-jdk curl unzip
+git clone <repository-url> coderush_oj
+cd coderush_oj
+chmod +x deploy.sh
+sudo ./deploy.sh install
 ```
 
-### 1.2 数据库与中间件
+脚本会提示你确认或填写：
+
+- 站点访问地址，例如 `http://192.168.1.10` 或 `https://oj.example.com`
+- MySQL 地址、库名、应用账号和密码
+- 初始超级管理员账号和密码
+- 允许跨域访问的前端地址
+
+首次安装完成后，浏览器访问服务器 IP 或域名即可进入系统。
+
+初始管理员信息会保存在：
+
 ```bash
-sudo apt install -y mysql-server redis-server nginx
-# 启动服务并设置开机自启
-sudo systemctl enable --now mysql redis-server nginx
+/opt/coderush_oj/initial-admin.txt
+```
+
+记录好账号密码后，建议删除这个文件：
+
+```bash
+sudo rm /opt/coderush_oj/initial-admin.txt
 ```
 
 ---
 
-## 2. 数据库配置
+## 2. 后续更新
 
-1. 登录 MySQL 控制台：
-   ```bash
-   sudo mysql -u root
-   ```
-2. 创建数据库及专用用户，并配置权限：
-   ```sql
-   CREATE DATABASE coderush_oj CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   
-   -- 创建 coderushoj 用户，密码以 'coderushoj_pass' 为例，请修改为强密码
-   CREATE USER 'coderushoj'@'localhost' IDENTIFIED BY 'coderushoj_pass';
-   GRANT ALL PRIVILEGES ON coderush_oj.* TO 'coderushoj'@'localhost';
-   FLUSH PRIVILEGES;
-   EXIT;
-   ```
+从 GitHub 拉取最新代码、重新构建并重启服务：
 
----
-
-## 3. 安装并部署 go-judge 沙箱
-
-`go-judge` 在 Linux 上直接运行，可以无缝使用内核的 `cgroups` 和 `namespaces` 实现极其安全的强沙箱隔离。
-
-1. **下载并存放二进制文件**：
-   ```bash
-   sudo mkdir -p /opt/go-judge
-   cd /opt/go-judge
-   # 下载 v1.12.0 Linux 版
-   sudo wget https://github.com/criyle/go-judge/releases/download/v1.12.0/go-judge_1.12.0_linux_amd64v2.tar.gz
-   sudo tar -zxvf go-judge_1.12.0_linux_amd64v2.tar.gz
-   sudo mv go-judge_1.12.0_linux_amd64v2 go-judge
-   sudo chmod +x go-judge
-   sudo rm go-judge_1.12.0_linux_amd64v2.tar.gz
-   ```
-
-2. **编写 Systemd 服务配置文件**：
-   创建 `/etc/systemd/system/go-judge.service` 并写入：
-   ```ini
-   [Unit]
-   Description=Go-Judge Sandbox Service
-   After=network.target
-   
-   [Service]
-   Type=simple
-   # 注意：Linux 原生沙箱限额必须使用 root 或具备 CAP_SYS_ADMIN 权限运行
-   User=root
-   WorkingDirectory=/opt/go-judge
-   ExecStart=/opt/go-judge/go-judge -addr :5050
-   Restart=always
-   RestartSec=5
-   LimitNOFILE=65535
-   
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-3. **启动沙箱服务**：
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable --now go-judge
-   # 验证状态
-   sudo systemctl status go-judge
-   ```
-
----
-
-## 4. 后端与 Worker 原生部署
-
-### 4.1 在本地编译 Jar 包并上传
-在开发机上（或在服务器上装有 Maven），在项目根目录下编译打包：
 ```bash
-./mvnw clean package -Dmaven.test.skip=true
+cd coderush_oj
+sudo ./deploy.sh update
 ```
-编译产物位置：
-* 后端 API: `backend/target/backend-0.0.1-SNAPSHOT.jar`
-* 判题 Worker: `judge-worker/target/judge-worker-0.0.1-SNAPSHOT.jar`
 
-上传这两个 jar 文件到服务器的部署目录（如 `/opt/coderush_oj`）。
+`update` 会尽量执行 `git pull --ff-only`。如果服务器仓库里存在本地改动，脚本会跳过拉取，直接用当前代码构建，避免覆盖现场改动。
 
-### 4.2 准备生产配置环境 `.env`
-在 `/opt/coderush_oj` 目录下，新建 `.env` 文件，内容如下：
+如果你已经手动拉好了代码，只想部署当前工作区：
+
+```bash
+sudo ./deploy.sh deploy
+```
+
+更新前建议先做一次备份：
+
+```bash
+sudo ./deploy.sh backup
+```
+
+数据库结构变更由 Flyway 在后端启动时自动迁移。
+
+---
+
+## 3. 常用运维命令
+
+查看服务状态：
+
+```bash
+sudo ./deploy.sh status
+```
+
+查看日志：
+
+```bash
+sudo ./deploy.sh logs backend
+sudo ./deploy.sh logs worker
+sudo ./deploy.sh logs sandbox
+sudo ./deploy.sh logs nginx
+sudo ./deploy.sh logs all
+```
+
+重启全部服务：
+
+```bash
+sudo ./deploy.sh restart
+```
+
+检查依赖与健康状态：
+
+```bash
+sudo ./deploy.sh doctor
+```
+
+创建备份：
+
+```bash
+sudo ./deploy.sh backup
+```
+
+回滚到上一个程序版本：
+
+```bash
+sudo ./deploy.sh rollback
+```
+
+---
+
+## 4. 目录约定
+
+脚本默认使用以下路径：
+
+| 路径 | 说明 |
+|------|------|
+| `/opt/coderush_oj` | 后端 jar、Worker jar、生产配置、历史发布版本 |
+| `/opt/coderush_oj/.env` | 生产环境配置，后续更新会保留 |
+| `/opt/coderush_oj/releases` | 每次发布前保存的上一版程序文件 |
+| `/var/lib/coderush_oj` | 测试数据、日志、查重工作区等运行时数据 |
+| `/var/www/coderush_oj` | 前端静态文件 |
+| `/var/backups/coderush_oj` | 数据库与运行时数据备份 |
+| `/opt/go-judge` | go-judge 沙箱二进制文件 |
+
+可以通过环境变量覆盖默认路径：
+
+```bash
+sudo INSTALL_DIR=/srv/coderush_oj DATA_DIR=/data/coderush_oj ./deploy.sh install
+```
+
+---
+
+## 5. 脚本会安装和管理什么
+
+首次安装时，脚本会自动处理：
+
+- Java 21 JDK、Node.js 20+、npm、Git、GCC/G++、Python3、PyPy3
+- MySQL、Redis、Nginx
+- go-judge v1.12.0，并以 `-http-addr :5050` 运行
+- `coderushoj-backend`、`coderushoj-worker`、`go-judge` 三个 Systemd 服务
+- Nginx 站点配置，前端静态资源走 `/`，后端 API 走 `/api/`
+
+脚本会创建系统用户 `coderushoj` 来运行后端和 Worker。go-judge 需要 Linux 沙箱能力，默认以 root 运行。
+
+---
+
+## 6. 生产配置
+
+生产配置位于：
+
+```bash
+/opt/coderush_oj/.env
+```
+
+常用配置项：
+
 ```properties
-# 数据库与中间件
 DB_URL=jdbc:mysql://localhost:3306/coderush_oj?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
 DB_USERNAME=coderushoj
-DB_PASSWORD=coderushoj_pass
+DB_PASSWORD=your_db_password
 REDIS_HOST=localhost
 REDIS_PORT=6379
-
-# 运行端口
 SERVER_PORT=8080
-FRONTEND_PORT=5173
-
-# 沙箱连接
 GO_JUDGE_BASE_URL=http://localhost:5050
-GO_JUDGE_CONNECT_TIMEOUT_MS=5000
-GO_JUDGE_READ_TIMEOUT_MS=300000
-
-# 数据及日志存储路径
 APP_DATA_ROOT=/var/lib/coderush_oj
-
-# 安全与授权
 SPRING_PROFILES_ACTIVE=prod
-# 请使用强随机生成的 JWT 密钥
-JWT_SECRET=e78f902ac793d56b08fc29712a4df872f232490bca87932c028ea78f89e2182c
+JWT_SECRET=replace_with_a_long_random_secret
 JWT_TTL_MINUTES=10080
-
-# 初始超级管理员账号
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your_secure_admin_password
-
-# 跨域配置 (这里写前端能访问到的所有外网/内网 IP 或域名)
-CORS_ALLOWED_ORIGINS=http://your-server-ip:5173,http://localhost:5173
+ADMIN_PASSWORD=replace_with_initial_admin_password
+CORS_ALLOWED_ORIGINS=http://your-server-ip
 CONTEST_VISIBILITY_RELEASE_DELAY_MS=60000
+JPLAG_JAR_PATH=/var/lib/coderush_oj/bin/jplag.jar
+JPLAG_WORKSPACE=/var/lib/coderush_oj/plagiarism
 ```
-创建数据及日志存放目录：
+
+更新时不会覆盖 `.env`。如果你修改了数据库、域名、跨域地址或数据目录，改完后重启服务：
+
 ```bash
-sudo mkdir -p /var/lib/coderush_oj
-sudo chmod 700 /var/lib/coderush_oj
+sudo ./deploy.sh restart
 ```
-
-### 4.3 配置后端服务的 Systemd 托管
-
-1. **后端 API 服务**：
-   创建 `/etc/systemd/system/coderushoj-backend.service`：
-   ```ini
-   [Unit]
-   Description=CodeRush OJ Backend Service
-   After=network.target mysql.service redis-server.service
-   
-   [Service]
-   Type=simple
-   User=root
-   WorkingDirectory=/opt/coderush_oj
-   # 载入环境变量
-   EnvironmentFile=/opt/coderush_oj/.env
-   ExecStart=/usr/bin/java -jar /opt/coderush_oj/backend-0.0.1-SNAPSHOT.jar
-   Restart=always
-   RestartSec=5
-   StandardOutput=syslog
-   StandardError=syslog
-   SyslogIdentifier=oj-backend
-   
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-2. **判题 Worker 服务**：
-   创建 `/etc/systemd/system/coderushoj-worker.service`：
-   ```ini
-   [Unit]
-   Description=CodeRush OJ Judge Worker Service
-   After=network.target mysql.service redis-server.service go-judge.service
-   
-   [Service]
-   Type=simple
-   User=root
-   WorkingDirectory=/opt/coderush_oj
-   EnvironmentFile=/opt/coderush_oj/.env
-   ExecStart=/usr/bin/java -jar /opt/coderush_oj/judge-worker-0.0.1-SNAPSHOT.jar
-   Restart=always
-   RestartSec=5
-   StandardOutput=syslog
-   StandardError=syslog
-   SyslogIdentifier=oj-worker
-   
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-3. **启动并使能服务**：
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable --now coderushoj-backend coderushoj-worker
-   # 检查状态
-   sudo systemctl status coderushoj-backend
-   sudo systemctl status coderushoj-worker
-   ```
 
 ---
 
-## 5. 前端编译与 Nginx 配置
+## 7. 备份与回滚
 
-### 5.1 本地打包并上传
-在开发机或本地机器的 `frontend` 目录下进行生产打包：
+创建备份：
+
 ```bash
-cd frontend
-npm install
-npm run build
+sudo ./deploy.sh backup
 ```
-打包后生成的 `frontend/dist` 文件夹，将它整体上传到服务器路径 `/var/www/coderush_oj`。
 
-### 5.2 配置 Nginx
-1. 编辑 Nginx 默认站点配置文件（通常位于 `/etc/nginx/sites-available/default`）：
-   ```nginx
-   server {
-       listen 80;
-       server_name _;
-       client_max_body_size 256M;
-   
-       # 指向上传的前端 dist 静态资源目录
-       root /var/www/coderush_oj;
-       index index.html;
-   
-       # Gzip 压缩配置
-       gzip on;
-       gzip_min_length 1024;
-       gzip_buffers 4 16k;
-       gzip_comp_level 6;
-       gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
-       gzip_vary on;
-   
-       # 静态资源缓存控制
-       location ~* \.(?:css|js|woff2?|svg|gif|png|jpe?g|ico|webp)$ {
-           expires 1y;
-           add_header Cache-Control "public, no-transform";
-       }
-   
-       # 判题 SSE 结果实时推送通道（反向代理）
-       location /api/submissions/live {
-           proxy_pass http://localhost:8080/api/submissions/live;
-           proxy_http_version 1.1;
-           proxy_set_header Connection "";
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-           proxy_buffering off;
-           proxy_cache off;
-           proxy_read_timeout 1h;
-           add_header X-Accel-Buffering no;
-       }
-   
-       # 业务 API 反向代理
-       location /api/ {
-           proxy_pass http://localhost:8080/api/;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-       }
-   
-       # 解决 SPA 页面路由刷新 404 问题
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
-   }
-   ```
-2. 测试并重新载入 Nginx 配置：
-   ```bash
-   sudo nginx -t
-   sudo systemctl restart nginx
-   ```
+备份会写入 `/var/backups/coderush_oj/<timestamp>/`，包含：
 
-现在，您可以通过 Linux 服务器的公网或局域网 IP 直接在浏览器中访问您的在线评测系统了！
+- `db.sql`：MySQL 数据库导出
+- `data.tar.gz`：运行时数据目录压缩包
+
+程序回滚：
+
+```bash
+sudo ./deploy.sh rollback
+```
+
+回滚只恢复上一版 jar 和前端静态文件，不会回滚数据库结构和业务数据。因此大版本升级前，仍然建议先执行 `backup`。
+
+---
+
+## 8. 网络与安全建议
+
+- 内网部署时，确认学生端能访问服务器 80 端口。
+- 公网部署时，建议额外配置 HTTPS，可以使用 Nginx + Certbot 或放在已有网关之后。
+- 首次登录后立即修改超级管理员密码。
+- 不要把 `/opt/coderush_oj/.env` 和 `/opt/coderush_oj/initial-admin.txt` 上传到 Git。
+- 如果使用远程 MySQL，请先在数据库侧创建账号并开放网络访问，脚本会跳过远程数据库自动建库。
+
+---
+
+## 9. 手动部署提示
+
+正常情况下不需要手动部署。若你要自定义部署平台，可以参考 `deploy.sh` 中的 Systemd 与 Nginx 模板。关键约定如下：
+
+- 后端服务监听 `127.0.0.1:8080`
+- go-judge 监听 `127.0.0.1:5050`
+- go-judge v1.12 使用参数 `-http-addr :5050`
+- 前端生产产物来自 `frontend/dist`
+- 后端和 Worker 需要读取同一份生产 `.env`

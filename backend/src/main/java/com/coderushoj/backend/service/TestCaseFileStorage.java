@@ -112,8 +112,7 @@ public class TestCaseFileStorage {
                         outputFile,
                         inputSize,
                         outputSize,
-                        distributedScore(caseIndex, pairedNames.size()),
-                        false
+                        distributedScore(caseIndex, pairedNames.size())
                 ));
                 caseIndex++;
             }
@@ -173,7 +172,6 @@ public class TestCaseFileStorage {
                 testCase.setExpectedOutput(null);
                 testCase.setScore(command.score() == null ? 100 : command.score());
                 testCase.setSortOrder(index);
-                testCase.setSample(Boolean.TRUE.equals(command.sample()));
                 testCase.setCreatedAt(now);
                 testCases.add(testCase);
                 index++;
@@ -438,8 +436,7 @@ public class TestCaseFileStorage {
             String outputFile,
             long inputSize,
             long outputSize,
-            int score,
-            boolean sample
+            int score
     ) {
     }
 
@@ -472,8 +469,7 @@ public class TestCaseFileStorage {
     public record TestCaseText(
             String inputText,
             String expectedOutput,
-            Integer score,
-            Boolean sample
+            Integer score
     ) {
     }
 
@@ -502,8 +498,7 @@ public class TestCaseFileStorage {
                         outputFile,
                         Files.size(inputPath),
                         Files.size(outputPath),
-                        caseText.score() == null ? distributedScore(index - 1, cases.size()) : caseText.score(),
-                        Boolean.TRUE.equals(caseText.sample())
+                        caseText.score() == null ? distributedScore(index - 1, cases.size()) : caseText.score()
                 ));
                 index++;
             }
