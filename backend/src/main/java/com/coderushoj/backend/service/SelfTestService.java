@@ -1,8 +1,8 @@
 package com.coderushoj.backend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.coderushoj.backend.gojudge.GoJudgeClient;
-import com.coderushoj.backend.gojudge.GoJudgeResult;
+import com.coderushoj.common.gojudge.GoJudgeClient;
+import com.coderushoj.common.gojudge.GoJudgeResult;
 import com.coderushoj.backend.security.CurrentUser;
 import com.coderushoj.common.enums.Language;
 import com.coderushoj.common.enums.Role;

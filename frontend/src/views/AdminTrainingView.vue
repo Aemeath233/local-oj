@@ -298,7 +298,8 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
 import MarkdownView from '../components/MarkdownView.vue'
-import { http, fetchAdminProblems, importProblemPackage } from '../api/http'
+import { http } from '../api/base'
+import { fetchAdminProblems, importProblemPackage } from '../api/admin'
 import { getTagColor } from '../utils/tag'
 
 const props = defineProps<{

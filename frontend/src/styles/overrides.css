@@ -1,0 +1,219 @@
+/* Element Plus Dark Mode UX Overrides */
+html.dark .el-button--primary:not(.is-link):not(.is-text) {
+  --el-button-bg-color: var(--primary) !important;
+  --el-button-hover-bg-color: var(--primary-hover) !important;
+  --el-button-active-bg-color: var(--primary-dark) !important;
+  --el-button-border-color: var(--primary) !important;
+  --el-button-hover-border-color: var(--primary-hover) !important;
+  --el-button-active-border-color: var(--primary-dark) !important;
+  --el-button-text-color: #ffffff !important;
+  --el-button-hover-text-color: #ffffff !important;
+  --el-button-active-text-color: #ffffff !important;
+}
+html.dark .el-button--primary:not(.is-link):not(.is-text) i,
+html.dark .el-button--primary:not(.is-link):not(.is-text) span,
+html.dark .el-button--primary:not(.is-link):not(.is-text) .el-icon {
+  color: #09090b !important;
+}
+html.dark .el-button--primary.is-disabled {
+  opacity: 0.5 !important;
+  --el-button-text-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html.dark .el-switch {
+  --el-switch-on-color: var(--success) !important;
+  --el-switch-off-color: var(--bg-muted) !important;
+  --el-switch-border-color: var(--border-color) !important;
+}
+html.dark .el-switch__core {
+  background: var(--bg-muted) !important;
+  border-color: var(--border-color) !important;
+}
+html.dark .el-switch.is-checked .el-switch__core {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+}
+
+html.dark .el-segmented {
+  --el-segmented-item-selected-color: #09090b !important;
+}
+
+html.dark .el-pagination.is-background .el-pager li.is-active {
+  color: #09090b !important;
+}
+
+/* Difficulty Badges Dark Mode Overrides */
+html.dark .difficulty-badge.easy {
+  background-color: rgba(56, 189, 248, 0.08) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
+}
+html.dark .difficulty-badge.medium {
+  background-color: rgba(251, 191, 36, 0.08) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(251, 191, 36, 0.2) !important;
+}
+html.dark .difficulty-badge.hard {
+  background-color: rgba(244, 63, 94, 0.08) !important;
+  color: #f43f5e !important;
+  border-color: rgba(244, 63, 94, 0.2) !important;
+}
+
+/* Status Badges Dark Mode Overrides */
+html.dark .status-badge.accepted {
+  background-color: rgba(52, 211, 153, 0.08) !important;
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.2) !important;
+}
+html.dark .status-badge.attempted {
+  background-color: rgba(251, 191, 36, 0.08) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(251, 191, 36, 0.2) !important;
+}
+html.dark .status-badge.unattempted {
+  background-color: var(--bg-muted) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Markdown Text Dark Mode Overrides */
+html.dark .markdown-body {
+  color: var(--text-secondary) !important;
+}
+html.dark .markdown-body code {
+  background: var(--bg-muted) !important;
+  color: var(--text-primary) !important;
+}
+html.dark .markdown-body blockquote {
+  border-left-color: var(--border-color) !important;
+  background: var(--bg-muted) !important;
+  color: var(--text-muted) !important;
+}
+html.dark .markdown-body th {
+  background: var(--bg-muted) !important;
+  color: var(--text-primary) !important;
+}
+html.dark .markdown-body td,
+html.dark .markdown-body th {
+  border-color: var(--border-color) !important;
+}
+html.dark .markdown-body a {
+  color: #38bdf8 !important;
+}
+
+
+
+/* ===== Monaco Editor Autocomplete Suggest Widget Overrides ===== */
+/* Force hide suggest widget when not active/visible to prevent empty pill styling */
+.monaco-editor .suggest-widget:not(.visible) {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  border: none !important;
+  padding: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  box-shadow: none !important;
+}
+
+.monaco-editor .suggest-widget.visible {
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 4px !important;
+}
+
+/* Individual list rows inside suggest widget */
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row {
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-primary) !important;
+  background-color: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row:hover {
+  background-color: var(--bg-muted) !important;
+}
+
+/* Label text elements in normal state */
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .monaco-highlighted-label {
+  color: var(--text-primary) !important;
+}
+
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .details-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .type-label {
+  color: var(--text-muted) !important;
+}
+
+/* Match highlights in normal state */
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .monaco-highlighted-label .highlight {
+  color: #3b82f6 !important; /* Premium accent blue for light mode / standard matches */
+  font-weight: 600 !important;
+  background-color: transparent !important;
+}
+
+html.dark .monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .monaco-highlighted-label .highlight {
+  color: #60a5fa !important; /* Bright blue match highlighting in dark mode */
+}
+
+/* ========================================================
+   FOCUSED / SELECTED suggestion item styling
+   Using maximum specificity to override Monaco inline styles
+   ======================================================== */
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused.selected {
+  background-color: var(--primary-light) !important;
+}
+
+/* Text and highlights inside the active item */
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .monaco-highlighted-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .monaco-highlighted-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label {
+  color: var(--primary) !important;
+  font-weight: 550 !important;
+}
+
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .monaco-highlighted-label .highlight,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .monaco-highlighted-label .highlight,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label .highlight {
+  color: #3b82f6 !important; /* Vibrant highlight color for matches in active list row */
+  font-weight: 700 !important;
+  background-color: rgba(59, 130, 246, 0.15) !important; /* Subtle backdrop for active match highlights */
+  border-radius: 2px !important;
+  padding: 0 2px !important;
+}
+
+html.dark .monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .monaco-highlighted-label .highlight,
+html.dark .monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .monaco-highlighted-label .highlight,
+html.dark .monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused.selected .monaco-highlighted-label .highlight {
+  color: #60a5fa !important;
+  background-color: rgba(96, 165, 250, 0.2) !important;
+}
+
+/* Secondary/type labels inside the active item */
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .details-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .details-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .type-label,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .type-label {
+  color: var(--primary) !important;
+  opacity: 0.8 !important;
+}
+
+/* Icons styling inside suggest widget */
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .symbol-icon,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row .codicon {
+  color: var(--text-muted) !important;
+}
+
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .symbol-icon,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.focused .codicon,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .symbol-icon,
+.monaco-editor .suggest-widget.visible .monaco-list .monaco-list-row.selected .codicon {
+  color: var(--primary) !important;
+}
+
+

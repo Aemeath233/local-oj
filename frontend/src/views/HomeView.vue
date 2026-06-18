@@ -47,7 +47,7 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue'
-import { fetchUserStats } from '../api/http'
+import { fetchUserStats } from '../api/profile'
 import { useAuthStore } from '../stores/auth'
 import HomeDailyProblemCard from '../components/home/HomeDailyProblemCard.vue'
 import HomeLeaderboardCard from '../components/home/HomeLeaderboardCard.vue'

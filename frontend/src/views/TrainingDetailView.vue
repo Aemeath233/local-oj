@@ -99,7 +99,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, ArrowRight, User, Calendar } from '@element-plus/icons-vue'
-import { http } from '../api/http'
+import { http } from '../api/base'
 import { getTagColor } from '../utils/tag'
 import type { ProblemStatus } from '../types'
 

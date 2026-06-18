@@ -131,14 +131,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { Check, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
-import {
-  fetchSandboxSettings,
-  fetchSmtpSettings,
-  fetchSystemSettings,
-  updateSandboxSettings,
-  updateSmtpSettings,
-  updateSystemSettings
-} from '../api/http'
+import { fetchSandboxSettings, fetchSmtpSettings, fetchSystemSettings, updateSandboxSettings, updateSmtpSettings, updateSystemSettings } from '../api/admin'
 
 const loading = ref(false)
 const savingSmtp = ref(false)

@@ -68,12 +68,8 @@ import { Refresh, RefreshRight } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
 import VerdictTag from '../components/VerdictTag.vue'
-import {
-  fetchAdminSubmissions,
-  fetchSubmission,
-  rejudgeSubmission,
-  requeueUnfinishedSubmissions
-} from '../api/http'
+import { fetchAdminSubmissions, rejudgeSubmission, requeueUnfinishedSubmissions } from '../api/admin'
+import { fetchSubmission } from '../api/submission'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import type { AdminSubmissionSummary, SubmissionDetail } from '../types'
 

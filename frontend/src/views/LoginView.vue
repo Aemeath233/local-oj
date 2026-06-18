@@ -99,7 +99,7 @@
 import { onBeforeUnmount, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { requestRegisterCode, requestResetPasswordCode, resetPassword } from '../api/http'
+import { requestRegisterCode, requestResetPasswordCode, resetPassword } from '../api/auth'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()

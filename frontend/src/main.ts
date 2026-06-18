@@ -28,7 +28,7 @@ import '@fontsource/ibm-plex-mono/700.css'
 
 import App from './App.vue'
 import router from './router'
-import './styles.css'
+import './styles/index.css'
 
 const app = createApp(App)
 

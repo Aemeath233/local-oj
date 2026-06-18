@@ -26,6 +26,7 @@ public class TrainingService {
     private final TrainingProblemRelationMapper trainingProblemRelationMapper;
     private final ProblemMapper problemMapper;
     private final ProblemService problemService;
+    private final ProblemSearchService problemSearchService;
     private final UserMapper userMapper;
 
     public TrainingService(
@@ -33,12 +34,14 @@ public class TrainingService {
             TrainingProblemRelationMapper trainingProblemRelationMapper,
             ProblemMapper problemMapper,
             ProblemService problemService,
+            ProblemSearchService problemSearchService,
             UserMapper userMapper
     ) {
         this.trainingSetMapper = trainingSetMapper;
         this.trainingProblemRelationMapper = trainingProblemRelationMapper;
         this.problemMapper = problemMapper;
         this.problemService = problemService;
+        this.problemSearchService = problemSearchService;
         this.userMapper = userMapper;
     }
 
@@ -57,7 +60,7 @@ public class TrainingService {
             int solved = 0;
             if (user != null && total > 0) {
                 List<Long> problemIds = problems.stream().map(Problem::getId).toList();
-                Map<Long, String> statuses = problemService.solveStatuses(user, problemIds);
+                Map<Long, String> statuses = problemSearchService.solveStatuses(user, problemIds);
                 solved = (int) statuses.values().stream().filter("ACCEPTED"::equals).count();
             }
             dtos.add(new TrainingSetDto(
@@ -89,7 +92,7 @@ public class TrainingService {
         }
 
         List<Long> problemIds = problems.stream().map(Problem::getId).toList();
-        Map<Long, String> statuses = problemService.solveStatuses(user, problemIds);
+        Map<Long, String> statuses = problemSearchService.solveStatuses(user, problemIds);
 
         return problems.stream().map(p -> new ProblemWithStatusDto(
                 p.getId(),

@@ -95,7 +95,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { http } from '../api/http'
+import { http } from '../api/base'
 import AdminNav from '../components/AdminNav.vue'
 
 interface TrainingSetDto {

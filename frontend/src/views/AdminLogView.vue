@@ -142,7 +142,7 @@ import { onMounted, ref } from 'vue'
 import { Warning, Download, Setting, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
-import { fetchAdminDlq, clearAdminDlq, requeueAdminDlq, fetchLogToggle, updateLogToggle, downloadAdminLog, clearAdminLog } from '../api/http'
+import { fetchAdminDlq, clearAdminDlq, requeueAdminDlq, fetchLogToggle, updateLogToggle, downloadAdminLog, clearAdminLog } from '../api/admin'
 
 const logEnabled = ref(true)
 const toggling = ref(false)

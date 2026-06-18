@@ -70,7 +70,7 @@
 import { ref, watch, reactive, computed, onUnmounted } from 'vue'
 import { Check } from '@element-plus/icons-vue'
 import { ElMessage, type FormInstance } from 'element-plus'
-import { updateProfile, requestEmailChangeCode, changeEmail } from '../../api/http'
+import { updateProfile, requestEmailChangeCode, changeEmail } from '../../api/profile'
 import type { User } from '../../types'
 
 const props = defineProps<{

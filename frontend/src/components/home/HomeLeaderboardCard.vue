@@ -52,7 +52,7 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Trophy, ArrowRight } from '@element-plus/icons-vue'
-import { fetchLeaderboard } from '../../api/http'
+import { fetchLeaderboard } from '../../api/leaderboard'
 import { useAuthStore } from '../../stores/auth'
 import type { LeaderboardRow } from '../../types'
 
@@ -270,5 +270,10 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 30px 0;
+}
+html.dark .rank-icon {
+  background: rgba(217, 119, 6, 0.1) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(217, 119, 6, 0.2) !important;
 }
 </style>

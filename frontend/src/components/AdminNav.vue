@@ -61,37 +61,37 @@ const auth = useAuthStore()
 }
 
 .admin-nav-super {
-  border-color: #fef3c7 !important;
-  background: #fffdf5 !important;
+  border-color: var(--border-color) !important;
+  background: var(--bg-surface) !important;
 }
 
 .admin-nav-super .router-link-active {
-  background: #fef3c7 !important;
-  color: #b45309 !important;
+  background: var(--bg-muted) !important;
+  color: var(--text-primary) !important;
 }
 
 .admin-nav-super a:hover {
-  background: #fefce8 !important;
-  color: #b45309 !important;
+  background: var(--bg-muted) !important;
+  color: var(--text-primary) !important;
 }
 
 /* Dark mode overrides */
 html.dark .admin-nav-super {
-  border-color: rgba(217, 119, 6, 0.25) !important;
-  background: rgba(217, 119, 6, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
 }
 
 html.dark .admin-nav-super a {
-  color: #fbbf24 !important;
+  color: var(--text-muted) !important;
 }
 
 html.dark .admin-nav-super .router-link-active {
-  background: rgba(217, 119, 6, 0.25) !important;
-  color: #fef08a !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-primary) !important;
 }
 
 html.dark .admin-nav-super a:hover {
-  background: rgba(217, 119, 6, 0.15) !important;
-  color: #fef08a !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
 }
 </style>

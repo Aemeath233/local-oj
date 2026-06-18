@@ -89,7 +89,7 @@ import { RouterLink } from 'vue-router'
 import { ArrowRight, Refresh } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
 import VerdictTag from '../components/VerdictTag.vue'
-import { fetchAdminDashboard } from '../api/http'
+import { fetchAdminDashboard } from '../api/admin'
 import type { AdminDashboard, Verdict } from '../types'
 
 const loading = ref(false)

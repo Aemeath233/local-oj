@@ -40,63 +40,72 @@
         <el-segmented v-model="statusFilter" :options="statusOptions" @change="handleFilterChange" style="margin-left: auto;" />
         <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
       </div>
-      <el-table v-loading="loading" :data="problems" row-key="id" @row-click="openProblem">
-        <el-table-column label="状态" width="110">
-          <template #default="{ row }">
-            <span :class="'status-badge ' + (row.solveStatus || 'UNATTEMPTED').toLowerCase()">
-              {{ statusLabel(row.solveStatus) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="id" label="#" width="80" />
-        <el-table-column prop="title" label="题目" min-width="220">
-          <template #default="{ row }">
-            <div class="problem-title">{{ row.title }}</div>
-            <div class="muted">{{ row.slug }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="difficulty" label="难度" width="110">
-          <template #default="{ row }">
-            <span :class="'difficulty-badge ' + (row.difficulty || 'Easy').toLowerCase()">
-              {{ row.difficulty }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="标签" min-width="180">
-          <template #default="{ row }">
-            <div class="tag-list">
-              <el-tag
-                v-for="tag in splitTags(row.tags)"
-                :key="tag"
-                size="small"
-                :color="getTagColor(tag) + '20'"
-                :style="{ borderColor: getTagColor(tag), color: getTagColor(tag) }"
-                class="premium-tag"
-                effect="plain"
-              >
-                {{ tag }}
-              </el-tag>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="限制" width="160">
-          <template #default="{ row }">
-            {{ row.timeLimitMs }} ms / {{ Math.round(row.memoryLimitKb / 1024) }} MB
-          </template>
-        </el-table-column>
-        <el-table-column label="AC / 提交" width="130" align="center">
-          <template #default="{ row }">
-            <span style="font-family: var(--font-mono); font-size: 0.9rem; font-weight: 550; color: var(--text-secondary);">
-              {{ row.acceptedCount ?? 0 }} / {{ row.submitCount ?? 0 }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column width="90" align="right">
-          <template #default="{ row }">
-            <el-button :icon="ArrowRight" circle @click.stop="router.push(`/problems/${row.id}`)" />
-          </template>
-        </el-table-column>
-      </el-table>
+      <el-skeleton :loading="loading && problems.length === 0" animated>
+        <template #template>
+          <div style="padding: 12px 20px;">
+            <el-skeleton-item variant="rect" style="height: 40px; border-radius: 8px; margin-bottom: 12px;" v-for="i in 10" :key="i" />
+          </div>
+        </template>
+        <template #default>
+          <el-table v-loading="loading" :data="problems" row-key="id" @row-click="openProblem">
+            <el-table-column label="状态" width="110">
+              <template #default="{ row }">
+                <span :class="'status-badge ' + (row.solveStatus || 'UNATTEMPTED').toLowerCase()">
+                  {{ statusLabel(row.solveStatus) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="id" label="#" width="80" />
+            <el-table-column prop="title" label="题目" min-width="220">
+              <template #default="{ row }">
+                <div class="problem-title">{{ row.title }}</div>
+                <div class="muted">{{ row.slug }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="difficulty" label="难度" width="110">
+              <template #default="{ row }">
+                <span :class="'difficulty-badge ' + (row.difficulty || 'Easy').toLowerCase()">
+                  {{ row.difficulty }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="标签" min-width="180">
+              <template #default="{ row }">
+                <div class="tag-list">
+                  <el-tag
+                    v-for="tag in splitTags(row.tags)"
+                    :key="tag"
+                    size="small"
+                    :color="getTagColor(tag) + '20'"
+                    :style="{ borderColor: getTagColor(tag), color: getTagColor(tag) }"
+                    class="premium-tag"
+                    effect="plain"
+                  >
+                    {{ tag }}
+                  </el-tag>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="限制" width="160">
+              <template #default="{ row }">
+                {{ row.timeLimitMs }} ms / {{ Math.round(row.memoryLimitKb / 1024) }} MB
+              </template>
+            </el-table-column>
+            <el-table-column label="AC / 提交" width="130" align="center">
+              <template #default="{ row }">
+                <span style="font-family: var(--font-mono); font-size: 0.9rem; font-weight: 550; color: var(--text-secondary);">
+                  {{ row.acceptedCount ?? 0 }} / {{ row.submitCount ?? 0 }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column width="90" align="right">
+              <template #default="{ row }">
+                <el-button :icon="ArrowRight" circle @click.stop="router.push(`/problems/${row.id}`)" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+      </el-skeleton>
       <div class="pagination-container">
         <el-pagination
           v-model:current-page="currentPage"
@@ -131,7 +140,8 @@
 import { computed, onMounted, onActivated, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ArrowRight, Refresh, Search } from '@element-plus/icons-vue'
-import { fetchProblems, fetchProblemTags } from '../api/http'
+import { fetchProblems } from '../api/problem'
+import { fetchProblemTags } from '../api/admin'
 import { useAuthStore } from '../stores/auth'
 import { getTagColor } from '../utils/tag'
 import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'

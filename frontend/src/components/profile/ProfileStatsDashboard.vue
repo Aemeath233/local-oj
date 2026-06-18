@@ -182,7 +182,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { fetchUserStats } from '../../api/http'
+import { fetchUserStats } from '../../api/profile'
 import type { UserStats } from '../../types'
 
 const loading = ref(false)

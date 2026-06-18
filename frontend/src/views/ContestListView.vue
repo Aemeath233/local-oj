@@ -121,7 +121,7 @@
 import { computed, onMounted, onUnmounted, onActivated, onDeactivated, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue'
-import { fetchContests } from '../api/http'
+import { fetchContests } from '../api/contest'
 import { useAuthStore } from '../stores/auth'
 import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
 import type { Contest } from '../types'

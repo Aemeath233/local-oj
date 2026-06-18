@@ -29,12 +29,19 @@
 
     <!-- 学习激励大盘：难度统计与提交冷热图 -->
     <ProfileStatsDashboard v-if="!loading && form.username" />
+
+    <!-- 错误/空状态：如果加载结束且没有拉取到数据（比如后端没启动） -->
+    <el-empty 
+      v-if="!loading && !form.username" 
+      description="无法连接到服务器加载个人资料，请检查后端服务是否已启动" 
+      style="margin-top: 60px;" 
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { fetchProfile } from '../api/http'
+import { fetchProfile } from '../api/profile'
 import { useAuthStore } from '../stores/auth'
 import type { User } from '../types'
 import ProfileAvatarCard from '../components/profile/ProfileAvatarCard.vue'

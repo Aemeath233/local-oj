@@ -39,7 +39,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { Timer, ArrowRight } from '@element-plus/icons-vue'
-import { fetchContests } from '../../api/http'
+import { fetchContests } from '../../api/contest'
 import type { Contest } from '../../types'
 
 const router = useRouter()
@@ -227,5 +227,10 @@ function getContestStatusClass(c: Contest) {
   align-items: center;
   justify-content: center;
   padding: 30px 0;
+}
+html.dark .contest-icon {
+  background: rgba(124, 58, 237, 0.1) !important;
+  color: #a78bfa !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
 }
 </style>

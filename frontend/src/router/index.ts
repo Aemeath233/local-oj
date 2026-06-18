@@ -64,7 +64,14 @@ const router = createRouter({
   ]
 })
 
+import NProgress from 'nprogress'
+import 'nprogress/nprogress.css'
+
+// Configure NProgress
+NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.15 })
+
 router.beforeEach((to) => {
+  NProgress.start()
   const auth = useAuthStore()
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     return '/login'
@@ -76,6 +83,10 @@ router.beforeEach((to) => {
     return '/problems'
   }
   return true
+})
+
+router.afterEach(() => {
+  NProgress.done()
 })
 
 export default router

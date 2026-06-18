@@ -70,7 +70,7 @@
 import { computed, onMounted, onActivated, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, ArrowRight, User } from '@element-plus/icons-vue'
-import { http } from '../api/http'
+import { http } from '../api/base'
 import { useAuthStore } from '../stores/auth'
 import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
 

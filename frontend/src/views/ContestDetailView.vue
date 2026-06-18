@@ -24,292 +24,51 @@
     <el-tabs v-if="contest" v-model="activeTab" class="contest-tabs">
       <!-- Tab 1: Contest Details / Rules -->
       <el-tab-pane label="比赛说明" name="info">
-        <div class="panel statement-card">
-          <div class="statement-body">
-            <MarkdownView :source="contest.description || '*出题人太懒了，没有填写任何比赛说明。*'" />
-          </div>
-        </div>
-
-        <!-- Registration Prompt Banner -->
-        <div v-if="!isRegisteredOrAdmin" class="registration-prompt-card panel" style="margin-top: 20px; padding: 24px; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
-          <h3 style="margin: 0 0 8px; font-size: 16px; color: var(--text-primary); font-weight: 700;">您尚未报名此场比赛</h3>
-          <p style="margin: 0 0 16px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6;">
-            本场评测比赛包含特定隐藏评测题目，只有<b>报名参赛</b>的用户才能查看题目列表、在线提交评测代码，并实时刷新 ICPC/OI 赛制排行榜单。
-          </p>
-          <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-            <template v-if="!auth.isLoggedIn">
-              <el-button
-                type="primary"
-                style="font-weight: 600; padding: 12px 24px; border-radius: var(--radius-md); font-size: 14px;"
-                @click="router.push('/login')"
-              >
-                请先登录以报名参赛
-              </el-button>
-            </template>
-            <template v-else>
-              <el-button
-                v-if="registrationStatus?.canRegister"
-                type="primary"
-                style="font-weight: 600; padding: 12px 24px; border-radius: var(--radius-md); font-size: 14px;"
-                :loading="registering"
-                @click="handleRegister"
-              >
-                立即报名参赛
-              </el-button>
-              <el-tag v-else type="info" size="large" style="font-weight: 600; padding: 6px 14px; border-radius: var(--radius-md);">
-                报名通道已关闭 (比赛已结束)
-              </el-tag>
-            </template>
-            <span v-if="registrationStatus" style="font-size: 13.5px; color: var(--text-secondary); font-weight: 550; display: flex; align-items: center; gap: 6px;">
-              <span style="display: inline-flex; align-items: center; color: var(--text-muted);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; margin-right: 4px;">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                目前已有
-              </span>
-              <span style="font-size: 16px; font-weight: 700; color: var(--primary);">{{ registrationStatus.registrationCount }}</span>
-              <span style="color: var(--text-muted);">人报名参赛</span>
-            </span>
-          </div>
-        </div>
-
-        <!-- Registered Info Banner -->
-        <div v-else-if="!auth.isAdmin && registrationStatus?.registered" class="registration-success-card panel" style="margin-top: 20px; padding: 16px 20px; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 13.5px;">
-            <span style="font-weight: 600; color: var(--text-primary);">您已成功报名此场比赛</span>
-            <span style="color: var(--border-color);">|</span>
-            <span style="color: var(--text-muted); font-size: 12.5px;">报名时间: {{ formatFullTime(registrationStatus.registeredAt || '') }}</span>
-          </div>
-          <el-tag type="success" effect="light" style="font-weight: 600; border-radius: var(--radius-sm);">已参赛</el-tag>
-        </div>
+        <ContestInfoTab
+          :contest="contest"
+          :registration-status="registrationStatus"
+          :is-registered-or-admin="isRegisteredOrAdmin"
+          :registering="registering"
+          @register="handleRegister"
+        />
       </el-tab-pane>
 
       <!-- Tab 2: Problems List -->
       <el-tab-pane v-if="isRegisteredOrAdmin && timeState !== 'UPCOMING'" label="题目列表" name="problems">
-        <div class="panel">
-          <el-table :data="problems" row-key="id" @row-click="openProblem">
-            <el-table-column label="状态" width="120">
-              <template #default="{ row }">
-                <el-tag :type="statusType(row.id)" size="small" effect="light">
-                  {{ statusLabel(row.id) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="sequenceCode" label="序号" width="90" align="center" />
-            <el-table-column prop="title" label="题目名称" min-width="260">
-              <template #default="{ row }">
-                <div class="problem-title-cell">
-                  <span class="title-text">{{ row.title }}</span>
-                  <span class="slug-text">{{ row.slug }}</span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column prop="difficulty" label="难度" width="120">
-              <template #default="{ row }">
-                <el-tag size="small">{{ row.difficulty }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="通过比例" width="180" align="center">
-              <template #default="{ row }">
-                <div class="progress-wrapper">
-                  <span class="ratio-text">{{ row.acceptedCount }} / {{ row.submissionCount }}</span>
-                  <el-progress
-                    :percentage="row.submissionCount > 0 ? Math.round((row.acceptedCount / row.submissionCount) * 100) : 0"
-                    :show-text="false"
-                    stroke-width="4"
-                    status="success"
-                  />
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column width="100" align="right">
-              <template #default="{ row }">
-                <el-button circle :icon="ArrowRight" @click.stop="router.push(`/contests/${contest.id}/problems/${row.id}`)" />
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
+        <ContestProblemsTab
+          :problems="problems"
+          :contest-id="contest.id"
+          :solved-problem-ids="solvedProblemIds"
+          :attempted-problem-ids="attemptedProblemIds"
+        />
       </el-tab-pane>
 
       <!-- Tab 3: Submissions -->
       <el-tab-pane v-if="isRegisteredOrAdmin && timeState !== 'UPCOMING'" :label="submissionsTabLabel" name="submissions">
-        <div class="panel">
-          <div class="submissions-toolbar">
-            <el-button :icon="Refresh" @click="loadSubmissions" :loading="submissionsLoading">刷新</el-button>
-          </div>
-          <el-table v-loading="submissionsLoading" :data="submissions" row-key="id">
-            <el-table-column prop="id" label="提交 ID" width="100" />
-            <el-table-column v-if="showUserColumn" label="用户" min-width="150">
-              <template #default="{ row }">
-                <div class="user-cell">
-                  <el-avatar :size="20" :src="row.avatarUrl">{{ row.username ? row.username.slice(0, 1).toUpperCase() : 'U' }}</el-avatar>
-                  <span class="user-display">{{ row.displayName || row.username }}</span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="评测状态" width="150">
-              <template #default="{ row }">
-                <VerdictTag :status="row.status" :verdict="row.verdict" />
-              </template>
-            </el-table-column>
-            <el-table-column label="题目" min-width="180">
-              <template #default="{ row }">
-                <span>{{ problemCodeMap[row.problemId] }} - {{ problemTitleMap[row.problemId] || row.problemId }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="language" label="语言" width="100" />
-            <el-table-column label="运行时间" width="110">
-              <template #default="{ row }">
-                {{ row.status === 'FINISHED' ? `${row.timeMs ?? 0} ms` : '--' }}
-              </template>
-            </el-table-column>
-            <el-table-column label="运行内存" width="110">
-              <template #default="{ row }">
-                {{ row.status === 'FINISHED' ? `${Math.round((row.memoryKb ?? 0) / 10.24) / 100} MB` : '--' }}
-              </template>
-            </el-table-column>
-            <el-table-column label="提交时间" width="180">
-              <template #default="{ row }">
-                {{ formatFullTime(row.createdAt) }}
-              </template>
-            </el-table-column>
-            <el-table-column width="90" align="right">
-              <template #default="{ row }">
-                <el-button circle :icon="DocumentCopy" @click="openSubmissionDetail(row)" />
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
+        <ContestSubmissionsTab
+          :submissions="submissions"
+          :loading="submissionsLoading"
+          :show-user-column="showUserColumn"
+          :problem-code-map="problemCodeMap"
+          :problem-title-map="problemTitleMap"
+          @refresh="loadSubmissions"
+          @open-detail="openSubmissionDetail"
+        />
       </el-tab-pane>
 
       <!-- Tab 4: ICPC Standings -->
       <el-tab-pane v-if="isRegisteredOrAdmin && timeState !== 'UPCOMING'" label="实时排名" name="standings">
-        <div class="panel" style="padding: 20px;">
-          <!-- Freeze Warning Banner -->
-          <div v-if="isBoardFrozen" class="freeze-warning-banner" :class="{ 'is-admin': auth.isAdmin }">
-            <template v-if="auth.isAdmin">
-              <span class="icon">🛡️</span>
-              <div class="banner-body">
-                <h4>管理员视图</h4>
-                <p>您正在查看实时完整排行榜（普通参赛选手目前只能看到封榜前的数据，封榜时长为 <b>{{ contest.freezeDurationMinutes }}</b> 分钟）。</p>
-              </div>
-            </template>
-            <template v-else>
-              <span class="icon">⚠️</span>
-              <div class="banner-body">
-                <h4>排行榜已封榜！</h4>
-                <p>当前比赛已进入封榜阶段（比赛结束前 <b>{{ contest.freezeDurationMinutes }}</b> 分钟已停止公开更新榜单）。正式完整榜单将在比赛结束后揭晓，祝各位选手取得佳绩！</p>
-              </div>
-            </template>
-          </div>
-
-          <div class="standings-toolbar">
-            <el-input
-              v-model="standingsSearch"
-              placeholder="搜索参赛人..."
-              clearable
-              style="width: 260px;"
-              :prefix-icon="Search"
-            />
-            <el-button :icon="Refresh" @click="loadStandings" :loading="standingsLoading">刷新榜单</el-button>
-            <el-button type="success" :icon="Download" @click="exportStandings" :loading="exporting">导出排行榜</el-button>
-          </div>
-          <el-table v-loading="standingsLoading" :data="filteredStandings" border class="standings-table">
-            <el-table-column label="Rank" width="80" align="center" fixed>
-              <template #default="{ row }">
-                <div class="rank-badge" :class="'rank-' + row.rank">
-                  {{ row.rank }}
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="参赛选手" min-width="160" fixed>
-              <template #default="{ row }">
-                <div class="user-cell">
-                  <el-avatar :size="24" :src="row.avatarUrl">{{ row.username.slice(0, 1).toUpperCase() }}</el-avatar>
-                  <span class="user-display">{{ row.displayName || row.username }}</span>
-                </div>
-              </template>
-            </el-table-column>
-            <!-- If ACM format: show Solved count and Penalty -->
-            <template v-if="contest.type === 'ACM'">
-              <el-table-column prop="acceptedCount" label="Solved" width="90" align="center">
-                <template #default="{ row }">
-                  <strong class="solved-bold">{{ row.acceptedCount }}</strong>
-                </template>
-              </el-table-column>
-              <el-table-column prop="totalPenaltyMinutes" label="Penalty" width="100" align="center">
-                <template #default="{ row }">
-                  <span class="penalty-text">{{ row.totalPenaltyMinutes }}</span>
-                </template>
-              </el-table-column>
-            </template>
-            <!-- If OI format: show Total Score and no Penalty -->
-            <template v-else>
-              <el-table-column prop="totalScore" label="总分" width="100" align="center">
-                <template #default="{ row }">
-                  <strong class="oi-score-bold" style="color: var(--el-color-warning); font-size: 1.15rem;">{{ row.totalScore ?? 0 }}</strong>
-                </template>
-              </el-table-column>
-            </template>
-
-            <!-- Dynamically render one column for each contest problem -->
-            <el-table-column
-              v-for="p in problems"
-              :key="p.id"
-              :label="p.sequenceCode"
-              width="100"
-              align="center"
-            >
-              <template #default="{ row }">
-                <div v-if="row.problemDetails[p.id]">
-                  <!-- ACM format individual cell -->
-                  <div
-                    v-if="contest.type === 'ACM'"
-                    class="standing-cell"
-                    :class="{
-                      'cell-ac': row.problemDetails[p.id].accepted,
-                      'cell-failed': !row.problemDetails[p.id].accepted && row.problemDetails[p.id].failedAttempts > 0,
-                      'cell-first': row.problemDetails[p.id].firstToSolve
-                    }"
-                  >
-                    <div class="cell-status">
-                      <span v-if="row.problemDetails[p.id].accepted">
-                        +{{ row.problemDetails[p.id].failedAttempts > 0 ? row.problemDetails[p.id].failedAttempts : '' }}
-                      </span>
-                      <span v-else-if="row.problemDetails[p.id].failedAttempts > 0">
-                        -{{ row.problemDetails[p.id].failedAttempts }}
-                      </span>
-                    </div>
-                    <div v-if="row.problemDetails[p.id].accepted" class="cell-time">
-                      {{ row.problemDetails[p.id].acElapsedMinutes }}'
-                    </div>
-                    <el-tooltip v-if="row.problemDetails[p.id].firstToSolve" content="全场首杀 (First to Solve)" placement="top">
-                      <span class="first-solve-star">⭐</span>
-                    </el-tooltip>
-                  </div>
-                  <!-- OI format individual cell -->
-                  <div
-                    v-else
-                    class="standing-cell"
-                    :class="{
-                      'cell-ac': row.problemDetails[p.id].score === 100,
-                      'cell-oi-partial': row.problemDetails[p.id].score > 0 && row.problemDetails[p.id].score < 100,
-                      'cell-failed': row.problemDetails[p.id].score === 0
-                    }"
-                  >
-                    <div class="cell-status oi-score-text">
-                      {{ row.problemDetails[p.id].score ?? 0 }}
-                    </div>
-                  </div>
-                </div>
-                <div v-else class="standing-cell cell-empty">-</div>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
+        <ContestStandingsTab
+          :contest="contest"
+          :problems="problems"
+          :standings="standings"
+          :loading="standingsLoading"
+          :exporting="exporting"
+          :is-admin="auth.isAdmin"
+          :is-board-frozen="isBoardFrozen"
+          @refresh="loadStandings"
+          @export="exportStandings"
+        />
       </el-tab-pane>
     </el-tabs>
 
@@ -326,17 +85,12 @@ import { ArrowRight, Refresh, DocumentCopy, Search, Download } from '@element-pl
 import MarkdownView from '../components/MarkdownView.vue'
 import VerdictTag from '../components/VerdictTag.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
-import {
-  fetchContest,
-  fetchContestProblems,
-  fetchContestSubmissions,
-  fetchContestLeaderboard,
-  fetchSubmission,
-  fetchContestRegistration,
-  registerContest,
-  downloadContestStandings,
-  requestSseTicket
-} from '../api/http'
+import ContestInfoTab from '../components/contest/ContestInfoTab.vue'
+import ContestProblemsTab from '../components/contest/ContestProblemsTab.vue'
+import ContestSubmissionsTab from '../components/contest/ContestSubmissionsTab.vue'
+import ContestStandingsTab from '../components/contest/ContestStandingsTab.vue'
+import { fetchContest, fetchContestProblems, fetchContestSubmissions, fetchContestLeaderboard, fetchContestRegistration, registerContest, downloadContestStandings } from '../api/contest'
+import { fetchSubmission, requestSseTicket } from '../api/submission'
 import { useAuthStore } from '../stores/auth'
 import { parseSubmissionUpdate } from '../utils/submissionEvents'
 import type {

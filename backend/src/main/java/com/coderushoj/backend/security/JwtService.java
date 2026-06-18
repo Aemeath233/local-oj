@@ -26,18 +26,29 @@ public class JwtService {
     private final ObjectMapper objectMapper;
     private final byte[] secret;
     private final long ttlMinutes;
+    private final long refreshTtlMinutes;
 
     public JwtService(
             ObjectMapper objectMapper,
             @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.ttl-minutes}") long ttlMinutes
+            @Value("${app.jwt.ttl-minutes}") long ttlMinutes,
+            @Value("${app.jwt.refresh-ttl-minutes:10080}") long refreshTtlMinutes
     ) {
         this.objectMapper = objectMapper;
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
         this.ttlMinutes = ttlMinutes;
+        this.refreshTtlMinutes = refreshTtlMinutes;
     }
 
     public String issue(User user) {
+        return issueToken(user, "access", ttlMinutes);
+    }
+
+    public String issueRefreshToken(User user) {
+        return issueToken(user, "refresh", refreshTtlMinutes);
+    }
+
+    private String issueToken(User user, String tokenType, long minutes) {
         try {
             String header = encodeJson(Map.of("alg", "HS256", "typ", "JWT"));
             Map<String, Object> payload = new LinkedHashMap<>();
@@ -45,8 +56,9 @@ public class JwtService {
             payload.put("username", user.getUsername());
             payload.put("role", user.getRole().name());
             payload.put("ver", user.getAuthTokenVersion() == null ? 0 : user.getAuthTokenVersion());
+            payload.put("type", tokenType);
             payload.put("iat", Instant.now().getEpochSecond());
-            payload.put("exp", Instant.now().plusSeconds(ttlMinutes * 60).getEpochSecond());
+            payload.put("exp", Instant.now().plusSeconds(minutes * 60).getEpochSecond());
             String body = encodeJson(payload);
             return header + "." + body + "." + sign(header + "." + body);
         } catch (Exception ex) {
@@ -55,6 +67,14 @@ public class JwtService {
     }
 
     public Optional<CurrentUser> parse(String token) {
+        return parseInternal(token, "access");
+    }
+
+    public Optional<CurrentUser> parseRefreshToken(String token) {
+        return parseInternal(token, "refresh");
+    }
+
+    private Optional<CurrentUser> parseInternal(String token, String expectedType) {
         try {
             String[] parts = token.split("\\.");
             if (parts.length != 3) {
@@ -69,6 +89,15 @@ public class JwtService {
             if (exp <= Instant.now().getEpochSecond()) {
                 return Optional.empty();
             }
+            
+            if (payload.has("type")) {
+                if (!expectedType.equals(payload.path("type").asText())) {
+                    return Optional.empty();
+                }
+            } else if ("refresh".equals(expectedType)) {
+                return Optional.empty();
+            }
+
             Long id = payload.path("sub").asLong();
             String username = payload.path("username").asText();
             Role role = Role.valueOf(payload.path("role").asText());

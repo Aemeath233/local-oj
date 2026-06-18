@@ -35,7 +35,7 @@
 import { onUnmounted, reactive, ref } from 'vue'
 import { Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { requestPasswordChangeCode, changePassword } from '../../api/http'
+import { requestPasswordChangeCode, changePassword } from '../../api/profile'
 
 defineProps<{
   email?: string

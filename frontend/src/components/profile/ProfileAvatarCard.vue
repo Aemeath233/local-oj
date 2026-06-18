@@ -30,7 +30,7 @@ import { computed, ref } from 'vue'
 import { Upload } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import AvatarCropperDialog from '../AvatarCropperDialog.vue'
-import { uploadAvatar } from '../../api/http'
+import { uploadAvatar } from '../../api/profile'
 import type { User } from '../../types'
 
 const props = defineProps<{

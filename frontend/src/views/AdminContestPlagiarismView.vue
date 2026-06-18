@@ -169,7 +169,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Cpu, InfoFilled, Loading } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
-import { http } from '../api/http'
+import { http } from '../api/base'
 
 const route = useRoute()
 const router = useRouter()

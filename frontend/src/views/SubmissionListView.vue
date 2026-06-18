@@ -111,7 +111,7 @@
 import { computed, onMounted, onUnmounted, onActivated, onDeactivated, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh, Search } from '@element-plus/icons-vue'
-import { fetchSubmission, fetchSubmissions, requestSseTicket } from '../api/http'
+import { fetchSubmission, fetchSubmissions, requestSseTicket } from '../api/submission'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
 import { ElMessage } from 'element-plus'
 import VerdictTag from '../components/VerdictTag.vue'

@@ -97,7 +97,9 @@
 import { onMounted, reactive, ref } from 'vue'
 import { Delete, Lock } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchProblems, fetchContests, cleanupSubmissions } from '../../api/http'
+import { fetchProblems } from '../../api/problem'
+import { fetchContests } from '../../api/contest'
+import { cleanupSubmissions } from '../../api/admin'
 
 const loading = ref(false)
 const cleaningSubmissions = ref(false)

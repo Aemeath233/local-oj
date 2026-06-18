@@ -3,6 +3,7 @@ package com.coderushoj.backend.controller;
 import com.coderushoj.backend.api.ApiResponse;
 import com.coderushoj.backend.security.CurrentUser;
 import com.coderushoj.backend.security.SecurityUtils;
+import com.coderushoj.backend.service.ProblemSearchService;
 import com.coderushoj.backend.service.ProblemService;
 import com.coderushoj.common.enums.Role;
 import com.coderushoj.common.model.Problem;
@@ -24,9 +25,11 @@ import java.util.Map;
 @RequestMapping("/api/problems")
 public class ProblemController {
     private final ProblemService problemService;
+    private final ProblemSearchService problemSearchService;
 
-    public ProblemController(ProblemService problemService) {
+    public ProblemController(ProblemService problemService, ProblemSearchService problemSearchService) {
         this.problemService = problemService;
+        this.problemSearchService = problemSearchService;
     }
 
     @GetMapping
@@ -66,7 +69,7 @@ public class ProblemController {
 
     @GetMapping("/daily")
     public ApiResponse<ProblemSummary> daily() {
-        List<Problem> problems = problemService.visibleProblems();
+        List<Problem> problems = problemSearchService.visibleProblems();
         if (problems.isEmpty()) {
             return ApiResponse.ok(null);
         }
@@ -75,7 +78,7 @@ public class ProblemController {
         Problem dailyProblem = problems.get(index);
 
         CurrentUser user = SecurityUtils.optionalCurrentUser();
-        String solveStatus = problemService.solveStatuses(user, List.of(dailyProblem.getId()))
+        String solveStatus = problemSearchService.solveStatuses(user, List.of(dailyProblem.getId()))
                 .getOrDefault(dailyProblem.getId(), "UNATTEMPTED");
         Map<Long, ProblemService.SubmissionStats> stats = problemService.submissionStats(List.of(dailyProblem.getId()));
         ProblemService.SubmissionStats dailyStats = stats.getOrDefault(dailyProblem.getId(), new ProblemService.SubmissionStats(0, 0));
@@ -92,7 +95,7 @@ public class ProblemController {
             }
         }
 
-        String solveStatus = problemService.solveStatuses(user, List.of(id))
+        String solveStatus = problemSearchService.solveStatuses(user, List.of(id))
                 .getOrDefault(id, "UNATTEMPTED");
         long updateEpoch = problem.getUpdatedAt() != null
                 ? problem.getUpdatedAt().toEpochSecond(java.time.ZoneOffset.UTC) : 0;

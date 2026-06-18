@@ -51,7 +51,7 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Message, ArrowRight } from '@element-plus/icons-vue'
-import { fetchSubmissions } from '../../api/http'
+import { fetchSubmissions } from '../../api/submission'
 import { formatRelativeTime } from '../../utils/time'
 import type { SubmissionSummary } from '../../types'
 import VerdictTag from '../VerdictTag.vue'
@@ -223,5 +223,10 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 30px 0;
+}
+html.dark .sub-icon {
+  background: rgba(13, 148, 136, 0.1) !important;
+  color: #2dd4bf !important;
+  border-color: rgba(13, 148, 136, 0.2) !important;
 }
 </style>

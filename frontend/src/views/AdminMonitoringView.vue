@@ -249,57 +249,7 @@
       </div>
     </div>
 
-    <!-- Distributed Worker Nodes -->
-    <section class="panel mt-4">
-      <div class="panel-header">
-        <h2>在线分布式评测节点 (Distributed Workers)</h2>
-      </div>
 
-      <el-empty
-        v-if="!stats?.workers || stats.workers.length === 0"
-        description="暂无在线 Judge-Worker 节点上报数据"
-      />
-      <div v-else class="workers-grid">
-        <div v-for="w in stats.workers" :key="w.workerId" class="worker-card">
-          <div class="worker-card-header">
-            <span class="worker-name">{{ w.workerId }}</span>
-            <span class="worker-pulse"></span>
-          </div>
-          <div class="worker-card-body">
-            <div class="worker-metric-row">
-              <span class="lbl">系统:</span>
-              <span class="val">{{ w.osName }} ({{ w.osArch }})</span>
-            </div>
-            <div class="worker-metric-row">
-              <span class="lbl">Uptime:</span>
-              <span class="val">{{ formatUptime(w.uptime) }}</span>
-            </div>
-            <div class="worker-metric-row mt-2">
-              <div class="progress-header mini-font">
-                <span>CPU 负载:</span>
-                <span>{{ formatPercentage(w.processCpuLoad) }}</span>
-              </div>
-              <div class="custom-progress progress-mini">
-                <div class="progress-fill" :style="{ width: formatPercentage(w.processCpuLoad) }"></div>
-              </div>
-            </div>
-            <div class="worker-metric-row mt-2">
-              <div class="progress-header mini-font">
-                <span>堆内存:</span>
-                <span>{{ formatBytes(w.heapMemoryUsed) }} / {{ formatBytes(w.heapMemoryMax) }}</span>
-              </div>
-              <div class="custom-progress progress-mini progress-jvm">
-                <div class="progress-fill" :style="{ width: formatPercentage(w.heapMemoryUsed / (w.heapMemoryMax || 1)) }"></div>
-              </div>
-            </div>
-            <div class="worker-metric-row mt-2">
-              <span class="lbl">活跃线程:</span>
-              <span class="val">{{ w.threadCount }} Threads</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
   </section>
 </template>
@@ -309,7 +259,7 @@ import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
-import { http } from '../api/http'
+import { http } from '../api/base'
 
 const loading = ref(false)
 const autoRefresh = ref(true)
@@ -702,87 +652,5 @@ function getHealthClass(status: string | null | undefined) {
   font-family: 'Outfit', sans-serif;
 }
 
-/* Workers Section */
-.workers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.25rem;
-  margin-top: 1rem;
-}
 
-.worker-card {
-  border: 1px solid var(--el-border-color-light);
-  background: var(--el-bg-color);
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
-}
-
-.worker-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.worker-name {
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-  font-size: 0.95rem;
-}
-
-.worker-pulse {
-  width: 8px;
-  height: 8px;
-  background-color: var(--el-color-success);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--el-color-success);
-  animation: pulse-active 2s infinite;
-}
-
-@keyframes pulse-active {
-  0% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(103, 194, 58, 0.7);
-  }
-  70% {
-    transform: scale(1);
-    box-shadow: 0 0 0 6px rgba(103, 194, 58, 0);
-  }
-  100% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(103, 194, 58, 0);
-  }
-}
-
-.worker-metric-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
-  padding: 0.25rem 0;
-}
-
-.worker-metric-row.mt-2 {
-  flex-direction: column;
-}
-
-.worker-metric-row .lbl {
-  color: var(--el-text-color-secondary);
-}
-
-.worker-metric-row .val {
-  color: var(--el-text-color-primary);
-  font-weight: 500;
-}
-
-.mini-font {
-  font-size: 0.75rem !important;
-  margin-bottom: 2px !important;
-}
-
-.progress-mini {
-  height: 6px !important;
-}
 </style>

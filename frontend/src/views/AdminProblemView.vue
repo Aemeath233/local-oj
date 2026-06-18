@@ -254,16 +254,10 @@ import { Check, Delete, Upload, InfoFilled, Document, Files, DocumentCopy, Plus 
 import { ElMessage } from 'element-plus'
 import AdminNav from '../components/AdminNav.vue'
 import ProblemStatementContent from '../components/problem/ProblemStatementContent.vue'
-import {
-  createProblem,
-  fetchAdminProblem,
-  importTestCaseFiles,
-  updateProblem,
-  fetchTestCaseFileContent
-} from '../api/http'
+import { createProblem, fetchAdminProblem, importTestCaseFiles, updateProblem, fetchTestCaseFileContent } from '../api/admin'
 import { getTagColor } from '../utils/tag'
 import { countProblemSamples } from '../utils/problemSamples'
-import type { CreateProblemPayload } from '../api/http'
+import type { CreateProblemPayload } from '../api/admin'
 import type { AdminProblemDetail } from '../types'
 
 interface TestCaseForm {

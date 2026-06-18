@@ -139,7 +139,8 @@
 import { onMounted, ref } from 'vue'
 import { DocumentCopy, InfoFilled, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchBackupInfo, http } from '../../api/http'
+import { fetchBackupInfo } from '../../api/admin'
+import { http } from '../../api/base'
 
 const loading = ref(false)
 const exporting = ref(false)

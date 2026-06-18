@@ -88,7 +88,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { Refresh, Delete, Files, Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { fetchStorageStats, cleanupOrphanedCases } from '../../api/http'
+import { fetchStorageStats, cleanupOrphanedCases } from '../../api/admin'
 
 const loading = ref(false)
 const storageData = ref<any>(null)

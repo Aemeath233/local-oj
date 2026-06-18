@@ -4,6 +4,8 @@ import com.coderushoj.backend.api.ApiResponse;
 import com.coderushoj.backend.security.CurrentUser;
 import com.coderushoj.backend.security.SecurityUtils;
 import com.coderushoj.backend.service.ContestService;
+import com.coderushoj.backend.service.ContestStandingsService;
+import com.coderushoj.backend.service.ProblemSearchService;
 import com.coderushoj.backend.service.ProblemService;
 import com.coderushoj.backend.service.SubmissionService;
 import com.coderushoj.common.model.Contest;
@@ -26,14 +28,20 @@ import java.util.Map;
 @RequestMapping("/api/contests")
 public class ContestController {
     private final ContestService contestService;
+    private final ContestStandingsService contestStandingsService;
     private final ProblemService problemService;
+    private final ProblemSearchService problemSearchService;
 
     public ContestController(
             ContestService contestService,
-            ProblemService problemService
+            ContestStandingsService contestStandingsService,
+            ProblemService problemService,
+            ProblemSearchService problemSearchService
     ) {
         this.contestService = contestService;
+        this.contestStandingsService = contestStandingsService;
         this.problemService = problemService;
+        this.problemSearchService = problemSearchService;
     }
 
     @GetMapping
@@ -75,7 +83,7 @@ public class ContestController {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         Problem problem = contestService.getContestProblemDetail(id, problemId, user);
 
-        String solveStatus = problemService.solveStatuses(user, List.of(problemId), id)
+        String solveStatus = problemSearchService.solveStatuses(user, List.of(problemId), id)
                 .getOrDefault(problemId, "UNATTEMPTED");
         long updateEpoch = problem.getUpdatedAt() != null
                 ? problem.getUpdatedAt().toEpochSecond(java.time.ZoneOffset.UTC) : 0;
@@ -104,16 +112,16 @@ public class ContestController {
     }
 
     @GetMapping("/{id}/leaderboard")
-    public ApiResponse<List<ContestService.ContestStandingsRow>> leaderboard(@PathVariable("id") Long id) {
+    public ApiResponse<List<ContestStandingsService.ContestStandingsRow>> leaderboard(@PathVariable("id") Long id) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
         contestService.requireContest(id, user);
-        return ApiResponse.ok(contestService.calculateStandings(id, user));
+        return ApiResponse.ok(contestStandingsService.calculateStandings(id, user));
     }
 
     @GetMapping("/{id}/leaderboard/export")
     public org.springframework.http.ResponseEntity<byte[]> exportLeaderboard(@PathVariable("id") Long id) {
         CurrentUser user = SecurityUtils.optionalCurrentUser();
-        byte[] csvBytes = contestService.exportStandingsCsv(id, user);
+        byte[] csvBytes = contestStandingsService.exportStandingsCsv(id, user);
 
         return org.springframework.http.ResponseEntity.ok()
                 .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")

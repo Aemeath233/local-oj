@@ -12,21 +12,9 @@
       </div>
     </div>
 
-    <section class="problem-layout" ref="problemLayoutRef">
-      <!-- Left side: Statement -->
-      <article v-if="problem" class="statement panel" style="display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 24px 8px 24px 24px;" :style="leftStyle">
-        <!-- Maximize Button -->
-        <el-tooltip v-if="!isMobile" :content="isMaximized ? '还原布局' : '放大题面'" placement="top">
-          <el-button
-            class="maximize-btn"
-            circle
-            :icon="isMaximized ? ScaleToOriginal : FullScreen"
-            @click="toggleMaximize"
-            size="small"
-          />
-        </el-tooltip>
-
-        <div class="statement-scroll-area">
+    <ProblemWorkspaceLayout ref="problemLayoutRef">
+      <template #left>
+        <div v-if="problem" class="statement-scroll-area" style="padding: 24px 8px 24px 24px; height: 100%; overflow-y: auto; overflow-x: hidden;">
           <ProblemStatementContent
             :source="statementMarkdown"
             :reader-font-size="readerFontSize"
@@ -50,15 +38,10 @@
           </el-card>
 
         </div>
-      </article>
+      </template>
 
-      <!-- Drag Resizable Divider -->
-      <div v-if="problem && !isMobile && !isMaximized" class="resize-divider" @mousedown="startDrag">
-        <div class="resize-divider-line"></div>
-      </div>
-
-      <!-- Right side: Code Editor & Submissions & Custom Stdin Test Console -->
-      <aside v-if="!isMobile" v-show="!isMaximized" class="sidebar" :style="rightStyle">
+      <template #right>
+        <aside class="sidebar" style="height: 100%; display: flex; flex-direction: column;">
         <!-- Editor Header -->
         <div class="editor-bar panel">
           <div class="bar-left">
@@ -182,8 +165,9 @@
             </div>
           </div>
         </div>
-      </aside>
-    </section>
+        </aside>
+      </template>
+    </ProblemWorkspaceLayout>
 
     <!-- Submission Details Drawer -->
     <SubmissionDetailDrawer v-model="drawerVisible" :detail="selectedSubmission" :current-code="sourceCode" />
@@ -199,18 +183,10 @@ import CodeEditor from '../components/CodeEditor.vue'
 import ProblemStatementContent from '../components/problem/ProblemStatementContent.vue'
 import VerdictTag from '../components/VerdictTag.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
-import {
-  fetchContest,
-  fetchContestProblem,
-  fetchContestProblems,
-  runSelfTest,
-  submitContestSolution,
-  fetchSubmission,
-  fetchContestSubmissions,
-  fetchContestRegistration,
-  formatCode,
-  requestSseTicket
-} from '../api/http'
+import ProblemWorkspaceLayout from '../components/problem/ProblemWorkspaceLayout.vue'
+import { fetchContest, fetchContestProblem, fetchContestProblems, submitContestSolution, fetchContestSubmissions, fetchContestRegistration } from '../api/contest'
+import { runSelfTest, fetchSubmission, requestSseTicket } from '../api/submission'
+import { formatCode } from '../api/system'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import { useAuthStore } from '../stores/auth'
 import { parseSubmissionUpdate } from '../utils/submissionEvents'
@@ -221,97 +197,15 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const problemLayoutRef = ref<HTMLElement | null>(null)
-const leftWidthPercent = ref(50)
-let startX = 0
-let startWidthPercent = 0
-
-// Check if mobile or desktop split screen is active
-const isWideScreen = ref(window.innerWidth >= 1041)
-const isMobile = ref(window.innerWidth <= 768)
-const isMaximized = ref(false)
-
-function handleResize() {
-  isWideScreen.value = window.innerWidth >= 1041
-  isMobile.value = window.innerWidth <= 768
-}
-
-function toggleMaximize() {
-  isMaximized.value = !isMaximized.value
-  setTimeout(() => {
-    window.dispatchEvent(new Event('resize'))
-  }, 100)
-}
-
-const leftStyle = computed(() => {
-  if (isMaximized.value) {
-    return {
-      width: '100%',
-      flex: '0 0 100%'
-    }
-  }
-  if (!isWideScreen.value || isMobile.value) return {}
-  return {
-    width: `${leftWidthPercent.value}%`,
-    flex: `0 0 ${leftWidthPercent.value}%`
-  }
-})
-
-const rightStyle = computed(() => {
-  if (isMaximized.value) {
-    return {
-      display: 'none'
-    }
-  }
-  if (!isWideScreen.value || isMobile.value) return {}
-  return {
-    width: `${100 - leftWidthPercent.value}%`,
-    flex: `0 0 ${100 - leftWidthPercent.value}%`
-  }
-})
+const problemLayoutRef = ref<any>(null)
+const isMobile = computed(() => problemLayoutRef.value?.isMobile ?? false)
 
 function copyLink() {
   navigator.clipboard.writeText(window.location.href)
   ElMessage.success('链接已复制到剪贴板，快去电脑上打开吧！')
 }
 
-function startDrag(event: MouseEvent) {
-  event.preventDefault()
-  startX = event.clientX
-  startWidthPercent = leftWidthPercent.value
-  
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-  
-  window.addEventListener('mousemove', doDrag)
-  window.addEventListener('mouseup', stopDrag)
-}
 
-function doDrag(event: MouseEvent) {
-  if (!problemLayoutRef.value) return
-  const containerWidth = problemLayoutRef.value.getBoundingClientRect().width
-  if (containerWidth === 0) return
-  
-  const deltaX = event.clientX - startX
-  const deltaPercent = (deltaX / containerWidth) * 100
-  let newPercent = startWidthPercent + deltaPercent
-  
-  if (newPercent < 20) newPercent = 20
-  if (newPercent > 80) newPercent = 80
-  
-  leftWidthPercent.value = newPercent
-}
-
-function stopDrag() {
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-  
-  window.removeEventListener('mousemove', doDrag)
-  window.removeEventListener('mouseup', stopDrag)
-  
-  // Force Monaco to recalculate layout
-  window.dispatchEvent(new Event('resize'))
-}
 
 const contestId = computed(() => Number(route.params.contestId))
 const problemId = computed(() => Number(route.params.id))
@@ -566,7 +460,6 @@ function disconnectSse() {
 }
 
 onMounted(async () => {
-  window.addEventListener('resize', handleResize)
   await initProblem()
   connectSse()
   // Auto-refresh submissions status every 3 seconds to track pending runs!
@@ -579,7 +472,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
   disconnectSse()
   if (submissionsTimerId) {
     window.clearInterval(submissionsTimerId)

@@ -5,18 +5,8 @@
         <el-button type="primary" @click="router.push('/problems')">返回题目列表</el-button>
       </el-empty>
     </div>
-    <section v-else-if="problem" class="problem-layout" ref="problemLayoutRef">
-      <article class="statement panel" style="display: flex; flex-direction: column; position: relative;" :style="leftStyle">
-        <!-- Maximize Button -->
-        <el-tooltip v-if="!isMobile" :content="isMaximized ? '还原布局' : '放大题面'" placement="top">
-          <el-button
-            class="maximize-btn"
-            circle
-            :icon="isMaximized ? ScaleToOriginal : FullScreen"
-            @click="toggleMaximize"
-            size="small"
-          />
-        </el-tooltip>
+    <ProblemWorkspaceLayout v-else-if="problem" ref="problemLayoutRef">
+      <template #left>
         <el-tabs v-model="activeLeftTab" class="statement-tabs" style="flex: 1; display: flex; flex-direction: column;">
           <!-- Tab 1: Problem Description -->
           <el-tab-pane label="题目描述" name="statement" style="padding-top: 10px;">
@@ -47,62 +37,32 @@
             <ProblemSolutionsTab :problem="problem" />
           </el-tab-pane>
         </el-tabs>
-      </article>
+      </template>
 
-      <!-- Drag Resizable Divider -->
-      <div v-if="!isMobile && !isMaximized" class="resize-divider" @mousedown="startDrag">
-        <div class="resize-divider-line"></div>
-      </div>
-
-      <aside v-if="!isMobile" v-show="!isMaximized" class="submit-panel panel" :style="rightStyle">
-        <div class="submit-toolbar">
-          <el-select v-model="language" class="language-select">
-            <el-option label="C++20 (O2)" value="CPP" />
-            <el-option label="C++20 (O3)" value="CPP_O3" />
-            <el-option label="C17 (O2)" value="C" />
-            <el-option label="Python 3.12" value="PYTHON" />
-            <el-option label="PyPy 3" value="PYPY3" />
-            <el-option label="Java 21" value="JAVA" />
-          </el-select>
-          <el-button :icon="Brush" :loading="formatting" @click="handleFormat">简单整理</el-button>
-          <el-button :loading="selfTesting" :disabled="cooldownSeconds > 0" @click="runCustomTest">
-            <template #icon>
-              <span v-if="cooldownSeconds > 0" class="cooldown-num-icon">{{ cooldownSeconds }}</span>
-              <el-icon v-else><VideoPlay /></el-icon>
-            </template>
-            自测
-          </el-button>
-          <el-button type="primary" :loading="submitting" :disabled="cooldownSeconds > 0" @click="submit">
-            <template #icon>
-              <span v-if="cooldownSeconds > 0" class="cooldown-num-icon white-num">{{ cooldownSeconds }}</span>
-              <el-icon v-else><Upload /></el-icon>
-            </template>
-            提交
-          </el-button>
-        </div>
-        <CodeEditor ref="codeEditorRef" v-model="sourceCode" :language="language" />
-
-        <!-- Collapsible Self-test Console -->
-        <ProblemSelfTestConsole
-          ref="selfTestConsoleRef"
-          v-model="selfTestInput"
+      <template #right>
+        <ProblemSubmitPanel
+          ref="submitPanelRef"
+          v-model:language="language"
+          v-model:sourceCode="sourceCode"
+          v-model:selfTestInput="selfTestInput"
+          :formatting="formatting"
           :self-testing="selfTesting"
+          :submitting="submitting"
+          :cooldown-seconds="cooldownSeconds"
           :self-test-error="selfTestError"
           :self-test-result="selfTestResult"
-          @clear="clearSelfTest"
-        />
-
-        <!-- Mini Submissions list for current problem and current user -->
-        <ProblemMiniSubmissions
           :submissions="submissions"
           :submissions-loading="submissionsLoading"
-          @refresh="loadSubmissions"
-          @click-submission="openSubmissionDetail"
+          :message="message"
+          @format="handleFormat"
+          @run-custom-test="runCustomTest"
+          @submit="submit"
+          @clear-self-test="clearSelfTest"
+          @refresh-submissions="loadSubmissions"
+          @open-submission="openSubmissionDetail"
         />
-
-        <el-alert v-if="message" :title="message" type="success" show-icon :closable="false" style="margin-top: 8px;" />
-      </aside>
-    </section>
+      </template>
+    </ProblemWorkspaceLayout>
 
     <!-- Submission Details Drawer -->
     <SubmissionDetailDrawer v-model="drawerVisible" :detail="selectedSubmission" :current-code="sourceCode" />
@@ -112,25 +72,17 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Upload, VideoPlay, Brush, Monitor, FullScreen, ScaleToOriginal } from '@element-plus/icons-vue'
+import { Monitor, FullScreen, ScaleToOriginal } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import CodeEditor from '../components/CodeEditor.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
 import ProblemStatementTab from '../components/problem/ProblemStatementTab.vue'
 import ProblemSolutionsTab from '../components/problem/ProblemSolutionsTab.vue'
-import ProblemSelfTestConsole from '../components/problem/ProblemSelfTestConsole.vue'
-import ProblemMiniSubmissions from '../components/problem/ProblemMiniSubmissions.vue'
-import {
-  fetchProblem,
-  runSelfTest,
-  submitSolution,
-  fetchSubmission,
-  fetchSubmissions,
-  formatCode,
-  requestSseTicket
-} from '../api/http'
+import ProblemSubmitPanel from '../components/ProblemSubmitPanel.vue'
+import { fetchProblem } from '../api/problem'
+import { runSelfTest, submitSolution, fetchSubmission, fetchSubmissions } from '../api/submission'
+import { formatCode } from '../api/system'
 import { useAuthStore } from '../stores/auth'
-import { parseSubmissionUpdate } from '../utils/submissionEvents'
+import { useSubmissionSse } from '../composables/useSubmissionSse'
 import { firstProblemSampleInput } from '../utils/problemSamples'
 import type { Language, ProblemDetail, SelfTestResult, SubmissionSummary, SubmissionDetail } from '../types'
 
@@ -138,93 +90,11 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const problemLayoutRef = ref<HTMLElement | null>(null)
-const selfTestConsoleRef = ref<any>(null)
-const leftWidthPercent = ref(50)
-let startX = 0
-let startWidthPercent = 0
+import ProblemWorkspaceLayout from '../components/problem/ProblemWorkspaceLayout.vue'
 
-// Check if mobile or desktop split screen is active
-const isWideScreen = ref(window.innerWidth >= 1041)
-const isMobile = ref(window.innerWidth <= 768)
-const isMaximized = ref(false)
-
-function handleResize() {
-  isWideScreen.value = window.innerWidth >= 1041
-  isMobile.value = window.innerWidth <= 768
-}
-
-function toggleMaximize() {
-  isMaximized.value = !isMaximized.value
-  setTimeout(() => {
-    window.dispatchEvent(new Event('resize'))
-  }, 100)
-}
-
-const leftStyle = computed(() => {
-  if (isMaximized.value) {
-    return {
-      width: '100%',
-      flex: '0 0 100%'
-    }
-  }
-  if (!isWideScreen.value || isMobile.value) return {}
-  return {
-    width: `${leftWidthPercent.value}%`,
-    flex: `0 0 ${leftWidthPercent.value}%`
-  }
-})
-
-const rightStyle = computed(() => {
-  if (isMaximized.value) {
-    return {
-      display: 'none'
-    }
-  }
-  if (!isWideScreen.value || isMobile.value) return {}
-  return {
-    width: `${100 - leftWidthPercent.value}%`,
-    flex: `0 0 ${100 - leftWidthPercent.value}%`
-  }
-})
-
-function startDrag(event: MouseEvent) {
-  event.preventDefault()
-  startX = event.clientX
-  startWidthPercent = leftWidthPercent.value
-  
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-  
-  window.addEventListener('mousemove', doDrag)
-  window.addEventListener('mouseup', stopDrag)
-}
-
-function doDrag(event: MouseEvent) {
-  if (!problemLayoutRef.value) return
-  const containerWidth = problemLayoutRef.value.getBoundingClientRect().width
-  if (containerWidth === 0) return
-  
-  const deltaX = event.clientX - startX
-  const deltaPercent = (deltaX / containerWidth) * 100
-  let newPercent = startWidthPercent + deltaPercent
-  
-  if (newPercent < 20) newPercent = 20
-  if (newPercent > 80) newPercent = 80
-  
-  leftWidthPercent.value = newPercent
-}
-
-function stopDrag() {
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-  
-  window.removeEventListener('mousemove', doDrag)
-  window.removeEventListener('mouseup', stopDrag)
-  
-  // Force Monaco to recalculate layout
-  window.dispatchEvent(new Event('resize'))
-}
+const problemLayoutRef = ref<any>(null)
+const submitPanelRef = ref<any>(null)
+const isMobile = computed(() => problemLayoutRef.value?.isMobile ?? false)
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -323,103 +193,43 @@ function copyLink() {
   ElMessage.success('链接已复制到剪贴板，快去电脑上打开吧！')
 }
 
-let eventSource: EventSource | null = null
-let reconnectTimeout: any = null
-let isConnecting = false
+const { connect: connectSse, disconnect: disconnectSse } = useSubmissionSse((update) => {
+  if (update.problemId !== undefined && update.problemId !== problemId.value) return
+  if (update.contestId !== undefined && update.contestId !== null) return
+  const subId = update.submissionId
+  const status = update.status
+  const verdict = update.verdict || null
 
-async function connectSse() {
-  if (eventSource || isConnecting) return
-  if (!authStore.token) return
+  const existingIndex = submissions.value.findIndex(s => s.id === subId)
+  if (existingIndex !== -1) {
+    submissions.value[existingIndex].status = status as any
+    submissions.value[existingIndex].verdict = verdict as any
+  }
 
-  isConnecting = true
-  try {
-    const ticket = await requestSseTicket()
-    if (!isConnecting || eventSource) return
+  // Auto-update drawer if it's currently showing one of our submissions
+  if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
+    fetchSubmission(subId).then(detail => {
+      if (selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
+        const curStatus = selectedSubmission.value.submission.status
+        const curCaseCount = selectedSubmission.value.cases?.length || 0
+        const newStatus = detail.submission.status
+        const newCaseCount = detail.cases?.length || 0
 
-    const sseUrl = `/api/submissions/live?ticket=${encodeURIComponent(ticket)}`
-    eventSource = new EventSource(sseUrl)
-
-    eventSource.addEventListener('update', (event) => {
-      try {
-        const update = parseSubmissionUpdate(event.data)
-        if (update) {
-          if (update.problemId !== undefined && update.problemId !== problemId.value) return
-          if (update.contestId !== undefined && update.contestId !== null) return
-          const subId = update.submissionId
-          const status = update.status
-          const verdict = update.verdict || null
-
-          const existingIndex = submissions.value.findIndex(s => s.id === subId)
-          if (existingIndex !== -1) {
-            submissions.value[existingIndex].status = status as any
-            submissions.value[existingIndex].verdict = verdict as any
-          }
-
-          // Auto-update drawer if it's currently showing one of our submissions
-          if (drawerVisible.value && selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
-            fetchSubmission(subId).then(detail => {
-              if (selectedSubmission.value && selectedSubmission.value.submission.id === subId) {
-                const curStatus = selectedSubmission.value.submission.status
-                const curCaseCount = selectedSubmission.value.cases?.length || 0
-                const newStatus = detail.submission.status
-                const newCaseCount = detail.cases?.length || 0
-
-                // Guard: Do not overwrite with older state (e.g. finished -> running, or fewer cases)
-                if (curStatus === 'FINISHED' && newStatus !== 'FINISHED') {
-                  return
-                }
-                if (newCaseCount < curCaseCount) {
-                  return
-                }
-                selectedSubmission.value = detail
-              }
-            }).catch(console.error)
-          }
-
-          if (status === 'FINISHED') {
-            // Silent reload to populate exact run metrics (time, memory) and reactively update solved status
-            loadSubmissions(true)
-            initProblem(true)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to handle SSE message', err)
+        // Guard: Do not overwrite with older state
+        if (curStatus === 'FINISHED' && newStatus !== 'FINISHED') return
+        if (newCaseCount < curCaseCount) return
+        selectedSubmission.value = detail
       }
-    })
+    }).catch(console.error)
+  }
 
-    eventSource.onerror = (err) => {
-      console.error('SSE connection error, scheduled reconnect in 1s:', err)
-      disconnectSse()
-      if (reconnectTimeout) clearTimeout(reconnectTimeout)
-      reconnectTimeout = setTimeout(() => {
-        connectSse()
-      }, 1000)
-    }
-  } catch (error) {
-    console.error('Failed to fetch SSE ticket, scheduled reconnect in 1s:', error)
-    if (reconnectTimeout) clearTimeout(reconnectTimeout)
-    reconnectTimeout = setTimeout(() => {
-      connectSse()
-    }, 1000)
-  } finally {
-    isConnecting = false
+  if (status === 'FINISHED') {
+    loadSubmissions(true)
+    initProblem(true)
   }
-}
-
-function disconnectSse() {
-  isConnecting = false
-  if (reconnectTimeout) {
-    clearTimeout(reconnectTimeout)
-    reconnectTimeout = null
-  }
-  if (eventSource) {
-    eventSource.close()
-    eventSource = null
-  }
-}
+}, () => authStore.token)
 
 onMounted(async () => {
-  window.addEventListener('resize', handleResize)
   // Listen for editor/reader preference updates locally
   window.addEventListener('coderushoj-preferences-saved', handlePrefUpdates)
   await initProblem()
@@ -432,7 +242,6 @@ watch(problemId, async () => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
   window.removeEventListener('coderushoj-preferences-saved', handlePrefUpdates)
   disconnectSse()
   if (timer.value) {
@@ -448,7 +257,6 @@ function handlePrefUpdates() {
   readerFontFamily.value = localStorage.getItem('coderushoj.reader.fontFamily') || "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif"
 }
 
-const codeEditorRef = ref<any>(null)
 const formatting = ref(false)
 
 async function handleFormat() {
@@ -459,8 +267,8 @@ async function handleFormat() {
   formatting.value = true
   try {
     const formatted = await formatCode(language.value, sourceCode.value)
-    if (codeEditorRef.value?.setValuePreservingHistory) {
-      codeEditorRef.value.setValuePreservingHistory(formatted)
+    if (submitPanelRef.value?.codeEditorRef?.setValuePreservingHistory) {
+      submitPanelRef.value.codeEditorRef.setValuePreservingHistory(formatted)
     } else {
       sourceCode.value = formatted
     }
@@ -583,7 +391,7 @@ function clearSelfTest() {
 
 function fillSelfTest(text: string) {
   selfTestInput.value = text
-  selfTestConsoleRef.value?.expandInputTab()
+  submitPanelRef.value?.selfTestConsoleRef?.expandInputTab()
   ElMessage.success('已填入自测输入')
 }
 

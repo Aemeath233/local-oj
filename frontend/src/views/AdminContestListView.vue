@@ -78,7 +78,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Plus, Refresh, View, Delete, Checked } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
-import { fetchAdminContests, setContestVisibility, deleteContest } from '../api/http'
+import { fetchAdminContests, setContestVisibility, deleteContest } from '../api/admin'
 import type { AdminContestSummary } from '../types'
 
 const router = useRouter()

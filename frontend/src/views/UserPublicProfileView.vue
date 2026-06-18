@@ -37,179 +37,11 @@
       <!-- Solved Stats & Heatmap Grid -->
       <section class="stats-dashboard-grid">
         <!-- Solved Problems Donut Chart -->
-        <div class="donut-chart-card panel">
-          <h3 class="panel-title">做题统计</h3>
-          <div class="donut-content">
-            <div class="donut-chart-wrapper">
-              <svg width="120" height="120" viewBox="0 0 100 100" class="donut-svg">
-                <!-- Background Track -->
-                <circle cx="50" cy="50" r="42" fill="transparent" stroke="#f1f5f9" stroke-width="8" />
-                <!-- Active Progress Ring -->
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="transparent"
-                  stroke="#0f766e"
-                  stroke-width="8"
-                  :stroke-dasharray="263.89"
-                  :stroke-dashoffset="donutStrokeOffset"
-                  transform="rotate(-90 50 50)"
-                  stroke-linecap="round"
-                  class="donut-ring-active"
-                />
-                <!-- Central Text -->
-                <text x="50" y="48" text-anchor="middle" class="donut-total" font-size="16" font-weight="bold" fill="#0f766e">
-                  {{ solvedTotal }}
-                </text>
-                <text x="50" y="66" text-anchor="middle" class="donut-label" font-size="8" fill="#64748b" font-weight="600">
-                  已解决 / {{ problemsTotal }}
-                </text>
-              </svg>
-            </div>
-
-            <div class="difficulty-list">
-              <!-- Easy -->
-              <div class="difficulty-row">
-                <div class="difficulty-header">
-                  <span class="difficulty-badge easy">简单</span>
-                  <span class="difficulty-count">
-                    <strong>{{ profile.stats.difficultyDistribution.easySolved }}</strong> / {{ profile.stats.difficultyDistribution.easyTotal }}
-                  </span>
-                  <span class="difficulty-pct">{{ getPercentage(profile.stats.difficultyDistribution.easySolved, profile.stats.difficultyDistribution.easyTotal) }}%</span>
-                </div>
-                <div class="progress-bar-track">
-                  <div
-                    class="progress-bar-fill easy"
-                    :style="{ width: getPercentage(profile.stats.difficultyDistribution.easySolved, profile.stats.difficultyDistribution.easyTotal) + '%' }"
-                  ></div>
-                </div>
-              </div>
-
-              <!-- Medium -->
-              <div class="difficulty-row">
-                <div class="difficulty-header">
-                  <span class="difficulty-badge medium">中等</span>
-                  <span class="difficulty-count">
-                    <strong>{{ profile.stats.difficultyDistribution.mediumSolved }}</strong> / {{ profile.stats.difficultyDistribution.mediumTotal }}
-                  </span>
-                  <span class="difficulty-pct">{{ getPercentage(profile.stats.difficultyDistribution.mediumSolved, profile.stats.difficultyDistribution.mediumTotal) }}%</span>
-                </div>
-                <div class="progress-bar-track">
-                  <div
-                    class="progress-bar-fill medium"
-                    :style="{ width: getPercentage(profile.stats.difficultyDistribution.mediumSolved, profile.stats.difficultyDistribution.mediumTotal) + '%' }"
-                  ></div>
-                </div>
-              </div>
-
-              <!-- Hard -->
-              <div class="difficulty-row">
-                <div class="difficulty-header">
-                  <span class="difficulty-badge hard">困难</span>
-                  <span class="difficulty-count">
-                    <strong>{{ profile.stats.difficultyDistribution.hardSolved }}</strong> / {{ profile.stats.difficultyDistribution.hardTotal }}
-                  </span>
-                  <span class="difficulty-pct">{{ getPercentage(profile.stats.difficultyDistribution.hardSolved, profile.stats.difficultyDistribution.hardTotal) }}%</span>
-                </div>
-                <div class="progress-bar-track">
-                  <div
-                    class="progress-bar-fill hard"
-                    :style="{ width: getPercentage(profile.stats.difficultyDistribution.hardSolved, profile.stats.difficultyDistribution.hardTotal) + '%' }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Solved Problems Donut Chart -->
+        <UserStatsDonut :difficulty="profile.stats.difficultyDistribution" />
 
         <!-- Heatmap Grid Panel -->
-        <div class="heatmap-card panel">
-          <div class="heatmap-header">
-            <h3 class="panel-title">提交冷热图</h3>
-            <div class="heatmap-stats">
-              <div class="heatmap-stat-item">
-                <span class="heatmap-stat-label">过去一年提交</span>
-                <strong class="heatmap-stat-value">{{ heatmapTotalSubmissions }}</strong>
-              </div>
-              <div class="heatmap-stat-item">
-                <span class="heatmap-stat-label">AC 通过数</span>
-                <strong class="heatmap-stat-value ac">{{ heatmapTotalAc }}</strong>
-              </div>
-              <div class="heatmap-stat-item">
-                <span class="heatmap-stat-label">通过率</span>
-                <strong class="heatmap-stat-value">{{ heatmapAcRate }}</strong>
-              </div>
-              <div class="heatmap-stat-item">
-                <span class="heatmap-stat-label">活跃天数</span>
-                <strong class="heatmap-stat-value">{{ heatmapActiveDays }} 天</strong>
-              </div>
-            </div>
-          </div>
-
-          <div class="heatmap-container">
-            <svg viewBox="0 0 740 135" width="100%" class="heatmap-svg">
-              <!-- Month Labels -->
-              <text
-                v-for="(label, lIndex) in monthLabels"
-                :key="'m-' + lIndex"
-                :x="label.x"
-                y="12"
-                class="heatmap-label"
-                font-size="9"
-                fill="#64748b"
-              >
-                {{ label.text }}
-              </text>
-
-              <!-- Weekday Labels -->
-              <text x="0" y="38" class="heatmap-label" font-size="9" fill="#64748b">周一</text>
-              <text x="0" y="64" class="heatmap-label" font-size="9" fill="#64748b">周三</text>
-              <text x="0" y="90" class="heatmap-label" font-size="9" fill="#64748b">周五</text>
-
-              <!-- Grid Cells -->
-              <g v-for="(week, wIndex) in weeks" :key="'w-' + wIndex">
-                <template v-for="(day, dIndex) in week" :key="'d-' + dIndex">
-                  <rect
-                    v-if="day.level >= 0"
-                    :x="30 + wIndex * 13"
-                    :y="20 + dIndex * 13"
-                    width="10"
-                    height="10"
-                    rx="2"
-                    ry="2"
-                    :class="['heatmap-cell', `level-${day.level}`]"
-                    @mouseenter="showTooltip($event, day)"
-                    @mouseleave="hideTooltip"
-                  />
-                </template>
-              </g>
-
-              <!-- Legend -->
-              <g transform="translate(580, 118)">
-                <text x="0" y="9" class="heatmap-label" font-size="9" fill="#64748b">少</text>
-                <rect x="18" y="0" width="10" height="10" rx="2" ry="2" class="heatmap-cell level-0" />
-                <rect x="31" y="0" width="10" height="10" rx="2" ry="2" class="heatmap-cell level-1" />
-                <rect x="44" y="0" width="10" height="10" rx="2" ry="2" class="heatmap-cell level-2" />
-                <rect x="57" y="0" width="10" height="10" rx="2" ry="2" class="heatmap-cell level-3" />
-                <rect x="70" y="0" width="10" height="10" rx="2" ry="2" class="heatmap-cell level-4" />
-                <text x="86" y="9" class="heatmap-label" font-size="9" fill="#64748b">多</text>
-              </g>
-            </svg>
-            <Teleport to="body">
-              <Transition name="fade-fast">
-                <div
-                  v-show="tooltipVisible"
-                  class="custom-heatmap-tooltip"
-                  :style="tooltipStyle"
-                >
-                  {{ tooltipContent }}
-                  <div class="tooltip-arrow"></div>
-                </div>
-              </Transition>
-            </Teleport>
-          </div>
-        </div>
+        <UserHeatmap :heatmap-data="profile.stats.heatmap" />
       </section>
       <!-- Recent Submissions Panel -->
       <div class="panel recent-submissions-card" style="margin-top: 24px;">
@@ -258,11 +90,14 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Notebook, Calendar, Clock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { fetchPublicProfile, fetchSubmission } from '../api/http'
+import { fetchPublicProfile } from '../api/profile'
+import { fetchSubmission } from '../api/submission'
 import type { PublicProfile } from '../types'
 import { formatDateTime, formatRelativeTime } from '../utils/time'
 import VerdictTag from '../components/VerdictTag.vue'
 import SubmissionDetailDrawer from '../components/SubmissionDetailDrawer.vue'
+import UserStatsDonut from '../components/profile/UserStatsDonut.vue'
+import UserHeatmap from '../components/profile/UserHeatmap.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -292,83 +127,7 @@ function formatMemory(kb: number) {
 }
 const profile = ref<PublicProfile | null>(null)
 
-// Virtual Tooltip handlers to prevent SVG hover flickering
-const tooltipVisible = ref(false)
-const tooltipContent = ref('')
-const tooltipStyle = ref({
-  left: '0px',
-  top: '0px'
-})
 
-let activeCell: any = null
-let hoverTimeout: number | undefined
-let hideTimeout: number | undefined
-
-interface HeatmapDay {
-  date: Date
-  dateString: string
-  isFuture: boolean
-  totalCount: number
-  acCount: number
-  level: number
-}
-
-const weeks = ref<HeatmapDay[][]>([])
-const monthLabels = ref<Array<{ text: string; x: number }>>([])
-
-const solvedTotal = computed(() => {
-  if (!profile.value) return 0
-  const d = profile.value.stats.difficultyDistribution
-  return d.easySolved + d.mediumSolved + d.hardSolved
-})
-
-const problemsTotal = computed(() => {
-  if (!profile.value) return 0
-  const d = profile.value.stats.difficultyDistribution
-  return d.easyTotal + d.mediumTotal + d.hardTotal
-})
-
-const donutStrokeOffset = computed(() => {
-  const total = problemsTotal.value
-  if (total === 0) return 263.89
-  const solved = solvedTotal.value
-  const pct = Math.min(1, solved / total)
-  return 263.89 * (1 - pct)
-})
-
-const heatmapTotalSubmissions = computed(() => {
-  if (!profile.value) return 0
-  let sum = 0
-  for (const date in profile.value.stats.heatmap) {
-    sum += profile.value.stats.heatmap[date].totalCount
-  }
-  return sum
-})
-
-const heatmapTotalAc = computed(() => {
-  if (!profile.value) return 0
-  let sum = 0
-  for (const date in profile.value.stats.heatmap) {
-    sum += profile.value.stats.heatmap[date].acCount
-  }
-  return sum
-})
-
-const heatmapAcRate = computed(() => {
-  if (heatmapTotalSubmissions.value === 0) return '0.0%'
-  return ((heatmapTotalAc.value / heatmapTotalSubmissions.value) * 100).toFixed(1) + '%'
-})
-
-const heatmapActiveDays = computed(() => {
-  if (!profile.value) return 0
-  let count = 0
-  for (const date in profile.value.stats.heatmap) {
-    if (profile.value.stats.heatmap[date].totalCount > 0) {
-      count++
-    }
-  }
-  return count
-})
 
 const userFallback = computed(() => {
   if (!profile.value) return '?'
@@ -391,9 +150,6 @@ async function loadProfile() {
   try {
     const data = await fetchPublicProfile(userIdParam.value)
     profile.value = data
-    if (data && data.stats) {
-      generateHeatmapData(data.stats.heatmap)
-    }
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '获取用户主页信息失败')
   } finally {
@@ -401,147 +157,6 @@ async function loadProfile() {
   }
 }
 
-function showTooltip(event: MouseEvent, day: any) {
-  const rectEl = event.currentTarget as SVGRectElement
-  if (!rectEl) return
-
-  if (hideTimeout) {
-    clearTimeout(hideTimeout)
-    hideTimeout = undefined
-  }
-  if (activeCell === day) return
-  activeCell = day
-  if (hoverTimeout) {
-    clearTimeout(hoverTimeout)
-  }
-  hoverTimeout = window.setTimeout(() => {
-    const rectBounds = rectEl.getBoundingClientRect()
-    const left = rectBounds.left + window.scrollX + rectBounds.width / 2
-    const top = rectBounds.top + window.scrollY - 8
-    
-    tooltipStyle.value = {
-      left: `${left}px`,
-      top: `${top}px`
-    }
-
-    tooltipContent.value = getTooltipContent(day)
-    tooltipVisible.value = true
-  }, 20)
-}
-
-function hideTooltip() {
-  if (hoverTimeout) {
-    clearTimeout(hoverTimeout)
-    hoverTimeout = undefined
-  }
-  activeCell = null
-  if (hideTimeout) {
-    clearTimeout(hideTimeout)
-  }
-  hideTimeout = window.setTimeout(() => {
-    tooltipVisible.value = false
-  }, 40)
-}
-
-function getPercentage(solved: number, total: number) {
-  if (total === 0) return 0
-  return Math.round((solved / total) * 100)
-}
-
-function getTooltipContent(day: any) {
-  if (day.totalCount === 0) {
-    return `${day.dateString} : 无提交记录`
-  }
-  return `${day.dateString} : 提交 ${day.totalCount} 次，通过 AC ${day.acCount} 次`
-}
-
-function formatDate(d: Date) {
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function getContributionLevel(total: number, ac: number, isFuture: boolean) {
-  if (isFuture) return -1
-  if (total === 0) return 0
-  if (ac === 0) return 1
-  if (ac <= 2) return 2
-  if (ac <= 5) return 3
-  return 4
-}
-
-function generateHeatmapData(heatmapData: Record<string, { totalCount: number; acCount: number }>) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const lastSaturday = new Date(today)
-  lastSaturday.setDate(today.getDate() + (6 - today.getDay()))
-
-  const gridStartDate = new Date(lastSaturday)
-  gridStartDate.setDate(lastSaturday.getDate() - 370)
-
-  const tempWeeks: any[] = []
-  for (let w = 0; w < 53; w++) {
-    const weekDays: any[] = []
-    for (let d = 0; d < 7; d++) {
-      const date = new Date(gridStartDate)
-      date.setDate(gridStartDate.getDate() + (w * 7 + d))
-
-      const dateString = formatDate(date)
-      const isFuture = date > today
-      const statsObj = heatmapData[dateString] || { totalCount: 0, acCount: 0 }
-
-      weekDays.push({
-        date,
-        dateString,
-        isFuture,
-        totalCount: statsObj.totalCount,
-        acCount: statsObj.acCount,
-        level: getContributionLevel(statsObj.totalCount, statsObj.acCount, isFuture)
-      })
-    }
-    tempWeeks.push(weekDays)
-  }
-  weeks.value = tempWeeks
-  generateMonthLabels()
-}
-
-function generateMonthLabels() {
-  const labels: Array<{ text: string; x: number }> = []
-  let lastMonth = -1
-
-  for (let w = 0; w < 53; w++) {
-    const week = weeks.value[w]
-    if (!week || week.length === 0) continue
-    const sundayDate = week[0].date
-    const m = sundayDate.getMonth()
-
-    if (w === 0 || m !== lastMonth) {
-      const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
-      labels.push({
-        text: monthNames[m],
-        x: 30 + w * 13
-      })
-      lastMonth = m
-    }
-  }
-
-  if (labels.length >= 2 && labels[1].x - labels[0].x < 26) {
-    labels.shift()
-  }
-
-  monthLabels.value = labels
-}
-
-onUnmounted(() => {
-  if (hoverTimeout) {
-    clearTimeout(hoverTimeout)
-  }
-  if (hideTimeout) {
-    clearTimeout(hideTimeout)
-  }
-})
 </script>
 
 <style scoped>
@@ -832,46 +447,6 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   align-items: center;
-}
-
-.heatmap-svg {
-  min-width: 700px;
-}
-
-.heatmap-cell {
-  fill: #f1f5f9;
-  transition: fill 0.15s ease;
-  cursor: pointer;
-}
-
-.heatmap-cell:hover {
-  stroke: #0f172a;
-  stroke-width: 1.5;
-}
-
-.heatmap-cell.level-0 {
-  fill: #f1f5f9;
-}
- 
-.heatmap-cell.level-1 {
-  fill: #ccfbf1;
-}
- 
-.heatmap-cell.level-2 {
-  fill: #5eead4;
-}
- 
-.heatmap-cell.level-3 {
-  fill: #0d9488;
-}
- 
-.heatmap-cell.level-4 {
-  fill: #115e59;
-}
-
-.heatmap-label {
-  user-select: none;
-  font-family: var(--el-font-family);
 }
 
 @media (max-width: 992px) {

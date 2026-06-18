@@ -1,4 +1,4 @@
-import { fetchSystemVersions } from '../api/http'
+import { fetchSystemVersions } from '../api/system'
 
 /**
  * In-memory dedup cache for system version checks.

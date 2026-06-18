@@ -2,6 +2,7 @@ package com.coderushoj.backend.controller;
 
 import com.coderushoj.backend.api.ApiResponse;
 import com.coderushoj.backend.service.AdminDataService;
+import com.coderushoj.backend.service.AdminUserImportService;
 import com.coderushoj.backend.service.BackupService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -17,6 +18,7 @@ import java.io.IOException;
 @RequestMapping("/api/admin/data")
 public class AdminDataController {
     private final AdminDataService adminDataService;
+    private final AdminUserImportService adminUserImportService;
     private final BackupService backupService;
     private final String dbUrl;
     private final String dbUsername;
@@ -24,12 +26,14 @@ public class AdminDataController {
 
     public AdminDataController(
             AdminDataService adminDataService,
+            AdminUserImportService adminUserImportService,
             BackupService backupService,
             @Value("${spring.datasource.url}") String dbUrl,
             @Value("${spring.datasource.username}") String dbUsername,
             @Value("${MYSQL_PORT:127.0.0.1:3307}") String mysqlPortMapping
     ) {
         this.adminDataService = adminDataService;
+        this.adminUserImportService = adminUserImportService;
         this.backupService = backupService;
         this.dbUrl = dbUrl;
         this.dbUsername = dbUsername;
@@ -37,10 +41,10 @@ public class AdminDataController {
     }
 
     @PostMapping("/users/import")
-    public ApiResponse<AdminDataService.ImportUserResult> importUsers(
+    public ApiResponse<AdminUserImportService.ImportUserResult> importUsers(
             @RequestParam("file") MultipartFile file
-    ) throws IOException {
-        return ApiResponse.ok(adminDataService.importUsers(file));
+    ) throws Exception {
+        return ApiResponse.ok(adminUserImportService.importUsers(file));
     }
 
     @PostMapping("/submissions/cleanup")

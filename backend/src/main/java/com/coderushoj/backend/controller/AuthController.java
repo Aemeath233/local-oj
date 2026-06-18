@@ -52,6 +52,11 @@ public class AuthController {
         return ApiResponse.ok(null);
     }
 
+    @PostMapping("/refresh")
+    public ApiResponse<AuthService.LoginResult> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.ok(authService.refresh(request.refreshToken()));
+    }
+
     @GetMapping("/me")
     public ApiResponse<Object> me() {
         return ApiResponse.ok(SecurityUtils.currentUser());
@@ -83,5 +88,8 @@ public class AuthController {
             @NotBlank String code,
             @NotBlank String newPassword
     ) {
+    }
+
+    public record RefreshRequest(@NotBlank String refreshToken) {
     }
 }

@@ -51,47 +51,56 @@
     </div>
 
     <section class="panel table-panel">
-      <el-table v-loading="loading" :data="pagedRows" row-key="userId">
-        <el-table-column label="#" width="80">
-          <template #default="{ row }">
-            <div class="rank-number-box" :class="row.rank <= 3 ? 'rank-pos-' + row.rank : ''">
-              <span class="rank-num">{{ row.rank }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="上周变化" width="100">
-          <template #default="{ row }">
-            <div :class="['rank-change-box', getRankChange(row).type]">
-              <span class="change-icon">{{ getRankChange(row).icon }}</span>
-              <span class="change-text">{{ getRankChange(row).text }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="用户" min-width="220">
-          <template #default="{ row }">
-            <router-link :to="`/user/${row.userId}`" class="user-profile-link">
-              <div class="user-cell">
-                <el-avatar :size="32" :src="row.avatarUrl">
-                  {{ userFallback(row) }}
-                </el-avatar>
-                <div>
-                  <div class="user-nickname">{{ row.displayName || row.username }}</div>
-                  <div v-if="[row.studentNo, row.major].filter(Boolean).length > 0" class="muted">
-                    {{ [row.studentNo, row.major].filter(Boolean).join(' · ') }}
-                  </div>
+      <el-skeleton :loading="loading && rows.length === 0" animated>
+        <template #template>
+          <div style="padding: 12px 20px;">
+            <el-skeleton-item variant="rect" style="height: 40px; border-radius: 8px; margin-bottom: 12px;" v-for="i in 10" :key="i" />
+          </div>
+        </template>
+        <template #default>
+          <el-table v-loading="loading" :data="pagedRows" row-key="userId">
+            <el-table-column label="#" width="80">
+              <template #default="{ row }">
+                <div class="rank-number-box" :class="row.rank <= 3 ? 'rank-pos-' + row.rank : ''">
+                  <span class="rank-num">{{ row.rank }}</span>
                 </div>
-              </div>
-            </router-link>
-          </template>
-        </el-table-column>
-        <el-table-column prop="acceptedCount" label="AC 题数" width="120" />
-        <el-table-column prop="submissionCount" label="提交次数" width="120" />
-        <el-table-column label="最后 AC" min-width="150">
-          <template #default="{ row }">
-            {{ formatDateTime(row.lastAcceptedAt) }}
-          </template>
-        </el-table-column>
-      </el-table>
+              </template>
+            </el-table-column>
+            <el-table-column label="上周变化" width="100">
+              <template #default="{ row }">
+                <div :class="['rank-change-box', getRankChange(row).type]">
+                  <span class="change-icon">{{ getRankChange(row).icon }}</span>
+                  <span class="change-text">{{ getRankChange(row).text }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="用户" min-width="220">
+              <template #default="{ row }">
+                <router-link :to="`/user/${row.userId}`" class="user-profile-link">
+                  <div class="user-cell">
+                    <el-avatar :size="32" :src="row.avatarUrl">
+                      {{ userFallback(row) }}
+                    </el-avatar>
+                    <div>
+                      <div class="user-nickname">{{ row.displayName || row.username }}</div>
+                      <div v-if="[row.studentNo, row.major].filter(Boolean).length > 0" class="muted">
+                        {{ [row.studentNo, row.major].filter(Boolean).join(' · ') }}
+                      </div>
+                    </div>
+                  </div>
+                </router-link>
+              </template>
+            </el-table-column>
+            <el-table-column prop="acceptedCount" label="AC 题数" width="120" />
+            <el-table-column prop="submissionCount" label="提交次数" width="120" />
+            <el-table-column label="最后 AC" min-width="150">
+              <template #default="{ row }">
+                {{ formatDateTime(row.lastAcceptedAt) }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+      </el-skeleton>
 
       <!-- Pagination Footer -->
       <div v-if="rows.length > pageSize" class="table-pagination">
@@ -124,7 +133,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onActivated, ref, watch } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import { fetchLeaderboard, fetchMyRank } from '../api/http'
+import { fetchLeaderboard, fetchMyRank } from '../api/leaderboard'
 import { formatDateTime } from '../utils/time'
 import { shouldRefreshSection, forceUpdateSectionVersion } from '../utils/versionCheck'
 import { useAuthStore } from '../stores/auth'

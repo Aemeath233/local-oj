@@ -81,6 +81,14 @@ CodeRush OJ 是一套面向教学场景的轻量化在线评测系统，支持�
                                    └──────────────────────┘
 ```
 
+### 后端架构设计指南
+
+为保持代码高内聚低耦合，防止“屎山代码”堆积，本项目遵循以下架构设计规范：
+1. **轻量级控制器 (Thin Controller)**：Controller 层仅负责处理 HTTP 请求与响应封装，不包含任何业务逻辑。
+2. **按域拆分服务 (Domain Services)**：将臃肿的 Service（如 `ProblemService`、`ContestService`）按照功能域拆分为多个专注的 Service（如 `ProblemSearchService`、`ContestStandingsService`）。
+3. **隔离外部调用 (Isolation)**：第三方服务调用、文件操作与数据库操作应解耦并封装在特定的 Service 或 Repository 层中。
+4. **单一数据源 (Single Source of Truth)**：避免在多个 Service 中重复相同的复杂查询逻辑。复杂查询统一收口到对应的 `SearchService`。
+
 ---
 
 ## 快速开始

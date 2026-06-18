@@ -1,4 +1,4 @@
-package com.coderushoj.worker.gojudge;
+package com.coderushoj.common.gojudge;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 

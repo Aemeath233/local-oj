@@ -137,12 +137,7 @@ import { useRouter } from 'vue-router'
 import { Lock, Notebook } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
-import {
-  fetchProblemSolutions,
-  fetchProblemSolutionDetail,
-  saveProblemSolution,
-  deleteProblemSolution
-} from '../../api/http'
+import { fetchProblemSolutions, fetchProblemSolutionDetail, saveProblemSolution, deleteProblemSolution } from '../../api/problem'
 import { formatDateTime, formatRelativeTime } from '../../utils/time'
 import type { ProblemDetail, ProblemSolutionSummary, ProblemSolutionDetail } from '../../types'
 import MarkdownView from '../MarkdownView.vue'

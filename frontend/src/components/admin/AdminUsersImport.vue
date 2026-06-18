@@ -101,7 +101,7 @@
 import { ref } from 'vue'
 import { Download, UploadFilled, Warning, Check, DocumentCopy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { importUsersBulk } from '../../api/http'
+import { importUsersBulk } from '../../api/admin'
 
 const loading = ref(false)
 const importResult = ref<any>(null)

@@ -1,4 +1,4 @@
-package com.coderushoj.backend.gojudge;
+package com.coderushoj.common.gojudge;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

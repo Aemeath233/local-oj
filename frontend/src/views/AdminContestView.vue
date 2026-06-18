@@ -286,7 +286,8 @@ import {
   Download
 } from '@element-plus/icons-vue'
 import AdminNav from '../components/AdminNav.vue'
-import { fetchAdminContest, createContest, updateContest, fetchAdminProblems, http, importProblemPackage } from '../api/http'
+import { fetchAdminContest, createContest, updateContest, fetchAdminProblems, importProblemPackage } from '../api/admin'
+import { http } from '../api/base'
 import { getTagColor } from '../utils/tag'
 import type { AdminProblemSummary } from '../types'
 

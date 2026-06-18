@@ -1,0 +1,42 @@
+/* List Transition Animations */
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(10px);
+}
+.list-move {
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+
+/* Route Transitions */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.995);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.995);
+}
+
+/* NProgress Customization */
+#nprogress .bar {
+  background: var(--el-color-primary) !important;
+  height: 3px !important;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px var(--el-color-primary), 0 0 5px var(--el-color-primary) !important;
+}
+
+

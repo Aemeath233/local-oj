@@ -1,6 +1,7 @@
 package com.coderushoj.backend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.coderushoj.backend.security.CurrentUser;
 import com.coderushoj.backend.security.JwtService;
 import com.coderushoj.common.enums.Role;
 import com.coderushoj.common.mapper.UserMapper;
@@ -35,7 +36,24 @@ public class AuthService {
         if (user == null || !Boolean.TRUE.equals(user.getEnabled()) || !passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new IllegalArgumentException("用户名/邮箱或密码不正确");
         }
-        return new LoginResult(jwtService.issue(user), UserView.from(user));
+        return new LoginResult(jwtService.issue(user), jwtService.issueRefreshToken(user), UserView.from(user));
+    }
+
+    public LoginResult refresh(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new IllegalArgumentException("Refresh token is required");
+        }
+        CurrentUser currentUser = jwtService.parseRefreshToken(refreshToken)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired refresh token"));
+        User user = userMapper.selectById(currentUser.id());
+        if (user == null || !Boolean.TRUE.equals(user.getEnabled())) {
+            throw new IllegalArgumentException("User account is disabled or missing");
+        }
+        int currentVersion = user.getAuthTokenVersion() == null ? 0 : user.getAuthTokenVersion();
+        if (currentVersion != currentUser.tokenVersion()) {
+            throw new IllegalArgumentException("Token has been revoked");
+        }
+        return new LoginResult(jwtService.issue(user), jwtService.issueRefreshToken(user), UserView.from(user));
     }
 
     private User resolveUser(String identifier) {
@@ -88,7 +106,7 @@ public class AuthService {
         user.setCreatedAt(now);
         user.setUpdatedAt(now);
         userMapper.insert(user);
-        return new LoginResult(jwtService.issue(user), UserView.from(user));
+        return new LoginResult(jwtService.issue(user), jwtService.issueRefreshToken(user), UserView.from(user));
     }
 
     private String normalizeUsername(String username) {
@@ -141,7 +159,7 @@ public class AuthService {
     public record RegisterCommand(String username, String email, String displayName, String password, String code) {
     }
 
-    public record LoginResult(String token, UserView user) {
+    public record LoginResult(String token, String refreshToken, UserView user) {
     }
 
     public record UserView(

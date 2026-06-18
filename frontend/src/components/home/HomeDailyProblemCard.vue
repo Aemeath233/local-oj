@@ -71,7 +71,7 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Calendar, ArrowRight, Check } from '@element-plus/icons-vue'
-import { fetchDailyProblem } from '../../api/http'
+import { fetchDailyProblem } from '../../api/problem'
 import { getTagColor } from '../../utils/tag'
 import type { ProblemSummary } from '../../types'
 

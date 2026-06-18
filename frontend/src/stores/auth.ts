@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { login as loginRequest, register as registerRequest } from '../api/http'
+import { login as loginRequest, register as registerRequest } from '../api/auth'
 import type { User } from '../types'
 
 interface AuthState {
